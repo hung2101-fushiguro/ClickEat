@@ -21,7 +21,6 @@ public class CartItemDAO extends AbstractDAO<CartItem> implements ICartItemDAO {
     }
 
     // --- CÁC HÀM TỪ ICARTITEMDAO ---
-
     @Override
     public List<CartItem> getItemsByCartId(int cartId) {
         String sql = "SELECT * FROM CartItems WHERE cart_id = ?";
@@ -41,7 +40,6 @@ public class CartItemDAO extends AbstractDAO<CartItem> implements ICartItemDAO {
     }
 
     // --- CÁC HÀM BẮT BUỘC TỪ IGENERICDAO ---
-
     @Override
     public List<CartItem> findAll() {
         return query("SELECT * FROM CartItems");
@@ -55,7 +53,9 @@ public class CartItemDAO extends AbstractDAO<CartItem> implements ICartItemDAO {
     @Override
     public int insert(CartItem item) {
         String sql = "INSERT INTO CartItems (cart_id, food_item_id, quantity, unit_price_snapshot, note) VALUES (?, ?, ?, ?, ?)";
-        return update(sql, item.getCartId(), item.getFoodItemId(), item.getQuantity(), item.getUnitPriceSnapshot(), item.getNote());
+        String safeNote = (item.getNote() == null) ? "" : item.getNote();
+
+        return update(sql, item.getCartId(), item.getFoodItemId(), item.getQuantity(), item.getUnitPriceSnapshot(), safeNote);
     }
 
     @Override
@@ -66,7 +66,6 @@ public class CartItemDAO extends AbstractDAO<CartItem> implements ICartItemDAO {
 
     @Override
     public boolean delete(int id) {
-        // Khác với Cart, CartItem khi bị khách xóa khỏi giỏ hàng thì ta xóa thật (Hard Delete) luôn cho nhẹ DB
         String sql = "DELETE FROM CartItems WHERE id = ?";
         return update(sql, id) > 0;
     }

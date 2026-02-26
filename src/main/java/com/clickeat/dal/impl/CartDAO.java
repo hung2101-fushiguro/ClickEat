@@ -28,6 +28,12 @@ public class CartDAO extends AbstractDAO<Cart> implements ICartDAO {
         } else {
             cart.setGuestId(null);
         }
+        int merchantId = rs.getInt("merchant_user_id");
+        if (!rs.wasNull()) {
+            cart.setMerchantUserId(merchantId);
+        } else {
+            cart.setMerchantUserId(0); // Nếu null thì gán là 0
+        }
 
         cart.setStatus(rs.getString("status"));
         cart.setCreatedAt(rs.getTimestamp("created_at"));

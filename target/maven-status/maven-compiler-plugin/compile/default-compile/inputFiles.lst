@@ -1,6 +1,7 @@
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\controller\auth\LoginServlet.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\controller\auth\RegisterServlet.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\config\DBContext.java
+E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\controller\web\CheckoutServlet.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\impl\CartDAO.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\model\PaymentTransaction.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\model\User.java

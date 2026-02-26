@@ -22,6 +22,10 @@ public class FoodItemDAO extends AbstractDAO<FoodItem> implements IFoodItemDAO {
         food.setFried(rs.getBoolean("is_fried"));
         food.setCreatedAt(rs.getTimestamp("created_at"));
         food.setUpdatedAt(rs.getTimestamp("updated_at"));
+        food.setCalories(rs.getInt("calories"));
+        food.setProteinG(rs.getDouble("protein_g"));
+        food.setCarbsG(rs.getDouble("carbs_g"));
+        food.setFatG(rs.getDouble("fat_g"));
         return food;
     }
 
