@@ -9,10 +9,11 @@ public class User {
     private String passwordHash;
     private String role;
     private String status;
+    private String avatarUrl;
     private Timestamp createdAt;
     public User() {
     }
-    public User(int id, String fullName, String email, String phone, String passwordHash, String role, String status, Timestamp createdAt) {
+    public User(int id, String fullName, String email, String phone, String passwordHash, String role, String status, String avatarUrl, Timestamp createdAt) {
         this.id = id;
         this.fullName = fullName;
         this.email = email;
@@ -20,6 +21,7 @@ public class User {
         this.passwordHash = passwordHash;
         this.role = role;
         this.status = status;
+        this.avatarUrl = avatarUrl;
         this.createdAt = createdAt;
     }
     public int getId() {
@@ -63,6 +65,12 @@ public class User {
     }
     public void setStatus(String status) {
         this.status = status;
+    }
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
     }
     public Timestamp getCreatedAt() {
         return createdAt;

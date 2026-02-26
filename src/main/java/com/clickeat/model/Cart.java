@@ -23,10 +23,10 @@ public class Cart {
     public void setId(int id) {
         this.id = id;
     }
-    public int getCustomerUserId() {
+    public Integer getCustomerUserId() {
         return customerUserId;
     }
-    public void setCustomerUserId(int customerUserId) {
+    public void setCustomerUserId(Integer customerUserId) {
         this.customerUserId = customerUserId;
     }
     public String getGuestId() {

@@ -16,15 +16,9 @@ public class DashboardServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         
-        HttpSession session = request.getSession(false);
-        User user = (session != null) ? (User) session.getAttribute("account") : null;
-
-        // Bảo mật: Phải đăng nhập VÀ phải là ADMIN mới được vào
-        if (user == null || !"ADMIN".equals(user.getRole())) {
-            response.sendRedirect("../login"); // Quay ra ngoài login
-            return;
-        }
-
+        // Không cần check session hay Role ở đây nữa vì Filter đã chặn ngoài cửa rồi.
+        // Cứ lọt được vào hàm này nghĩa là CHẮC CHẮN 100% là Admin hợp lệ.
+        
         request.getRequestDispatcher("/views/admin/dashboard.jsp").forward(request, response);
     }
 }
