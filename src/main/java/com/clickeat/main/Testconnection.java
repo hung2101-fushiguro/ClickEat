@@ -1,13 +1,15 @@
 package com.clickeat.main;
 
+import com.clickeat.dal.impl.OrderDAO;
 import com.clickeat.dal.impl.UserDAO;
+import com.clickeat.model.Order;
 import com.clickeat.model.User;
 import java.util.List;
 
 public class Testconnection {
     public static void main(String[] args) {
         UserDAO userDAO = new UserDAO();
-
+        OrderDAO orDAO = new OrderDAO();
         // 1. Test hàm lấy tất cả
         List<User> list = userDAO.findAll();
         System.out.println("🔹 Tổng số user tìm thấy: " + list.size());
@@ -25,5 +27,7 @@ public class Testconnection {
         } else {
             System.out.println("❌ Đăng nhập THẤT BẠI! Kiểm tra lại code UserDAO hoặc dữ liệu SQL.");
         }
+        List<Order> listorder = orDAO.findAll();
+        System.out.println("Order:" + listorder.size());
     }
 }

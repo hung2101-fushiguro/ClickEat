@@ -13,14 +13,12 @@ public class MerchantProfile {
     private String wardName;
     private double latitude;
     private double longitude;
-    private Boolean isDefault;
-    private String note;
     private String status;
     private Timestamp createdAt;
     private Timestamp updatedAt;
     public MerchantProfile() {
     }
-    public MerchantProfile(int userId, String shopName, String shopPhone, String shopAddressLine, String provinceCode, String provinceName, String districtCode, String districtName, String wardCode, String wardName, double latitude, double longitude, Boolean isDefault, String note, String status, Timestamp createdAt, Timestamp updatedAt) {
+    public MerchantProfile(int userId, String shopName, String shopPhone, String shopAddressLine, String provinceCode, String provinceName, String districtCode, String districtName, String wardCode, String wardName, double latitude, double longitude, String status, Timestamp createdAt, Timestamp updatedAt) {
         this.userId = userId;
         this.shopName = shopName;
         this.shopPhone = shopPhone;
@@ -33,8 +31,6 @@ public class MerchantProfile {
         this.wardName = wardName;
         this.latitude = latitude;
         this.longitude = longitude;
-        this.isDefault = isDefault;
-        this.note = note;
         this.status = status;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -110,18 +106,6 @@ public class MerchantProfile {
     }
     public void setLongitude(double longitude) {
         this.longitude = longitude;
-    }
-    public Boolean getIsDefault() {
-        return isDefault;
-    }
-    public void setIsDefault(Boolean isDefault) {
-        this.isDefault = isDefault;
-    }
-    public String getNote() {
-        return note;
-    }
-    public void setNote(String note) {
-        this.note = note;
     }
     public String getStatus() {
         return status;
