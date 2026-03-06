@@ -5,6 +5,8 @@ public class ShipperProfile {
     private int id;
     private int userId;
     private String vehicleType;
+    private String vehicleName;
+    private String licensePlate;
     private String status;
     private Timestamp createdAt;
     public ShipperProfile() {
@@ -34,6 +36,10 @@ public class ShipperProfile {
     public void setVehicleType(String vehicleType) {
         this.vehicleType = vehicleType;
     }
+    public String getVehicleName() { return vehicleName; }
+    public void setVehicleName(String vehicleName) { this.vehicleName = vehicleName; }
+    public String getLicensePlate() { return licensePlate; }
+    public void setLicensePlate(String licensePlate) { this.licensePlate = licensePlate; }
     public String getStatus() {
         return status;
     }

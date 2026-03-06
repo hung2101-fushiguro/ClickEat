@@ -12,6 +12,10 @@ public class FoodItem {
     private String imageUrl;
     private boolean isAvailable;
     private boolean isFried;
+    private int calories;
+    private double proteinG;
+    private double carbsG;
+    private double fatG;
     private Timestamp createdAt;
     private Timestamp updatedAt;
     public FoodItem() {
@@ -95,4 +99,12 @@ public class FoodItem {
     public void setUpdatedAt(Timestamp updatedAt) {
         this.updatedAt = updatedAt;
     }
+    public int getCalories() { return calories; }
+    public void setCalories(int calories) { this.calories = calories; }
+    public double getProteinG() { return proteinG; }
+    public void setProteinG(double proteinG) { this.proteinG = proteinG; }
+    public double getCarbsG() { return carbsG; }
+    public void setCarbsG(double carbsG) { this.carbsG = carbsG; }
+    public double getFatG() { return fatG; }
+    public void setFatG(double fatG) { this.fatG = fatG; }
 }

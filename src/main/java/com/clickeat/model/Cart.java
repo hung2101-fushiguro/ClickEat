@@ -2,17 +2,19 @@ package com.clickeat.model;
 import java.sql.Timestamp;
 public class Cart {
     private int id;
-    private int customerUserId;
+    private Integer customerUserId;
     private String guestId;
+    private Integer merchantUserId;
     private String status;
     private Timestamp createdAt;
     private Timestamp updatedAt;
     public Cart() {
     }
-    public Cart(int id, int customerUserId, String guestId, String status, Timestamp createdAt, Timestamp updatedAt) {
+    public Cart(int id, Integer customerUserId, String guestId, Integer merchantUserId, String status, Timestamp createdAt, Timestamp updatedAt) {
         this.id = id;
         this.customerUserId = customerUserId;
         this.guestId = guestId;
+        this.merchantUserId = merchantUserId;
         this.status = status;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -23,11 +25,17 @@ public class Cart {
     public void setId(int id) {
         this.id = id;
     }
-    public int getCustomerUserId() {
+    public Integer getCustomerUserId() {
         return customerUserId;
     }
-    public void setCustomerUserId(int customerUserId) {
+    public void setCustomerUserId(Integer customerUserId) {
         this.customerUserId = customerUserId;
+    }
+    public Integer getMerchantUserId() {
+        return merchantUserId;
+    }
+    public void setMerchantUserId(Integer merchantUserId) {
+        this.merchantUserId = merchantUserId;
     }
     public String getGuestId() {
         return guestId;
