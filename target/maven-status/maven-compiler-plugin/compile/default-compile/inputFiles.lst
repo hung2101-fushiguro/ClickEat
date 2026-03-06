@@ -4,6 +4,11 @@ C:\Users\ASUS\Desktop\Subject_Project\ClickEat\src\main\java\com\clickeat\contro
 C:\Users\ASUS\Desktop\Subject_Project\ClickEat\src\main\java\com\clickeat\controller\auth\LoginServlet.java
 C:\Users\ASUS\Desktop\Subject_Project\ClickEat\src\main\java\com\clickeat\controller\auth\LogoutServlet.java
 C:\Users\ASUS\Desktop\Subject_Project\ClickEat\src\main\java\com\clickeat\controller\auth\RegisterServlet.java
+C:\Users\ASUS\Desktop\Subject_Project\ClickEat\src\main\java\com\clickeat\controller\merchant\MerchantCatalogServlet.java
+C:\Users\ASUS\Desktop\Subject_Project\ClickEat\src\main\java\com\clickeat\controller\merchant\MerchantDashboardServlet.java
+C:\Users\ASUS\Desktop\Subject_Project\ClickEat\src\main\java\com\clickeat\controller\merchant\MerchantLoginServlet.java
+C:\Users\ASUS\Desktop\Subject_Project\ClickEat\src\main\java\com\clickeat\controller\merchant\MerchantLogoutServlet.java
+C:\Users\ASUS\Desktop\Subject_Project\ClickEat\src\main\java\com\clickeat\controller\merchant\MerchantOrdersServlet.java
 C:\Users\ASUS\Desktop\Subject_Project\ClickEat\src\main\java\com\clickeat\controller\shipper\ShipperDashboardServlet.java
 C:\Users\ASUS\Desktop\Subject_Project\ClickEat\src\main\java\com\clickeat\controller\shipper\ShipperOrderDetailServlet.java
 C:\Users\ASUS\Desktop\Subject_Project\ClickEat\src\main\java\com\clickeat\controller\shipper\ShipperOrderTrackingServlet.java
@@ -44,6 +49,7 @@ C:\Users\ASUS\Desktop\Subject_Project\ClickEat\src\main\java\com\clickeat\dao\Vo
 C:\Users\ASUS\Desktop\Subject_Project\ClickEat\src\main\java\com\clickeat\filter\AdminFilter.java
 C:\Users\ASUS\Desktop\Subject_Project\ClickEat\src\main\java\com\clickeat\filter\CorsFilter.java
 C:\Users\ASUS\Desktop\Subject_Project\ClickEat\src\main\java\com\clickeat\filter\JwtAuthFilter.java
+C:\Users\ASUS\Desktop\Subject_Project\ClickEat\src\main\java\com\clickeat\filter\MerchantAuthFilter.java
 C:\Users\ASUS\Desktop\Subject_Project\ClickEat\src\main\java\com\clickeat\main\Testconnection.java
 C:\Users\ASUS\Desktop\Subject_Project\ClickEat\src\main\java\com\clickeat\model\Address.java
 C:\Users\ASUS\Desktop\Subject_Project\ClickEat\src\main\java\com\clickeat\model\Cart.java

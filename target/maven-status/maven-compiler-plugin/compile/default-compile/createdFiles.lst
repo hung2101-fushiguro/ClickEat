@@ -1,8 +1,8 @@
 com\clickeat\controller\shipper\ShipperDashboardServlet.class
 com\clickeat\config\DBContext.class
 com\clickeat\controller\admin\DashboardServlet.class
-com\clickeat\controller\shipper\ShipperOrderTrackingServlet.class
-com\clickeat\controller\auth\LoginServlet.class
 com\clickeat\controller\auth\RegisterServlet.class
 com\clickeat\controller\auth\LogoutServlet.class
 com\clickeat\controller\shipper\ShipperOrderDetailServlet.class
+com\clickeat\controller\shipper\ShipperOrderTrackingServlet.class
+com\clickeat\controller\auth\LoginServlet.class

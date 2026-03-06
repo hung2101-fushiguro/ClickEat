@@ -3,6 +3,7 @@ package com.clickeat.model;
 import java.sql.Timestamp;
 
 public class FoodItem {
+
     private int id;
     private int merchantUserId;
     private int categoryId;
@@ -18,8 +19,10 @@ public class FoodItem {
     private double fatG;
     private Timestamp createdAt;
     private Timestamp updatedAt;
+
     public FoodItem() {
     }
+
     public FoodItem(int id, int merchantUserId, int categoryId, String name, String description, double price, String imageUrl, boolean isAvailable, boolean isFried, Timestamp createdAt, Timestamp updatedAt) {
         this.id = id;
         this.merchantUserId = merchantUserId;
@@ -33,78 +36,124 @@ public class FoodItem {
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
+
     public int getId() {
         return id;
     }
+
     public void setId(int id) {
         this.id = id;
     }
+
     public int getMerchantUserId() {
         return merchantUserId;
     }
+
     public void setMerchantUserId(int merchantUserId) {
         this.merchantUserId = merchantUserId;
     }
+
     public int getCategoryId() {
         return categoryId;
     }
+
     public void setCategoryId(int categoryId) {
         this.categoryId = categoryId;
     }
+
     public String getName() {
         return name;
     }
+
     public void setName(String name) {
         this.name = name;
     }
+
     public String getDescription() {
         return description;
     }
+
     public void setDescription(String description) {
         this.description = description;
     }
+
     public double getPrice() {
         return price;
     }
+
     public void setPrice(double price) {
         this.price = price;
     }
+
     public String getImageUrl() {
         return imageUrl;
     }
+
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
     }
+
     public boolean isAvailable() {
         return isAvailable;
     }
+
     public void setAvailable(boolean available) {
         isAvailable = available;
     }
+
     public boolean isFried() {
         return isFried;
     }
+
     public void setFried(boolean fried) {
         isFried = fried;
     }
+
     public Timestamp getCreatedAt() {
         return createdAt;
     }
+
     public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
     }
+
     public Timestamp getUpdatedAt() {
         return updatedAt;
     }
+
     public void setUpdatedAt(Timestamp updatedAt) {
         this.updatedAt = updatedAt;
     }
-    public int getCalories() { return calories; }
-    public void setCalories(int calories) { this.calories = calories; }
-    public double getProteinG() { return proteinG; }
-    public void setProteinG(double proteinG) { this.proteinG = proteinG; }
-    public double getCarbsG() { return carbsG; }
-    public void setCarbsG(double carbsG) { this.carbsG = carbsG; }
-    public double getFatG() { return fatG; }
-    public void setFatG(double fatG) { this.fatG = fatG; }
+
+    public int getCalories() {
+        return calories;
+    }
+
+    public void setCalories(int calories) {
+        this.calories = calories;
+    }
+
+    public double getProteinG() {
+        return proteinG;
+    }
+
+    public void setProteinG(double proteinG) {
+        this.proteinG = proteinG;
+    }
+
+    public double getCarbsG() {
+        return carbsG;
+    }
+
+    public void setCarbsG(double carbsG) {
+        this.carbsG = carbsG;
+    }
+
+    public double getFatG() {
+        return fatG;
+    }
+
+    public void setFatG(double fatG) {
+        this.fatG = fatG;
+    }
 }
