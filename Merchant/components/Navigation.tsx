@@ -11,11 +11,18 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentScreen, onNavigate, isOpen, onClose }) => {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(getAvatarUrl());
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     const handler = (e: Event) => setAvatarUrl((e as CustomEvent).detail);
     window.addEventListener('ce:avatarUpdated', handler);
     return () => window.removeEventListener('ce:avatarUpdated', handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: Event) => setPendingCount((e as CustomEvent).detail ?? 0);
+    window.addEventListener('ce:pendingOrders', handler);
+    return () => window.removeEventListener('ce:pendingOrders', handler);
   }, []);
 
   const menuItems = [
@@ -79,9 +86,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentScreen, onNavigate, isO
           onClose();
         }
       }
-                className = {`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${isActive
-          ? 'bg-primary/10 text-primary shadow-sm'
-          : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                className = {`w-full flex items-center gap-3 py-3 pr-4 rounded-xl text-sm font-semibold transition-all duration-200 ${isActive
+          ? 'bg-primary/10 text-primary pl-[13px] border-l-[3px] border-primary rounded-l-none shadow-sm'
+          : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 pl-4 border-l-[3px] border-transparent'
           }`}
       >
       <span className={ `material-symbols-outlined ${isActive ? 'fill' : ''}` }>
@@ -92,6 +99,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentScreen, onNavigate, isO
   item.id === Screen.CHAT && (
     <span className="ml-auto bg-red-500 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full shadow-sm" > 3 </span>
                 )
+}
+{
+  item.id === Screen.ORDERS && pendingCount > 0 && (
+    <span className="ml-auto bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm animate-pulse" > { pendingCount } </span>
+  )
 }
 </button>
             )
@@ -369,9 +381,17 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentScreen, onNavigate,
     currentScreen === Screen.ORDER_DETAILS ||
     currentScreen === Screen.REFUND;
 
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    const handler = (e: Event) => setPendingCount((e as CustomEvent).detail ?? 0);
+    window.addEventListener('ce:pendingOrders', handler);
+    return () => window.removeEventListener('ce:pendingOrders', handler);
+  }, []);
+
   const items: { id: Screen; icon: string; label: string; active?: boolean; badge?: number }[] = [
     { id: Screen.DASHBOARD, icon: 'dashboard', label: 'Tổng quan' },
-    { id: Screen.ORDERS, icon: 'shopping_bag', label: 'Đơn hàng', active: isOrdersActive },
+    { id: Screen.ORDERS, icon: 'shopping_bag', label: 'Đơn hàng', active: isOrdersActive, badge: pendingCount },
     { id: Screen.MENU, icon: 'restaurant_menu', label: 'Thực đơn' },
     { id: Screen.CHAT, icon: 'chat', label: 'Tin nhắn', badge: 3 },
   ];

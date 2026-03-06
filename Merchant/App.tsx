@@ -12,6 +12,7 @@ import { Settings } from './screens/Settings';
 import { Refund } from './screens/Refund';
 import { Chat } from './screens/Chat';
 import { isLoggedIn, clearSession } from './api';
+import { Toast } from './components/Toast';
 
 const SCREEN_KEY = 'ce_screen';
 const AUTH_SCREENS = new Set<Screen>([
@@ -88,8 +89,9 @@ export default function App() {
 
   return (
     <div className= "flex bg-[#f8f7f5] h-full w-full text-slate-900" >
-    <Sidebar 
-        currentScreen={ currentScreen }
+    <Toast />
+    < Sidebar
+  currentScreen = { currentScreen }
   onNavigate = { handleNavigate }
   isOpen = { isMobileMenuOpen }
   onClose = {() => setIsMobileMenuOpen(false)

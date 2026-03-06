@@ -35,6 +35,8 @@ export const Onboarding: React.FC<{ screen: Screen; onNavigate: (s: Screen) => v
   // registration form fields
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
+  // password visibility toggle
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (screen !== Screen.LOGIN) return;
@@ -313,14 +315,24 @@ if (screen === Screen.LOGIN) {
   Quên mật khẩu ?
     </button>
     </div>
-    < input
-                  type = "password"
+    < div className = "relative" >
+      <input
+        type={ showPassword ? 'text' : 'password' }
 value = { password }
 onChange = { e => setPassword(e.target.value) }
 placeholder = "..."
-className = "w-full h-12 px-4 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-gray-400"
+className = "w-full h-12 px-4 pr-12 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 focus:bg-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-gray-400"
   />
-  </div>
+  <button
+        type="button"
+onClick = {() => setShowPassword(v => !v)}
+className = "absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors"
+tabIndex = {- 1}
+      >
+  <span className="material-symbols-outlined text-xl" > { showPassword? 'visibility_off': 'visibility' } </span>
+    </button>
+    </>
+    </div>
 {
   error && (
     <p className="text-red-500 text-sm font-medium flex items-center gap-1" >

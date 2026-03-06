@@ -45,7 +45,7 @@ const BE_TO_UI: Record<string, Order['status']> = {
 // Maps the *next* UI status (what the button targets) → backend status value
 const UI_TO_BE: Record<string, string> = {
   Preparing: 'MERCHANT_ACCEPTED',    // "Chấp nhận" / "Nhận đơn & Nấu"
-  Ready:     'READY_FOR_PICKUP',     // "Báo Sẵn sàng"
+  Ready: 'READY_FOR_PICKUP',     // "Báo Sẵn sàng"
   Cancelled: 'CANCELLED',            // "Từ chối"
 };
 
@@ -79,13 +79,24 @@ export const OrderManagement: React.FC<OrderManagementProps> = ({ onNavigate, vi
     setLoading(true);
     try {
       const res = await getOrders(undefined, 1, 50);
-      setOrders((res.items || []).map(mapOrder));
+      const mapped = (res.items || []).map(mapOrder);
+      setOrders(mapped);
+      window.dispatchEvent(new CustomEvent('ce:pendingOrders', {
+        detail: mapped.filter(o => o.status === 'New').length
+      }));
     } catch {
       setOrders([]);
     } finally {
       setLoading(false);
     }
   }, []);
+
+  // Auto-refresh every 30 seconds when in list view
+  useEffect(() => {
+    if (view !== 'LIST') return;
+    const interval = setInterval(loadOrders, 30000);
+    return () => clearInterval(interval);
+  }, [view, loadOrders]);
 
   useEffect(() => {
     if (view === 'LIST') {
@@ -382,10 +393,11 @@ onClick = {(e) => { e.stopPropagation(); handleStatusChange(order.rawId, 'Prepar
                   )}
 {
   order.status === 'Ready' && (
-    <span className="w-full md:w-auto px-4 py-2 rounded-lg bg-green-50 text-green-700 border border-green-200 font-semibold text-sm text-center">
+    <span className="w-full md:w-auto px-4 py-2 rounded-lg bg-green-50 text-green-700 border border-green-200 font-semibold text-sm text-center" >
       Chờ giao hàng
-    </span>
-  )}
+        </span>
+  )
+}
 </div>
   </div>
             ))

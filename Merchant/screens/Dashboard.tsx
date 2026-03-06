@@ -29,9 +29,27 @@ export const Dashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className= "flex items-center justify-center h-full" >
-      <span className="material-symbols-outlined animate-spin text-4xl text-primary" > progress_activity </span>
-        </div>
+      <div className= "p-4 md:p-8 max-w-7xl mx-auto space-y-6 md:space-y-8" >
+      <div className="h-9 w-80 bg-gray-200 rounded-xl animate-pulse" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6" >
+        {
+          [...Array(4)].map((_, i) => (
+            <div key= { i } className = "bg-white p-6 rounded-2xl border border-gray-200 space-y-4" >
+            <div className="w-12 h-12 bg-gray-200 rounded-xl animate-pulse" />
+          <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
+          <div className="h-7 bg-gray-200 rounded animate-pulse w-1/2" />
+          </div>
+          ))
+        }
+          </div>
+          < div className = "grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8" >
+            <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-200 h-80 animate-pulse" />
+              <div className="space-y-6" >
+                <div className="bg-white p-6 rounded-2xl border border-gray-200 h-48 animate-pulse" />
+                  <div className="bg-gray-200 rounded-2xl h-36 animate-pulse" />
+                    </div>
+                    </div>
+                    </div>
     );
   }
 
@@ -67,7 +85,7 @@ return (
   <div className= "p-4 md:p-8 max-w-7xl mx-auto space-y-6 md:space-y-8" >
   <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4" >
     <div>
-    <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight" > Chào buổi sáng, { shopName }! 👋</h1>
+    <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight" > {(() => { const h = new Date().getHours(); return h < 12 ? 'Chào buổi sáng' : h < 18 ? 'Chào buổi chiều' : 'Chào buổi tối'; })()}, { shopName } ! 👋</h1>
       < p className = "text-gray-500 mt-1 text-sm md:text-base" > Đây là tình hình kinh doanh hôm nay của bạn.</p>
         </div>
         </div>
@@ -75,14 +93,14 @@ return (
         < div className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6" >
         {
           [
-          { label: 'Doanh thu hôm nay', value: formatCurrency(stats?.todayRevenue ?? 0), icon: 'payments', color: 'text-primary', bg: 'bg-orange-50' },
-          { label: 'Đơn hàng hôm nay', value: String(stats?.todayOrders ?? 0), icon: 'receipt_long', color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'Giá trị TB đơn', value: formatCurrency(avgOrder), icon: 'data_usage', color: 'text-purple-600', bg: 'bg-purple-50' },
-          { label: 'Đánh giá TB', value: stats?.avgRating != null ? stats.avgRating.toFixed(1) : '—', icon: 'star', color: 'text-yellow-500', bg: 'bg-yellow-50' },
+            { label: 'Doanh thu hôm nay', value: formatCurrency(stats?.todayRevenue ?? 0), icon: 'payments', color: 'text-primary', bg: 'bg-orange-50' },
+            { label: 'Đơn hàng hôm nay', value: String(stats?.todayOrders ?? 0), icon: 'receipt_long', color: 'text-blue-600', bg: 'bg-blue-50' },
+            { label: 'Giá trị TB đơn', value: formatCurrency(avgOrder), icon: 'data_usage', color: 'text-purple-600', bg: 'bg-purple-50' },
+            { label: 'Đánh giá TB', value: stats?.avgRating != null ? stats.avgRating.toFixed(1) : '—', icon: 'star', color: 'text-yellow-500', bg: 'bg-yellow-50' },
         ].map((stat, i) => (
-            <div key= { i } className = "bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all group" >
-            <div className="flex justify-between items-start mb-4" >
-          <div className={`p-3 rounded-xl ${stat.bg} ${stat.color} group-hover:scale-110 transition-transform`} >
+              <div key= { i } className = "bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all group" >
+              <div className="flex justify-between items-start mb-4" >
+            <div className={`p-3 rounded-xl ${stat.bg} ${stat.color} group-hover:scale-110 transition-transform`} >
           <span className="material-symbols-outlined" > { stat.icon } </span>
             </div>
             </div>
@@ -98,7 +116,7 @@ return (
         <h3 className="font-semibold text-lg text-gray-900" > Biểu đồ Doanh thu(7 ngày) </h3>
           </div>
           < div className = "h-80 w-full flex-1" >
-            <ResponsiveContainer width="100%" height={300} >
+            <ResponsiveContainer width="100%" height = { 300} >
               <AreaChart data={ chartData } margin = {{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                 <linearGradient id="colorSales" x1 = "0" y1 = "0" x2 = "0" y2 = "1" >
