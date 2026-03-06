@@ -20,6 +20,7 @@ interface Order {
   rawId: number;      // DB id for API calls
   user: string;
   time: string;
+  createdAt: number;  // ms timestamp for countdown
   items: OrderItem[];
   total: number;
   status: 'New' | 'Preparing' | 'Ready' | 'Completed' | 'Cancelled';
@@ -27,6 +28,27 @@ interface Order {
   phone?: string;
   address?: string;
 }
+
+/** Per-card countdown — counts up from 0, turns red after 5 min */
+const OrderTimer: React.FC<{ createdAt: number; status: Order['status'] }> = ({ createdAt, status }) => {
+  const [elapsed, setElapsed] = useState(() => Math.floor((Date.now() - createdAt) / 1000));
+  useEffect(() => {
+    if (status !== 'New' && status !== 'Preparing') return;
+    const t = setInterval(() => setElapsed(Math.floor((Date.now() - createdAt) / 1000)), 1000);
+    return () => clearInterval(t);
+  }, [createdAt, status]);
+  const mins = Math.floor(elapsed / 60);
+  const secs = elapsed % 60;
+  const isLate = elapsed >= 300; // 5 minutes
+  if (status !== 'New' && status !== 'Preparing') return null;
+  return (
+    <span className= {`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${isLate ? 'bg-red-100 text-red-600 animate-pulse' : 'bg-gray-100 text-gray-600'}`
+}>
+  <span className="material-symbols-outlined text-[12px]" > timer </span>
+{ String(mins).padStart(2, '0') }: { String(secs).padStart(2, '0') }
+</span>
+  );
+};
 
 const BE_TO_UI: Record<string, Order['status']> = {
   CREATED: 'New',
@@ -61,6 +83,7 @@ function mapOrder(o: ApiOrder): Order {
     phone: o.receiverPhone,
     address: o.deliveryAddressLine,
     time: timeStr,
+    createdAt: createdMs,
     items: (o.items || []).map(it => ({ qty: it.quantity, name: it.itemNameSnapshot, price: it.unitPriceSnapshot ?? 0 })),
     total: o.totalAmount,
     status,
@@ -350,7 +373,8 @@ className = {`flex-1 py-4 px-6 text-sm font-semibold whitespace-nowrap border-b-
     < span className = {`text-[10px] font-semibold px-2 py-0.5 rounded uppercase border ${statusMap[order.status].color}`}>
     { statusMap[order.status].label }
     </span>
-    </div>
+  < OrderTimer createdAt = { order.createdAt } status = { order.status } />
+  </div>
   < p className = "text-gray-500 text-sm mb-3" >
   Tổng: <span className="font-semibold text-gray-900" > { formatPrice(order.total)}</span> • {order.time}
     </p>

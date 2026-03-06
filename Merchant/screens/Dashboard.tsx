@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState, useMemo } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { getDashboard, DashboardStats, getShopName } from '../api';
 
@@ -64,10 +64,12 @@ if (error) {
     );
   }
 
+const [chartRange, setChartRange] = useState<'7d' | '30d'>('7d');
 const shopName = getShopName() || 'ClickEat Merchant';
 const avgOrder = stats && stats.todayOrders > 0
   ? stats.todayRevenue / stats.todayOrders
   : 0;
+const isNewShop = !stats?.todayOrders && !stats?.topItems?.length;
 
 const statusLabel: Record<string, { text: string; color: string }> = {
   CREATED: { text: 'Mới', color: 'bg-blue-100 text-blue-700' },
@@ -83,60 +85,106 @@ const statusLabel: Record<string, { text: string; color: string }> = {
 
 return (
   <div className= "p-4 md:p-8 max-w-7xl mx-auto space-y-6 md:space-y-8" >
-  <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4" >
-    <div>
-    <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight" > {(() => { const h = new Date().getHours(); return h < 12 ? 'Chào buổi sáng' : h < 18 ? 'Chào buổi chiều' : 'Chào buổi tối'; })()}, { shopName } ! 👋</h1>
-      < p className = "text-gray-500 mt-1 text-sm md:text-base" > Đây là tình hình kinh doanh hôm nay của bạn.</p>
-        </div>
-        </div>
+  { isNewShop && (
+    <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border border-orange-200 rounded-2xl p-6" >
+      <div className="flex items-center gap-3 mb-4" >
+        <span className="material-symbols-outlined text-primary text-3xl" > rocket_launch </span>
+          < div >
+          <h3 className="font-bold text-gray-900" > Bắt đầu với ClickEat </h3>
+            < p className = "text-sm text-gray-500" > Hoàn thành các bước để sẵn sàng nhận đơn hàng </p>
+              </div>
+              </div>
+              < div className = "grid grid-cols-1 md:grid-cols-2 gap-3" >
+              {
+                [
+                { label: 'Thêm ảnh đại diện cửa hàng', icon: 'store', done: false, screen: 'SETTINGS' },
+                { label: 'Thêm ít nhất 5 món vào thực đơn', icon: 'restaurant_menu', done: false, screen: 'MENU' },
+                { label: 'Kiểm tra thông tin địa chỉ', icon: 'location_on', done: false, screen: 'SETTINGS' },
+                { label: 'Cài đặt giờ mở cửa', icon: 'schedule', done: false, screen: 'SETTINGS' },
+        ].map((step, i) => (
+                  <div key= { i } className = {`flex items-center gap-3 p-3 rounded-xl border bg-white ${step.done ? 'border-green-200 opacity-60' : 'border-gray-200 hover:border-primary cursor-pointer'
+                    }`} >
+                <span className={
+                  `material-symbols-outlined text-xl ${step.done ? 'text-green-500' : 'text-gray-400'
+                  }`
+}> { step.done ? 'check_circle' : step.icon } </span>
+  < span className = {`text-sm font-medium ${step.done ? 'line-through text-gray-400' : 'text-gray-700'}`}> { step.label } </span>
+    </div>
+        ))}
+</div>
+  </div>
+  )}
+<div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4" >
+  <div>
+  <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight" > {(() => { const h = new Date().getHours(); return h < 12 ? 'Chào buổi sáng' : h < 18 ? 'Chào buổi chiều' : 'Chào buổi tối'; })()}, { shopName } ! 👋</h1>
+    < p className = "text-gray-500 mt-1 text-sm md:text-base" > Đây là tình hình kinh doanh hôm nay của bạn.</p>
+      </div>
+      </div>
 
-        < div className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6" >
-        {
-          [
-            { label: 'Doanh thu hôm nay', value: formatCurrency(stats?.todayRevenue ?? 0), icon: 'payments', color: 'text-primary', bg: 'bg-orange-50' },
-            { label: 'Đơn hàng hôm nay', value: String(stats?.todayOrders ?? 0), icon: 'receipt_long', color: 'text-blue-600', bg: 'bg-blue-50' },
-            { label: 'Giá trị TB đơn', value: formatCurrency(avgOrder), icon: 'data_usage', color: 'text-purple-600', bg: 'bg-purple-50' },
-            { label: 'Đánh giá TB', value: stats?.avgRating != null ? stats.avgRating.toFixed(1) : '—', icon: 'star', color: 'text-yellow-500', bg: 'bg-yellow-50' },
+      < div className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6" >
+      {
+        [
+          { label: 'Doanh thu hôm nay', value: formatCurrency(stats?.todayRevenue ?? 0), icon: 'payments', color: 'text-primary', bg: 'bg-orange-50' },
+          { label: 'Đơn hàng hôm nay', value: String(stats?.todayOrders ?? 0), icon: 'receipt_long', color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: 'Giá trị TB đơn', value: formatCurrency(avgOrder), icon: 'data_usage', color: 'text-purple-600', bg: 'bg-purple-50' },
+          { label: 'Đánh giá TB', value: stats?.avgRating != null ? stats.avgRating.toFixed(1) : '—', icon: 'star', color: 'text-yellow-500', bg: 'bg-yellow-50' },
         ].map((stat, i) => (
-              <div key= { i } className = "bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all group" >
-              <div className="flex justify-between items-start mb-4" >
-            <div className={`p-3 rounded-xl ${stat.bg} ${stat.color} group-hover:scale-110 transition-transform`} >
-          <span className="material-symbols-outlined" > { stat.icon } </span>
-            </div>
-            </div>
-            < p className = "text-gray-500 text-sm font-semibold mb-1" > { stat.label } </p>
-              < h3 className = "text-2xl font-bold text-gray-900" > { stat.value } </h3>
-                </div>
+            <div key= { i } className = "bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all group" >
+            <div className="flex justify-between items-start mb-4" >
+          <div className={`p-3 rounded-xl ${stat.bg} ${stat.color} group-hover:scale-110 transition-transform`} >
+        <span className="material-symbols-outlined" > { stat.icon } </span>
+          </div>
+          </div>
+          < p className = "text-gray-500 text-sm font-semibold mb-1" > { stat.label } </p>
+            < h3 className = "text-2xl font-bold text-gray-900" > { stat.value } </h3>
+              </div>
         ))}
 </div>
 
   < div className = "grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8" >
     <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col" >
       <div className="flex justify-between items-center mb-6" >
-        <h3 className="font-semibold text-lg text-gray-900" > Biểu đồ Doanh thu(7 ngày) </h3>
+        <h3 className="font-semibold text-lg text-gray-900" > Biểu đồ Doanh thu </h3>
+          < div className = "flex bg-gray-100 rounded-lg p-0.5 gap-0.5" >
+            {(['7d', '30d'] as const).map(r => (
+              <button key= { r } onClick = {() => setChartRange(r)}
+              className = {`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${chartRange === r ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                }`}>
+                  { r === '7d' ? '7 ngày' : '30 ngày'}
+              </button>
+            ))}
+</div>
+  </div>
+{
+  chartRange === '30d' && (
+    <div className="mb-3 flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-lg" >
+      <span className="material-symbols-outlined text-blue-400 text-sm" > info </span>
+        < span className = "text-xs text-blue-600 font-medium" > Đang hiển thị 7 ngày gần nhất.Dữ liệu 30 ngày sẽ có trong phiên bản tiếp theo.</span>
           </div>
-          < div className = "h-80 w-full flex-1" >
-            <ResponsiveContainer width="100%" height = { 300} >
-              <AreaChart data={ chartData } margin = {{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <defs>
-                <linearGradient id="colorSales" x1 = "0" y1 = "0" x2 = "0" y2 = "1" >
-                  <stop offset="5%" stopColor = "#c86601" stopOpacity = { 0.2} />
-                    <stop offset="95%" stopColor = "#c86601" stopOpacity = { 0} />
-                      </linearGradient>
-                      </defs>
-                      < XAxis dataKey = "name" axisLine = { false} tickLine = { false} tick = {{ fill: '#9ca3af', fontSize: 12 }} dy = { 10} />
-                        <YAxis axisLine={ false } tickLine = { false} tick = {{ fill: '#9ca3af', fontSize: 12 }} tickFormatter = {(v) => `${(v / 1000000).toFixed(1)}M`} />
-                          < CartesianGrid strokeDasharray = "3 3" vertical = { false} stroke = "#f0f0f0" />
-                            <Tooltip contentStyle={ { borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' } } formatter = {(value: number) => [formatCurrency(value), 'Doanh thu']} />
-                              < Area type = "monotone" dataKey = "sales" stroke = "#c86601" strokeWidth = { 3} fillOpacity = { 1} fill = "url(#colorSales)" />
-                                </AreaChart>
-                                </ResponsiveContainer>
-                                </div>
-                                </div>
+      )
+}
+<div className = "h-80 w-full flex-1" >
+  <ResponsiveContainer width="100%" height = { 300} >
+    <AreaChart data={ chartData } margin = {{ top: 10, right: 10, left: 0, bottom: 0 }}>
+      <defs>
+      <linearGradient id="colorSales" x1 = "0" y1 = "0" x2 = "0" y2 = "1" >
+        <stop offset="5%" stopColor = "#c86601" stopOpacity = { 0.2} />
+          <stop offset="95%" stopColor = "#c86601" stopOpacity = { 0} />
+            </linearGradient>
+            </defs>
+            < XAxis dataKey = "name" axisLine = { false} tickLine = { false} tick = {{ fill: '#9ca3af', fontSize: 12 }} dy = { 10} />
+              <YAxis axisLine={ false } tickLine = { false} tick = {{ fill: '#9ca3af', fontSize: 12 }} tickFormatter = {(v) => `${(v / 1000000).toFixed(1)}M`} />
+                < CartesianGrid strokeDasharray = "3 3" vertical = { false} stroke = "#f0f0f0" />
+                  <Tooltip contentStyle={ { borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' } } formatter = {(value: number) => [formatCurrency(value), 'Doanh thu']} />
+                    < Area type = "monotone" dataKey = "sales" stroke = "#c86601" strokeWidth = { 3} fillOpacity = { 1} fill = "url(#colorSales)" />
+                      </AreaChart>
+                      </ResponsiveContainer>
+                      </div>
+                      </div>
 
-                                < div className = "space-y-6" >
-                                  <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm" >
-                                    <h3 className="font-semibold text-lg mb-4 text-gray-900" > Món bán chạy </h3>
+                      < div className = "space-y-6" >
+                        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm" >
+                          <h3 className="font-semibold text-lg mb-4 text-gray-900" > Món bán chạy </h3>
 {
   stats?.topItems?.length ? (
     <div className= "space-y-4" >
