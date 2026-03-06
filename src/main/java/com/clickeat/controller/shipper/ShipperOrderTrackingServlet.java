@@ -22,7 +22,7 @@ public class ShipperOrderTrackingServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
+
         User account = (User) request.getSession().getAttribute("account");
         if (account == null || !"SHIPPER".equals(account.getRole())) {
             response.sendRedirect(request.getContextPath() + "/login");
@@ -42,7 +42,7 @@ public class ShipperOrderTrackingServlet extends HttpServlet {
         if (order != null && order.getShipperUserId() == account.getId()) {
             MerchantProfileDAO merchantDAO = new MerchantProfileDAO();
             MerchantProfile merchant = merchantDAO.findById(order.getMerchantId());
-            
+
             request.setAttribute("order", order);
             request.setAttribute("merchant", merchant);
             request.getRequestDispatcher("/views/shipper/order-tracking.jsp").forward(request, response);
@@ -61,7 +61,7 @@ public class ShipperOrderTrackingServlet extends HttpServlet {
         }
 
         int orderId = Integer.parseInt(request.getParameter("orderId"));
-        String action = request.getParameter("action"); 
+        String action = request.getParameter("action");
 
         OrderDAO orderDAO = new OrderDAO();
         boolean success = false;
@@ -72,12 +72,8 @@ public class ShipperOrderTrackingServlet extends HttpServlet {
                 request.getSession().setAttribute("toastMsg", "Đã xác nhận lấy hàng! Vui lòng giao đến khách.");
             }
         } else if ("delivered".equals(action)) {
-            
-            success = orderDAO.updateOrderStatus(orderId, "DELIVERED");
-            if (success) {
-                request.getSession().setAttribute("toastMsg", "Giao hàng thành công! Đã hoàn thành đơn.");
-                // (Sau này chúng ta có thể gọi hàm cộng tiền vào ShipperWallets ở đây)
-            }
+            response.sendRedirect(request.getContextPath() + "/shipper/proof?orderId=" + orderId);
+            return;
         }
 
         // Điều hướng sau khi cập nhật

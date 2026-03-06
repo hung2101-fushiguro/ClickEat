@@ -16,12 +16,14 @@ E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\controller\admin\Da
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\interfaces\IOrderDAO.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\impl\UserDAO.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\interfaces\IMerchantProfileDAO.java
+E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\interfaces\IShipperWalletDAO.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\model\Voucher.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\impl\CartItemDAO.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\model\CustomerProfile.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\model\MerchantKYC.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\model\OrderStatusHistory.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\model\Rating.java
+E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\controller\shipper\ShipperProofServlet.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\model\ShipperAvailability.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\interfaces\IShipperDAO.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\model\OrderItem.java
@@ -42,6 +44,8 @@ E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\model\Cart.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\impl\AbstractDAO.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\controller\web\CartServlet.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\main\Testconnection.java
+E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\model\ShipperWallet.java
+E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\impl\ShipperWalletDAO.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\model\Order.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\impl\ShipperDAO.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\controller\shipper\ShipperOrderDetailServlet.java

@@ -12,7 +12,7 @@ public abstract class AbstractDAO<T> extends DBContext implements IGenericDAO<T>
     protected abstract T mapRow(ResultSet rs) throws SQLException;
 
     // Hàm SELECT chung
-    protected List<T> query(String sql, Object... params) {
+    public List<T> query(String sql, Object... params) {
         List<T> list = new ArrayList<>();
         try (Connection conn = getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -25,13 +25,13 @@ public abstract class AbstractDAO<T> extends DBContext implements IGenericDAO<T>
     }
     
     // Hàm SELECT lấy 1 dòng
-    protected T queryOne(String sql, Object... params) {
+    public T queryOne(String sql, Object... params) {
         List<T> list = query(sql, params);
         return list.isEmpty() ? null : list.get(0);
     }
 
     // Hàm INSERT/UPDATE/DELETE chung
-    protected int update(String sql, Object... params) {
+    public int update(String sql, Object... params) {
         try (Connection conn = getConnection();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             setParameter(ps, params);

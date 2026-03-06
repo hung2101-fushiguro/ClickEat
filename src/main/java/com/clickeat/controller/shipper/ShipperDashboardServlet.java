@@ -3,7 +3,9 @@ package com.clickeat.controller.shipper;
 import com.clickeat.dal.impl.MerchantProfileDAO;
 import com.clickeat.dal.impl.OrderDAO;
 import com.clickeat.dal.impl.ShipperDAO;
+import com.clickeat.dal.impl.ShipperWalletDAO;
 import com.clickeat.model.Order;
+import com.clickeat.model.ShipperWallet;
 import com.clickeat.model.User;
 import java.io.IOException;
 import java.util.List;
@@ -29,23 +31,28 @@ public class ShipperDashboardServlet extends HttpServlet {
             return;
         }
 
-        // 1. Dữ liệu tổng quan (Tạm thời Mockup)
-        request.setAttribute("currentBalance", 1500000); 
-        request.setAttribute("todayIncome", 350000);
-        request.setAttribute("weekIncome", 2100000);
         
-        // 2. Kiểm tra trạng thái Online hiện tại của Shipper
+       
+        ShipperWalletDAO walletDAO = new ShipperWalletDAO();
+        ShipperWallet wallet = walletDAO.getWalletByShipperId(account.getId());
+        double currentBalance = (wallet != null) ? wallet.getBalance() : 0;
+
+        OrderDAO orderDAO = new OrderDAO();
+        double todayIncome = orderDAO.getIncomeToday(account.getId());
+        double weekIncome = orderDAO.getIncomeThisWeek(account.getId());
+
+        request.setAttribute("currentBalance", currentBalance); 
+        request.setAttribute("todayIncome", todayIncome);
+        request.setAttribute("weekIncome", weekIncome);
+        
+        
         ShipperDAO shipperDAO = new ShipperDAO();
         boolean isOnline = shipperDAO.checkIsOnline(account.getId());
         request.setAttribute("isOnline", isOnline);
-
-        // 3. LẤY DANH SÁCH ĐƠN HÀNG TỪ DATABASE VÀ TRUYỀN SANG JSP
-        OrderDAO orderDAO = new OrderDAO();
         Order currentOrder = orderDAO.getCurrentOrderForShipper(account.getId());
         request.setAttribute("currentOrder", currentOrder);
         List<Order> availableOrders = orderDAO.getAvailableOrdersForShipper();
         request.setAttribute("availableOrders", availableOrders);
-        // 4. Truyền MerchantDAO sang để JSP lấy được tên Quán ăn
         MerchantProfileDAO merchantDAO = new MerchantProfileDAO();
         request.setAttribute("merchantDAO", merchantDAO);
 

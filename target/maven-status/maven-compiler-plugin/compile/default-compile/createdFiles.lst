@@ -28,15 +28,18 @@ com\clickeat\dal\interfaces\IMerchantProfileDAO.class
 com\clickeat\model\VoucherUsage.class
 com\clickeat\model\UserAuthProvider.class
 com\clickeat\dal\impl\MerchantProfileDAO.class
+com\clickeat\controller\shipper\ShipperProofServlet.class
 com\clickeat\dal\interfaces\IOrderDAO.class
 com\clickeat\controller\shipper\ShipperRegisterServlet.class
 com\clickeat\dal\impl\ShipperDAO.class
+com\clickeat\dal\interfaces\IShipperWalletDAO.class
 com\clickeat\controller\auth\LoginServlet.class
 com\clickeat\controller\auth\RegisterServlet.class
 com\clickeat\model\PaymentTransaction.class
 com\clickeat\model\Order.class
 com\clickeat\model\Voucher.class
 com\clickeat\model\MerchantKYC.class
+com\clickeat\model\ShipperWallet.class
 com\clickeat\main\Testconnection.class
 com\clickeat\model\UserBehaviorEvent.class
 com\clickeat\dal\interfaces\IShipperDAO.class
@@ -50,6 +53,7 @@ com\clickeat\controller\shipper\ShipperStatusServlet.class
 com\clickeat\controller\auth\LogoutServlet.class
 com\clickeat\model\Cart.class
 com\clickeat\dal\impl\CartDAO.class
+com\clickeat\dal\impl\ShipperWalletDAO.class
 com\clickeat\model\ShipperAvailability.class
 com\clickeat\controller\shipper\ShipperOrderDetailServlet.class
 com\clickeat\model\FoodItem.class
