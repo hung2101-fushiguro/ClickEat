@@ -1255,3 +1255,37 @@ BEGIN CATCH
     THROW;
 END CATCH;
 GO
+ALTER TABLE dbo.Orders
+ADD 
+    proof_image_url NVARCHAR(500) NULL; 
+GO
+CREATE TABLE dbo.ShipperWallets (
+    shipper_user_id BIGINT NOT NULL PRIMARY KEY,
+    balance         DECIMAL(18,2) NOT NULL CONSTRAINT DF_ShipperWallets_Balance DEFAULT 0,
+    updated_at      DATETIME2 NOT NULL CONSTRAINT DF_ShipperWallets_Updated DEFAULT SYSUTCDATETIME(),
+
+    CONSTRAINT FK_ShipperWallets_Shipper 
+        FOREIGN KEY (shipper_user_id) REFERENCES dbo.ShipperProfiles(user_id) ON DELETE CASCADE
+);
+GO
+
+-- Bảng Yêu cầu rút tiền
+CREATE TABLE dbo.WithdrawalRequests (
+    id                  BIGINT IDENTITY(1,1) PRIMARY KEY,
+    shipper_user_id     BIGINT        NOT NULL,
+    amount              DECIMAL(18,2) NOT NULL,
+    bank_name           NVARCHAR(100) NULL, -- Tên ngân hàng (VD: MB Bank, Vietcombank)
+    bank_account_number NVARCHAR(50)  NULL, -- Số tài khoản
+    status              NVARCHAR(20)  NOT NULL CONSTRAINT DF_WithdrawalRequests_Status DEFAULT 'PENDING', -- PENDING/APPROVED/REJECTED
+    created_at          DATETIME2     NOT NULL CONSTRAINT DF_WithdrawalRequests_Created DEFAULT SYSUTCDATETIME(),
+    processed_at        DATETIME2     NULL,
+
+    CONSTRAINT FK_WithdrawalRequests_Shipper 
+        FOREIGN KEY (shipper_user_id) REFERENCES dbo.ShipperProfiles(user_id) ON DELETE CASCADE
+);
+GO
+
+-- Cấp ví tiền (0đ) cho các shipper đang có trong hệ thống
+INSERT INTO dbo.ShipperWallets (shipper_user_id, balance)
+SELECT user_id, 0 FROM dbo.ShipperProfiles;
+GO

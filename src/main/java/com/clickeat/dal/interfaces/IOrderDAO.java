@@ -14,4 +14,6 @@ import java.util.List;
 public interface IOrderDAO extends IGenericDAO<Order> {
     List<Order> getAvailableOrdersForShipper();
     boolean claimOrder(int orderId, int shipperId);
+    Order getCurrentOrderForShipper(int shipperId);
+    public boolean updateOrderStatus(int orderId, String newStatus);
 }

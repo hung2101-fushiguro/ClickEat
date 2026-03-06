@@ -22,6 +22,7 @@ com\clickeat\model\GuestSession.class
 com\clickeat\model\Category.class
 com\clickeat\model\Address.class
 com\clickeat\model\Notification.class
+com\clickeat\controller\shipper\ShipperOrderTrackingServlet.class
 com\clickeat\dal\interfaces\ICartDAO.class
 com\clickeat\dal\interfaces\IMerchantProfileDAO.class
 com\clickeat\model\VoucherUsage.class

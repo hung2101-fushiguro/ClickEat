@@ -75,6 +75,27 @@ public class OrderDAO extends AbstractDAO<Order> implements IOrderDAO {
         String sql = "UPDATE Orders SET shipper_user_id = ?, order_status = 'DELIVERING' WHERE id = ? AND shipper_user_id IS NULL";
         return update(sql, shipperId, orderId) > 0;
     }
+    @Override
+    public Order getCurrentOrderForShipper(int shipperId) {
+        // Tìm đơn hàng của tài xế này và đang ở trạng thái Đang giao (DELIVERING)
+        String sql = "SELECT * FROM Orders WHERE shipper_user_id = ? AND order_status IN ('DELIVERING','PICKED_UP')";
+        return queryOne(sql, shipperId);
+    }
+    @Override
+    public boolean updateOrderStatus(int orderId, String newStatus) {
+        String sql;
+        if ("PICKED_UP".equals(newStatus)) {
+            // Đã lấy hàng -> Ghi lại giờ lấy
+            sql = "UPDATE Orders SET order_status = ?, picked_up_at = GETDATE() WHERE id = ?";
+        } else if ("DELIVERED".equals(newStatus)) {
+            // Giao thành công -> Ghi lại giờ giao
+            sql = "UPDATE Orders SET order_status = ?, delivered_at = GETDATE() WHERE id = ?";
+        } else {
+            sql = "UPDATE Orders SET order_status = ? WHERE id = ?";
+        }
+        return update(sql, newStatus, orderId) > 0;
+    }
+    
 
     @Override public List<Order> findAll() { return query("SELECT * FROM Orders ORDER BY created_at DESC"); }
     @Override public Order findById(int id) { return queryOne("SELECT * FROM Orders WHERE id = ?", id); }

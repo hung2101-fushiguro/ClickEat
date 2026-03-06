@@ -107,10 +107,50 @@
                             <h3 class="text-xl font-bold text-gray-900 flex items-center gap-2">
                                 <i class="fa-solid fa-radar text-green-500 animate-spin-slow"></i> Đơn hàng quanh bạn
                             </h3>
+
                             <span class="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-xs font-bold">
                                 Tìm thấy ${availableOrders.size()} đơn
                             </span>
                         </div>
+                        <c:if test="${not empty currentOrder}">
+                            <c:set var="currentMerchant" value="${merchantDAO.findById(currentOrder.merchantId)}" />
+                            <div class="bg-orange-500 rounded-2xl shadow-lg mb-8 p-1 relative overflow-hidden">
+                                <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/diagonal-stripes.png')] opacity-20"></div>
+
+                                <div class="bg-white rounded-xl p-5 relative z-10">
+                                    <div class="flex items-center gap-3 mb-4">
+                                        <span class="relative flex h-4 w-4">
+                                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                                            <span class="relative inline-flex rounded-full h-4 w-4 bg-orange-500"></span>
+                                        </span>
+                                        <h3 class="text-orange-600 font-black text-lg uppercase tracking-wider">Đơn đang thực hiện</h3>
+                                    </div>
+
+                                    <div class="flex justify-between items-center border-b border-gray-100 pb-4 mb-4">
+                                        <div>
+                                            <h4 class="font-bold text-xl text-gray-900">${currentMerchant.shopName}</h4>
+                                            <p class="text-sm text-gray-500 mt-1">Mã đơn: <span class="font-bold">${currentOrder.orderCode}</span></p>
+                                        </div>
+                                        <div class="text-right">
+                                            <p class="text-3xl font-black text-gray-900"><fmt:formatNumber value="${currentOrder.deliveryFee}" type="currency" currencySymbol="đ" maxFractionDigits="0"/></p>
+                                            <p class="text-xs text-gray-500 font-medium">Thu nhập</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex gap-3">
+                                        <a href="${pageContext.request.contextPath}/shipper/order-detail?id=${currentOrder.id}" class="flex-1 bg-orange-100 text-orange-600 hover:bg-orange-200 font-bold py-3 rounded-xl text-center transition">
+                                            Xem lại chi tiết
+                                        </a>
+                                        <a href="${pageContext.request.contextPath}/shipper/order-tracking?id=${currentOrder.id}" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl text-center transition shadow-md">
+                                            Cập nhật trạng thái
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </c:if>
+
+
+
 
                         <c:if test="${empty availableOrders}">
                             <div class="text-center py-10">

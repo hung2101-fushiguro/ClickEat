@@ -41,9 +41,10 @@ public class ShipperDashboardServlet extends HttpServlet {
 
         // 3. LẤY DANH SÁCH ĐƠN HÀNG TỪ DATABASE VÀ TRUYỀN SANG JSP
         OrderDAO orderDAO = new OrderDAO();
+        Order currentOrder = orderDAO.getCurrentOrderForShipper(account.getId());
+        request.setAttribute("currentOrder", currentOrder);
         List<Order> availableOrders = orderDAO.getAvailableOrdersForShipper();
         request.setAttribute("availableOrders", availableOrders);
-
         // 4. Truyền MerchantDAO sang để JSP lấy được tên Quán ăn
         MerchantProfileDAO merchantDAO = new MerchantProfileDAO();
         request.setAttribute("merchantDAO", merchantDAO);
