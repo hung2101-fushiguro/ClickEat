@@ -6,14 +6,25 @@ package com.clickeat.dal.interfaces;
 
 import com.clickeat.model.Order;
 import java.util.List;
+import java.util.Map;
 
 /**
  *
  * @author DELL
  */
 public interface IOrderDAO extends IGenericDAO<Order> {
+
     List<Order> getAvailableOrdersForShipper();
+
     boolean claimOrder(int orderId, int shipperId);
-    Order getCurrentOrderForShipper(int shipperId);
+
+    public List<Order> getCurrentOrdersForShipper(int shipperId);
+
+    public boolean yieldOrder(int orderId, int shipperId);
+
     public boolean updateOrderStatus(int orderId, String newStatus);
+
+    public int countDeliveredOrdersToday(int shipperId);
+
+    public Map<String, Double> getLast7DaysIncome(int shipperId);
 }

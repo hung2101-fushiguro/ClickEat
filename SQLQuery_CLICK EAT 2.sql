@@ -114,6 +114,16 @@ CREATE TABLE dbo.UserAuthProviders (
         FOREIGN KEY (user_id) REFERENCES dbo.Users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE OrderIssues (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    order_id INT NOT NULL,
+    reporter_user_id INT NOT NULL,
+    issue_type VARCHAR(50) NOT NULL,
+    description NVARCHAR(500),
+    status VARCHAR(20) DEFAULT 'PENDING',
+    created_at DATETIME DEFAULT GETDATE()
+);
+
 ALTER TABLE dbo.UserAuthProviders
 ADD CONSTRAINT CK_UserAuthProviders_Provider CHECK (provider IN (N'GOOGLE'));
 
