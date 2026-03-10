@@ -45,7 +45,7 @@ public class UserDAO extends AbstractDAO<User> implements IUserDAO {
 
     @Override
     public List<User> findByRole(String role) {
-        String sql = "SELECT * FROM Users WHERE role = ?";
+        String sql = "SELECT * FROM Users WHERE role = ? ORDER BY created_at DESC";
         return query(sql, role);
     }
 
@@ -61,6 +61,13 @@ public class UserDAO extends AbstractDAO<User> implements IUserDAO {
         String sql = "UPDATE Users SET password_hash = ?, updated_at = GETDATE() WHERE id = ?";
         // update() trả về số dòng ảnh hưởng, > 0 nghĩa là thành công
         return update(sql, newPasswordHash, userId) > 0;
+    }
+
+    @Override
+    public boolean changeUserStatus(int userId, String newStatus) {
+        String sql = "UPDATE Users SET status = ?, updated_at = GETDATE() WHERE id = ?";
+        // Giả định hàm update() của IGenericDAO trả về int (số dòng bị ảnh hưởng)
+        return update(sql, newStatus, userId) > 0;
     }
 
     @Override

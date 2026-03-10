@@ -27,4 +27,6 @@ public interface IOrderDAO extends IGenericDAO<Order> {
     public int countDeliveredOrdersToday(int shipperId);
 
     public Map<String, Double> getLast7DaysIncome(int shipperId);
+    
+    public List<Order> getHistoryOrdersForShipper(int shipperId);
 }

@@ -1,80 +1,109 @@
 package com.clickeat.model;
+
 import java.sql.Timestamp;
+
 public class MerchantKYC {
-    private int id;
-    private int merchantUserId;
+
+    private long id;
+    private long merchantUserId;
     private String businessName;
     private String businessLicenseNumber;
     private String documentUrl;
     private Timestamp submittedAt;
-    private int reviewedByAdminId;
+    private Long reviewedByAdminId;
     private String reviewStatus;
     private String reviewNote;
+    private String shopName;
+    private String shopPhone;
+
     public MerchantKYC() {
     }
-    public MerchantKYC(int id, int merchantUserId, String businessName, String businessLicenseNumber, String documentUrl, Timestamp submittedAt, int reviewedByAdminId, String reviewStatus, String reviewNote) {
-        this.id = id;
-        this.merchantUserId = merchantUserId;
-        this.businessName = businessName;
-        this.businessLicenseNumber = businessLicenseNumber;
-        this.documentUrl = documentUrl;
-        this.submittedAt = submittedAt;
-        this.reviewedByAdminId = reviewedByAdminId;
-        this.reviewStatus = reviewStatus;
-        this.reviewNote = reviewNote;
-    }
-    public int getId() {
+
+    public long getId() {
         return id;
     }
-    public void setId(int id) {
+
+    public void setId(long id) {
         this.id = id;
     }
-    public int getMerchantUserId() {
+
+    public long getMerchantUserId() {
         return merchantUserId;
     }
-    public void setMerchantUserId(int merchantUserId) {
+
+    public void setMerchantUserId(long merchantUserId) {
         this.merchantUserId = merchantUserId;
     }
+
     public String getBusinessName() {
         return businessName;
     }
+
     public void setBusinessName(String businessName) {
         this.businessName = businessName;
     }
+
     public String getBusinessLicenseNumber() {
         return businessLicenseNumber;
     }
+
     public void setBusinessLicenseNumber(String businessLicenseNumber) {
         this.businessLicenseNumber = businessLicenseNumber;
     }
+
     public String getDocumentUrl() {
         return documentUrl;
     }
+
     public void setDocumentUrl(String documentUrl) {
         this.documentUrl = documentUrl;
     }
+
     public Timestamp getSubmittedAt() {
         return submittedAt;
     }
+
     public void setSubmittedAt(Timestamp submittedAt) {
         this.submittedAt = submittedAt;
     }
-    public int getReviewedByAdminId() {
+
+    public Long getReviewedByAdminId() {
         return reviewedByAdminId;
     }
-    public void setReviewedByAdminId(int reviewedByAdminId) {
+
+    public void setReviewedByAdminId(Long reviewedByAdminId) {
         this.reviewedByAdminId = reviewedByAdminId;
     }
+
     public String getReviewStatus() {
         return reviewStatus;
     }
+
     public void setReviewStatus(String reviewStatus) {
         this.reviewStatus = reviewStatus;
     }
+
     public String getReviewNote() {
         return reviewNote;
     }
+
     public void setReviewNote(String reviewNote) {
         this.reviewNote = reviewNote;
+    }
+
+    public String getShopName() {
+        return shopName;
+    }
+
+    public void setShopName(String shopName) {
+        this.shopName = shopName;
+    }
+
+    public String getShopPhone() {
+        return shopPhone;
+    }
+
+    public void setShopPhone(String shopPhone) {
+        this.shopPhone = shopPhone;
     }
 }

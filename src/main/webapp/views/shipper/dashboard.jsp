@@ -33,6 +33,9 @@
                     <button onclick="switchTab('orders')" id="nav-orders" class="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-xl font-medium transition-colors">
                         <i class="fa-solid fa-box w-5"></i> Đơn hàng
                     </button>
+                    <button onclick="switchTab('history')" id="nav-history" class="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-xl font-medium transition-colors">
+                        <i class="fa-solid fa-clock-rotate-left w-5"></i> Lịch sử giao hàng
+                    </button>
                     <button onclick="switchTab('issues')" id="nav-issues" class="w-full flex items-center gap-3 px-4 py-3 text-gray-600 hover:bg-gray-50 hover:text-gray-900 rounded-xl font-medium transition-colors">
                         <i class="fa-solid fa-triangle-exclamation w-5"></i> Báo cáo sự cố
                     </button>
@@ -75,7 +78,10 @@
                 <div class="flex items-center gap-4">
                     <div class="text-right">
                         <p class="text-sm font-bold text-gray-900">${sessionScope.account.fullName}</p>
-                        <p class="text-xs text-gray-500">ID: SP-${sessionScope.account.id}</p>
+                        <div class="text-xs font-bold text-orange-500 mt-0.5">
+                            <i class="fa-solid fa-star text-yellow-400"></i> ${avgRating > 0 ? avgRating : '5.0'} (${totalReviews != null ? totalReviews : 0} đánh giá)
+                        </div>
+                        <p class="text-xs text-gray-500 mt-0.5">ID: SP-${sessionScope.account.id}</p>
                     </div>
                     <div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden border-2 border-orange-500">
                         <i class="fa-solid fa-user text-gray-400"></i>
@@ -250,6 +256,40 @@
                     </div>
                 </div>
 
+                <div id="tab-history" class="hidden">
+                    <div class="mb-6">
+                        <h3 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left text-blue-500"></i> Lịch sử giao hàng
+                        </h3>
+                        <p class="text-sm text-gray-500 mt-1">Các đơn hàng bạn đã hoàn thành hoặc bị hủy.</p>
+                    </div>
+
+                    <c:if test="${empty historyOrders}">
+                        <div class="text-center py-10 bg-white rounded-2xl border border-gray-200">
+                            <p class="text-gray-500 font-medium">Bạn chưa có lịch sử giao hàng nào.</p>
+                        </div>
+                    </c:if>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <c:forEach var="histOrder" items="${historyOrders}">
+                            <div class="bg-white rounded-2xl p-4 shadow-sm border ${histOrder.orderStatus == 'DELIVERED' ? 'border-green-200 border-l-4 border-l-green-500' : 'border-red-200 border-l-4 border-l-red-500'}">
+                                <div class="flex justify-between items-start mb-2">
+                                    <span class="text-xs font-bold px-2 py-1 rounded ${histOrder.orderStatus == 'DELIVERED' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
+                                        ${histOrder.orderStatus == 'DELIVERED' ? 'Hoàn thành' : 'Đã hủy'}
+                                    </span>
+                                    <span class="text-xs text-gray-400 font-medium"><fmt:formatDate value="${histOrder.createdAt}" pattern="dd/MM HH:mm"/></span>
+                                </div>
+                                <h4 class="font-bold text-gray-900 line-clamp-1">${histOrder.receiverName}</h4>
+                                <p class="text-sm text-gray-500 mb-3 line-clamp-1">${histOrder.deliveryAddressLine}</p>
+                                <div class="flex justify-between items-center border-t border-gray-100 pt-3">
+                                    <span class="text-xs text-gray-400 font-bold">Mã: ${histOrder.orderCode}</span>
+                                    <span class="font-black text-gray-900"><fmt:formatNumber value="${histOrder.deliveryFee}" type="currency" currencySymbol="đ" maxFractionDigits="0"/></span>
+                                </div>
+                            </div>
+                        </c:forEach>
+                    </div>
+                </div>
+
                 <div id="tab-issues" class="hidden">
                     <div class="mb-6">
                         <h3 class="text-xl font-bold text-gray-900 flex items-center gap-2">
@@ -323,13 +363,27 @@
             <c:remove var="toastError" scope="session" />
             <script>setTimeout(() => document.getElementById('toast-error').style.display = 'none', 4000);</script>
         </c:if>
+        <audio id="newOrderSound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
 
+        <div id="new-order-popup" class="fixed top-5 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-6 py-4 rounded-full shadow-2xl z-[100] flex items-center gap-4 transition-all duration-500 translate-y-[-150%]">
+            <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center animate-[spin_3s_linear_infinite]">
+                <i class="fa-solid fa-bell text-xl"></i>
+            </div>
+            <div>
+                <h4 class="font-bold text-lg">Có đơn hàng mới!</h4>
+                <p class="text-sm text-blue-100">Hệ thống vừa tìm thấy đơn hàng quanh khu vực của bạn.</p>
+            </div>
+            <button onclick="location.reload()" class="bg-white text-blue-600 font-bold px-5 py-2 rounded-full hover:bg-gray-100 transition shadow-sm ml-4">
+                Tải lại trang ngay
+            </button>
+        </div>
         <script>
             // Hàm chuyển Tab
             function switchTab(tabName) {
                 // Ẩn tất cả nội dung
                 document.getElementById('tab-overview').classList.add('hidden');
                 document.getElementById('tab-orders').classList.add('hidden');
+                document.getElementById('tab-history').classList.add('hidden'); // Ẩn tab lịch sử
                 document.getElementById('tab-issues').classList.add('hidden');
 
                 // Reset CSS các nút menu
@@ -338,6 +392,7 @@
 
                 document.getElementById('nav-overview').className = normalClass;
                 document.getElementById('nav-orders').className = normalClass;
+                document.getElementById('nav-history').className = normalClass; // Đặt về bình thường
                 document.getElementById('nav-issues').className = normalClass;
 
                 // Bật nội dung tương ứng
@@ -349,12 +404,17 @@
                     document.getElementById('tab-orders').classList.remove('hidden');
                     document.getElementById('nav-orders').className = activeClass;
                     document.getElementById('header-title').innerText = "Quản lý Đơn hàng";
+                } else if (tabName === 'history') { // Thêm logic cho History
+                    document.getElementById('tab-history').classList.remove('hidden');
+                    document.getElementById('nav-history').className = activeClass;
+                    document.getElementById('header-title').innerText = "Lịch sử giao hàng";
                 } else if (tabName === 'issues') {
                     document.getElementById('tab-issues').classList.remove('hidden');
                     document.getElementById('nav-issues').className = activeClass;
                     document.getElementById('header-title').innerText = "Quản lý Báo cáo";
                 }
             }
+
             document.addEventListener('DOMContentLoaded', function () {
                 const activeTab = '${activeTab}';
                 if (activeTab) {
@@ -402,45 +462,46 @@
                     }
                 });
             });
+
             // Hàm chuyển đổi Địa chỉ thành Tọa độ (Geocoding)
-        function updateLocationFromAddress() {
-            const address = document.getElementById('shipper-address').value.trim();
-            const statusText = document.getElementById('location-status');
+            function updateLocationFromAddress() {
+                const address = document.getElementById('shipper-address').value.trim();
+                const statusText = document.getElementById('location-status');
 
-            if (!address) {
-                statusText.innerHTML = '<span class="text-red-500"><i class="fa-solid fa-circle-exclamation"></i> Vui lòng nhập địa chỉ!</span>';
-                return;
+                if (!address) {
+                    statusText.innerHTML = '<span class="text-red-500"><i class="fa-solid fa-circle-exclamation"></i> Vui lòng nhập địa chỉ!</span>';
+                    return;
+                }
+
+                statusText.innerHTML = '<span class="text-blue-500"><i class="fa-solid fa-spinner fa-spin"></i> Đang tìm tọa độ...</span>';
+
+                // Gọi API Nominatim của OpenStreetMap
+                // Thêm đuôi "Vietnam" để API ưu tiên tìm ở VN cho chính xác
+                const searchQuery = encodeURIComponent(address + ", Vietnam");
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=\${searchQuery}&limit=1`;
+
+                fetch(url)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data && data.length > 0) {
+                                const lat = data[0].lat;
+                                const lng = data[0].lon;
+
+                                statusText.innerHTML = `<span class="text-green-500"><i class="fa-solid fa-circle-check"></i> Đã ghim: \${parseFloat(lat).toFixed(4)}, \${parseFloat(lng).toFixed(4)}</span>`;
+
+                                // TODO: Gửi tọa độ này về Backend để lưu vào Database
+                                // saveLocationToDatabase(lat, lng);
+
+                                alert(`Tuyệt vời! Hệ thống đã xác định bạn đang ở tọa độ:\nVĩ độ: \${lat}\nKinh độ: \${lng}`);
+                            } else {
+                                statusText.innerHTML = '<span class="text-red-500"><i class="fa-solid fa-triangle-exclamation"></i> Không tìm thấy địa chỉ này!</span>';
+                            }
+                        })
+                        .catch(error => {
+                            console.error("Lỗi API: ", error);
+                            statusText.innerHTML = '<span class="text-red-500"><i class="fa-solid fa-wifi"></i> Lỗi kết nối mạng!</span>';
+                        });
             }
-
-            statusText.innerHTML = '<span class="text-blue-500"><i class="fa-solid fa-spinner fa-spin"></i> Đang tìm tọa độ...</span>';
-
-            // Gọi API Nominatim của OpenStreetMap
-            // Thêm đuôi "Vietnam" để API ưu tiên tìm ở VN cho chính xác
-            const searchQuery = encodeURIComponent(address + ", Vietnam");
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=\${searchQuery}&limit=1`;
-
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    if (data && data.length > 0) {
-                        const lat = data[0].lat;
-                        const lng = data[0].lon;
-                        
-                        statusText.innerHTML = `<span class="text-green-500"><i class="fa-solid fa-circle-check"></i> Đã ghim: \${parseFloat(lat).toFixed(4)}, \${parseFloat(lng).toFixed(4)}</span>`;
-                        
-                        // TODO: Gửi tọa độ này về Backend để lưu vào Database
-                        // saveLocationToDatabase(lat, lng);
-                        
-                        alert(`Tuyệt vời! Hệ thống đã xác định bạn đang ở tọa độ:\nVĩ độ: \${lat}\nKinh độ: \${lng}`);
-                    } else {
-                        statusText.innerHTML = '<span class="text-red-500"><i class="fa-solid fa-triangle-exclamation"></i> Không tìm thấy địa chỉ này!</span>';
-                    }
-                })
-                .catch(error => {
-                    console.error("Lỗi API: ", error);
-                    statusText.innerHTML = '<span class="text-red-500"><i class="fa-solid fa-wifi"></i> Lỗi kết nối mạng!</span>';
-                });
-        }
         </script>
         <script>
             document.addEventListener('DOMContentLoaded', function () {
@@ -494,6 +555,40 @@
                     }
                 });
             });
+            let knownOrderCount = ${availableOrders != null ? availableOrders.size() : 0};
+
+            // Cài đặt vòng lặp: Cứ mỗi 5 giây (5000 mili-giây) lại chạy hàm này 1 lần
+            setInterval(function () {
+                // CHỈ chạy radar quét khi Shipper đang bật "Trực tuyến"
+                if ($('#toggle-online').is(':checked')) {
+
+                    $.ajax({
+                        url: '${pageContext.request.contextPath}/shipper/check-new-orders',
+                        type: 'GET',
+                        dataType: 'json',
+                        success: function (data) {
+                            // Nếu số đơn hàng trên Server NHIỀU HƠN số đơn bạn đang thấy
+                            if (data.count > knownOrderCount) {
+
+                                // 1. Bật âm thanh "Ting Ting"
+                                const audio = document.getElementById('newOrderSound');
+                                audio.play().catch(e => console.log("Trình duyệt chặn phát âm thanh tự động"));
+
+                                // 2. Hiển thị cái Popup rớt từ trên xuống
+                                document.getElementById('new-order-popup').classList.remove('translate-y-[-150%]');
+                                document.getElementById('new-order-popup').classList.add('translate-y-0');
+
+                                // 3. Cập nhật lại biến đếm để nó không kêu réo liên tục
+                                knownOrderCount = data.count;
+
+                            } else if (data.count < knownOrderCount) {
+                                // Nếu số đơn ít đi (do tài xế khác nhanh tay nhận mất) -> âm thầm cập nhật lại
+                                knownOrderCount = data.count;
+                            }
+                        }
+                    });
+                }
+            }, 5000);
         </script>
     </body>
 </html>

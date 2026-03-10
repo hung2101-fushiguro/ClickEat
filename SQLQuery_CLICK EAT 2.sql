@@ -80,6 +80,16 @@ GO
 /* =========================
    2) USERS & AUTH
    ========================= */
+CREATE TABLE ShipperReviews (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    order_id BIGINT NOT NULL FOREIGN KEY REFERENCES Orders(id), 
+    shipper_id BIGINT NOT NULL FOREIGN KEY REFERENCES Users(id), 
+    customer_id BIGINT NOT NULL FOREIGN KEY REFERENCES Users(id), 
+    
+    rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    comment NVARCHAR(500),
+    created_at DATETIME DEFAULT GETDATE()
+);
 
 CREATE TABLE dbo.Users (
     id            BIGINT IDENTITY(1,1) PRIMARY KEY,

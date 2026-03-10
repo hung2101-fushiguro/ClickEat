@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.clickeat.model;
 
 import java.sql.Timestamp;
@@ -10,12 +6,19 @@ public class OrderIssue {
 
     private int id;
     private int orderId;
-    private int reporterUserId;
+    private int reporterUserId; // Tương đương shipperId trong ngữ cảnh hiện tại
     private String issueType;
     private String description;
-    private String status;
+    private String status; // PENDING / RESOLVED
     private Timestamp createdAt;
+    private String orderCode;
+    private String reporterName;
+    private String reporterPhone;
 
+    public OrderIssue() {
+    }
+
+    // Getters & Setters
     public int getId() {
         return id;
     }
@@ -70,5 +73,34 @@ public class OrderIssue {
 
     public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getOrderCode() {
+        return orderCode;
+    }
+
+    public void setOrderCode(String orderCode) {
+        this.orderCode = orderCode;
+    }
+
+    public String getReporterName() {
+        return reporterName;
+    }
+
+    public void setReporterName(String reporterName) {
+        this.reporterName = reporterName;
+    }
+
+    public String getReporterPhone() {
+        return reporterPhone;
+    }
+
+    public void setReporterPhone(String reporterPhone) {
+        this.reporterPhone = reporterPhone;
+    }
+
+    // Giữ lại hàm tương thích ngược cho Shipper
+    public void setShipperId(int id) {
+        this.reporterUserId = id;
     }
 }

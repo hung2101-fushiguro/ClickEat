@@ -5,11 +5,15 @@
 package com.clickeat.dal.interfaces;
 
 import com.clickeat.model.OrderIssue;
+import java.util.List;
 
-/**
- *
- * @author DELL
- */
 public interface IOrderIssueDAO {
-    
+
+    List<OrderIssue> getPendingIssues();
+
+    boolean resolveIssue(int issueId);
+
+    int insert(OrderIssue issue);
+
+    List<OrderIssue> getIssuesByShipperId(long shipperId);
 }

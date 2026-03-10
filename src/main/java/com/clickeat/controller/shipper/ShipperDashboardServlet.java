@@ -1,14 +1,7 @@
 package com.clickeat.controller.shipper;
 
-import com.clickeat.dal.impl.MerchantProfileDAO;
-import com.clickeat.dal.impl.OrderDAO;
-import com.clickeat.dal.impl.OrderIssueDAO;
-import com.clickeat.dal.impl.ShipperDAO;
-import com.clickeat.dal.impl.ShipperWalletDAO;
-import com.clickeat.model.Order;
-import com.clickeat.model.OrderIssue;
-import com.clickeat.model.ShipperWallet;
-import com.clickeat.model.User;
+import com.clickeat.dal.impl.*;
+import com.clickeat.model.*;
 import java.io.IOException;
 import java.util.List;
 import jakarta.servlet.ServletException;
@@ -33,51 +26,42 @@ public class ShipperDashboardServlet extends HttpServlet {
             return;
         }
 
-        // 1. Lấy thông tin Ví tiền & Doanh thu
+        // 1. Dữ liệu Tổng quan & Biểu đồ
         ShipperWalletDAO walletDAO = new ShipperWalletDAO();
         ShipperWallet wallet = walletDAO.getWalletByShipperId(account.getId());
-        double currentBalance = (wallet != null) ? wallet.getBalance() : 0;
+        request.setAttribute("currentBalance", (wallet != null) ? wallet.getBalance() : 0);
 
         OrderDAO orderDAO = new OrderDAO();
-        double todayIncome = orderDAO.getIncomeToday(account.getId());
-        double weekIncome = orderDAO.getIncomeThisWeek(account.getId());
-        int todayOrders = orderDAO.countDeliveredOrdersToday(account.getId()); // Thêm số đơn
+        request.setAttribute("todayIncome", orderDAO.getIncomeToday(account.getId()));
+        request.setAttribute("weekIncome", orderDAO.getIncomeThisWeek(account.getId()));
+        request.setAttribute("todayOrders", orderDAO.countDeliveredOrdersToday(account.getId()));
 
-        request.setAttribute("currentBalance", currentBalance);
-        request.setAttribute("todayIncome", todayIncome);
-        request.setAttribute("weekIncome", weekIncome);
-        request.setAttribute("todayOrders", todayOrders); // Gửi số đơn sang JSP
-
-        // Dữ liệu Biểu đồ (Tách thành 2 chuỗi String để nạp vào Javascript)
         java.util.Map<String, Double> chartData = orderDAO.getLast7DaysIncome(account.getId());
-        String chartLabels = "'" + String.join("','", chartData.keySet()) + "'";
-        String chartValues = chartData.values().toString().replaceAll("[\\[\\]]", "");
-
-        request.setAttribute("chartLabels", chartLabels);
-        request.setAttribute("chartValues", chartValues);
+        request.setAttribute("chartLabels", "'" + String.join("','", chartData.keySet()) + "'");
+        request.setAttribute("chartValues", chartData.values().toString().replaceAll("[\\[\\]]", ""));
 
         // 2. Trạng thái Online
         ShipperDAO shipperDAO = new ShipperDAO();
-        boolean isOnline = shipperDAO.checkIsOnline(account.getId());
-        request.setAttribute("isOnline", isOnline);
+        request.setAttribute("isOnline", shipperDAO.checkIsOnline(account.getId()));
 
-        //3.
-        List<Order> currentOrders = orderDAO.getCurrentOrdersForShipper(account.getId());
-        request.setAttribute("currentOrders", currentOrders);
+        // 3. Quản lý Đơn hàng
+        request.setAttribute("currentOrders", orderDAO.getCurrentOrdersForShipper(account.getId()));
+        request.setAttribute("availableOrders", orderDAO.getAvailableOrdersForShipper());
+        request.setAttribute("merchantDAO", new MerchantProfileDAO());
 
-        // Đơn hàng đang chờ
-        List<Order> availableOrders = orderDAO.getAvailableOrdersForShipper();
-        request.setAttribute("availableOrders", availableOrders);
-
-        MerchantProfileDAO merchantDAO = new MerchantProfileDAO();
-        request.setAttribute("merchantDAO", merchantDAO);
-
-        // 4. LẤY DANH SÁCH SỰ CỐ ĐÃ BÁO CÁO
+        // 4. Sự cố
         OrderIssueDAO issueDAO = new OrderIssueDAO();
-        List<OrderIssue> reportedIssues = issueDAO.getIssuesByShipperId(account.getId());
-        request.setAttribute("reportedIssues", reportedIssues);
+        request.setAttribute("reportedIssues", issueDAO.getIssuesByShipperId(account.getId()));
 
-        // 5. Chuyển hướng
+        // 5. Lịch sử đơn hàng
+        request.setAttribute("historyOrders", orderDAO.getHistoryOrdersForShipper(account.getId()));
+
+        // 6. Đánh giá (Rating)
+        ShipperReviewDAO reviewDAO = new ShipperReviewDAO();
+        request.setAttribute("avgRating", reviewDAO.getAverageRating(account.getId()));
+        request.setAttribute("totalReviews", reviewDAO.getTotalReviews(account.getId()));
+
+        // Chuyển hướng Tab (Dựa vào URL param)
         String tab = request.getParameter("tab");
         request.setAttribute("activeTab", (tab != null) ? tab : "overview");
 

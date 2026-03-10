@@ -254,6 +254,11 @@ public class OrderDAO extends AbstractDAO<Order> implements IOrderDAO {
         }
         return incomeMap;
     }
+    @Override
+    public List<Order> getHistoryOrdersForShipper(int shipperId) {
+        String sql = "SELECT * FROM Orders WHERE shipper_user_id = ? AND order_status IN ('DELIVERED', 'CANCELLED') ORDER BY created_at DESC";
+        return query(sql, shipperId);
+    }
 
     @Override
     public List<Order> findAll() {
