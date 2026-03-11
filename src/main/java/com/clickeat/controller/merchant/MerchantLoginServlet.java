@@ -1,17 +1,18 @@
 package com.clickeat.controller.merchant;
 
-import com.clickeat.dal.impl.MerchantProfileDAO;
-import com.clickeat.dal.impl.UserDAO;
-import com.clickeat.model.MerchantProfile;
-import com.clickeat.model.User;
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.Optional;
+
+import com.clickeat.dao.MerchantDAO;
+import com.clickeat.model.Merchant;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-
-import java.io.IOException;
 
 @WebServlet("/merchant/login")
 public class MerchantLoginServlet extends HttpServlet {
@@ -43,31 +44,43 @@ public class MerchantLoginServlet extends HttpServlet {
             return;
         }
 
-        UserDAO userDAO = new UserDAO();
-        // checkLogin compares password_hash directly → assumes plaintext or pre-hashed
-        User user = userDAO.checkLogin(email.trim(), password);
+        MerchantDAO merchantDAO = new MerchantDAO();
+        Optional<Merchant> opt;
+        try {
+            opt = merchantDAO.findByEmail(email.trim());
+        } catch (SQLException e) {
+            req.setAttribute("error", "Lỗi kết nối cơ sở dữ liệu. Vui lòng thử lại.");
+            req.getRequestDispatcher("/views/merchant/login.jsp").forward(req, resp);
+            return;
+        }
 
-        if (user == null) {
+        if (opt.isEmpty()) {
             req.setAttribute("error", "Email hoặc mật khẩu không chính xác.");
             req.getRequestDispatcher("/views/merchant/login.jsp").forward(req, resp);
             return;
         }
 
-        if (!"MERCHANT".equalsIgnoreCase(user.getRole())) {
-            req.setAttribute("error", "Tài khoản này không phải Merchant.");
+        Merchant merchant = opt.get();
+
+        // BCrypt-aware password check
+        if (!merchantDAO.verifyPassword(password, merchant.getPasswordHash())) {
+            req.setAttribute("error", "Email hoặc mật khẩu không chính xác.");
             req.getRequestDispatcher("/views/merchant/login.jsp").forward(req, resp);
             return;
         }
 
-        // Load merchant profile for shop name
-        MerchantProfileDAO profileDAO = new MerchantProfileDAO();
-        MerchantProfile profile = profileDAO.findById(user.getId());
+        if (!"ACTIVE".equalsIgnoreCase(merchant.getUserStatus())) {
+            req.setAttribute("error", "Tài khoản đã bị khóa. Vui lòng liên hệ hỗ trợ.");
+            req.getRequestDispatcher("/views/merchant/login.jsp").forward(req, resp);
+            return;
+        }
 
         HttpSession session = req.getSession(true);
-        session.setAttribute("merchantId", user.getId());
-        session.setAttribute("merchantName", user.getFullName());
-        session.setAttribute("merchantEmail", user.getEmail());
-        session.setAttribute("merchantShopName", profile != null ? profile.getShopName() : user.getFullName());
+        session.setAttribute("merchantId", merchant.getUserId());
+        session.setAttribute("merchantName", merchant.getFullName());
+        session.setAttribute("merchantEmail", merchant.getEmail());
+        session.setAttribute("merchantShopName", merchant.getShopName() != null ? merchant.getShopName() : merchant.getFullName());
+        session.setAttribute("merchantIsOpen", merchant.isAcceptingOrders());
 
         resp.sendRedirect(req.getContextPath() + "/merchant/dashboard");
     }

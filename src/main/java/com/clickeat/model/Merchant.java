@@ -22,9 +22,10 @@ public class Merchant {
     private String provinceName;
     private String districtName;
     private String wardName;
-    private String shopStatus;      // MerchantProfiles.status (PENDING/APPROVED/REJECTED/SUSPENDED)
-    private String businessHours;    // MerchantProfiles.business_hours (JSON)
-    private String avatarUrl;          // MerchantProfiles.avatar_url
+    private String shopStatus;        // MerchantProfiles.status (PENDING/APPROVED/REJECTED/SUSPENDED)
+    private String businessHours;     // MerchantProfiles.business_hours (JSON)
+    private String avatarUrl;         // Users.avatar_url
+    private boolean acceptingOrders = true; // MerchantProfiles.is_accepting_orders
 
     private LocalDateTime createdAt; // Users.created_at
 
@@ -146,6 +147,14 @@ public class Merchant {
 
     public void setAvatarUrl(String avatarUrl) {
         this.avatarUrl = avatarUrl;
+    }
+
+    public boolean isAcceptingOrders() {
+        return acceptingOrders;
+    }
+
+    public void setAcceptingOrders(boolean acceptingOrders) {
+        this.acceptingOrders = acceptingOrders;
     }
 
     public LocalDateTime getCreatedAt() {

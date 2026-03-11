@@ -1,19 +1,22 @@
 package com.clickeat.controller.merchant;
 
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
+import com.clickeat.config.DBContext;
 import com.clickeat.dal.impl.OrderDAO;
 import com.clickeat.model.Order;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
-import java.io.IOException;
-import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
-
-import com.clickeat.config.DBContext;
 
 @WebServlet("/merchant/dashboard")
 public class MerchantDashboardServlet extends HttpServlet {
@@ -22,7 +25,7 @@ public class MerchantDashboardServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
-        int merchantId = (int) req.getSession().getAttribute("merchantId");
+        int merchantId = ((Number) req.getSession().getAttribute("merchantId")).intValue();
         OrderDAO orderDAO = new OrderDAO();
 
         // Stats via raw SQL for efficiency
@@ -33,14 +36,17 @@ public class MerchantDashboardServlet extends HttpServlet {
         long[] weeklyRevenue = new long[7];
 
         String sqlToday = "SELECT COUNT(*) AS cnt, ISNULL(SUM(total_amount),0) AS rev "
-                + "FROM Orders WHERE merchant_user_id = ? AND CAST(created_at AS DATE) = CAST(GETDATE() AS DATE)";
+                + "FROM Orders WHERE merchant_user_id = ? AND CAST(created_at AS DATE) = CAST(GETDATE() AS DATE) "
+                + "AND order_status NOT IN ('CANCELLED','FAILED')";
         String sqlPending = "SELECT COUNT(*) AS cnt FROM Orders WHERE merchant_user_id = ? "
                 + "AND order_status IN ('CREATED','PAID')";
         String sqlMonth = "SELECT COUNT(*) AS cnt FROM Orders WHERE merchant_user_id = ? "
-                + "AND MONTH(created_at) = MONTH(GETDATE()) AND YEAR(created_at) = YEAR(GETDATE())";
+                + "AND MONTH(created_at) = MONTH(GETDATE()) AND YEAR(created_at) = YEAR(GETDATE()) "
+                + "AND order_status NOT IN ('CANCELLED','FAILED')";
         String sqlWeekly = "SELECT DATEPART(dw, created_at) AS dow, ISNULL(SUM(total_amount),0) AS rev "
                 + "FROM Orders WHERE merchant_user_id = ? "
                 + "AND created_at >= DATEADD(day, -6, CAST(GETDATE() AS DATE)) "
+                + "AND order_status NOT IN ('CANCELLED','FAILED') "
                 + "GROUP BY DATEPART(dw, created_at)";
 
         try (Connection conn = DBContext.getConnection()) {
@@ -102,6 +108,39 @@ public class MerchantDashboardServlet extends HttpServlet {
             e.printStackTrace();
         }
 
+        // Top selling items (last 30 days)
+        List<Object[]> topItems = new ArrayList<>();
+        String sqlTopItems = "SELECT TOP 5 fi.name, SUM(oi.quantity) AS total_qty "
+                + "FROM OrderItems oi "
+                + "JOIN FoodItems fi ON fi.id = oi.food_item_id "
+                + "JOIN Orders o ON o.id = oi.order_id "
+                + "WHERE o.merchant_user_id = ? AND o.created_at >= DATEADD(day, -30, GETDATE()) "
+                + "AND o.order_status NOT IN ('CANCELLED','FAILED') "
+                + "GROUP BY fi.name ORDER BY total_qty DESC";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sqlTopItems)) {
+            ps.setInt(1, merchantId);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                topItems.add(new Object[]{rs.getString("name"), rs.getInt("total_qty")});
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        // Average rating
+        double avgRating = 0.0;
+        String sqlRating = "SELECT AVG(CAST(stars AS FLOAT)) AS avgRating FROM Ratings "
+                + "WHERE target_type = 'MERCHANT' AND target_user_id = ?";
+        try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sqlRating)) {
+            ps.setInt(1, merchantId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next() && rs.getObject("avgRating") != null) {
+                avgRating = Math.round(rs.getDouble("avgRating") * 10.0) / 10.0;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
         // Build weekly revenue JSON array
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 7; i++) {
@@ -114,8 +153,9 @@ public class MerchantDashboardServlet extends HttpServlet {
         req.setAttribute("todayRevenue", todayRevenue);
         req.setAttribute("todayOrders", todayOrders);
         req.setAttribute("pendingOrders", pendingOrders);
-        req.setAttribute("monthOrders", monthOrders);
         req.setAttribute("recentOrders", recentOrders);
+        req.setAttribute("topItems", topItems);
+        req.setAttribute("avgRating", avgRating);
         req.setAttribute("weeklyRevenueJson", sb.toString());
         req.setAttribute("isNewShop", todayOrders == 0 && recentOrders.isEmpty());
 

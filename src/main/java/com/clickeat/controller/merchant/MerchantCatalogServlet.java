@@ -1,19 +1,23 @@
 package com.clickeat.controller.merchant;
 
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
 import com.clickeat.config.DBContext;
 import com.clickeat.dal.impl.FoodItemDAO;
 import com.clickeat.model.Category;
 import com.clickeat.model.FoodItem;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
-import java.io.IOException;
-import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
 
 @WebServlet("/merchant/catalog")
 public class MerchantCatalogServlet extends HttpServlet {
@@ -22,7 +26,7 @@ public class MerchantCatalogServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
-        int merchantId = (int) req.getSession().getAttribute("merchantId");
+        int merchantId = ((Number) req.getSession().getAttribute("merchantId")).intValue();
         String categoryFilter = req.getParameter("categoryId");
 
         FoodItemDAO foodDAO = new FoodItemDAO();
@@ -61,7 +65,7 @@ public class MerchantCatalogServlet extends HttpServlet {
             throws ServletException, IOException {
 
         req.setCharacterEncoding("UTF-8");
-        int merchantId = (int) req.getSession().getAttribute("merchantId");
+        int merchantId = ((Number) req.getSession().getAttribute("merchantId")).intValue();
         String action = req.getParameter("action");
 
         switch (action == null ? "" : action) {
@@ -123,8 +127,41 @@ public class MerchantCatalogServlet extends HttpServlet {
                     e.printStackTrace();
                 }
             }
+            case "edit" -> {
+                String itemIdStr = req.getParameter("itemId");
+                String name = req.getParameter("name");
+                String priceStr = req.getParameter("price");
+                String desc = req.getParameter("description");
+                String imgUrl = req.getParameter("imageUrl");
+                String catStr = req.getParameter("categoryId");
+                if (itemIdStr == null || name == null || name.isBlank() || priceStr == null) {
+                    break;
+                }
+                int itemId = Integer.parseInt(itemIdStr);
+                double price = Double.parseDouble(priceStr);
+                int categoryId = (catStr != null && !catStr.isBlank()) ? Integer.parseInt(catStr) : 0;
+                String sql = "UPDATE FoodItems SET name=?, description=?, price=?, image_url=?, "
+                        + "category_id=?, updated_at=GETDATE() WHERE id=? AND merchant_user_id=?";
+                try (Connection conn = DBContext.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setString(1, name);
+                    ps.setString(2, desc);
+                    ps.setDouble(3, price);
+                    ps.setString(4, imgUrl != null && !imgUrl.isBlank() ? imgUrl : null);
+                    ps.setInt(5, categoryId);
+                    ps.setInt(6, itemId);
+                    ps.setInt(7, merchantId);
+                    ps.executeUpdate();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
         }
 
+        // For AJAX calls (toggle from JS), don't redirect – just return 204
+        if ("1".equals(req.getParameter("xhr"))) {
+            resp.setStatus(204);
+            return;
+        }
         resp.sendRedirect(req.getContextPath() + "/merchant/catalog");
     }
 

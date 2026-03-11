@@ -8,6 +8,7 @@ export const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [chartRange, setChartRange] = useState<'7d' | '30d'>('7d');
 
   useEffect(() => {
     getDashboard()
@@ -64,7 +65,6 @@ if (error) {
     );
   }
 
-const [chartRange, setChartRange] = useState<'7d' | '30d'>('7d');
 const shopName = getShopName() || 'ClickEat Merchant';
 const avgOrder = stats && stats.todayOrders > 0
   ? stats.todayRevenue / stats.todayOrders
@@ -97,16 +97,16 @@ return (
               < div className = "grid grid-cols-1 md:grid-cols-2 gap-3" >
               {
                 [
-                { label: 'Thêm ảnh đại diện cửa hàng', icon: 'store', done: false, screen: 'SETTINGS' },
-                { label: 'Thêm ít nhất 5 món vào thực đơn', icon: 'restaurant_menu', done: false, screen: 'MENU' },
-                { label: 'Kiểm tra thông tin địa chỉ', icon: 'location_on', done: false, screen: 'SETTINGS' },
-                { label: 'Cài đặt giờ mở cửa', icon: 'schedule', done: false, screen: 'SETTINGS' },
+                  { label: 'Thêm ảnh đại diện cửa hàng', icon: 'store', done: false, screen: 'SETTINGS' },
+                  { label: 'Thêm ít nhất 5 món vào thực đơn', icon: 'restaurant_menu', done: false, screen: 'MENU' },
+                  { label: 'Kiểm tra thông tin địa chỉ', icon: 'location_on', done: false, screen: 'SETTINGS' },
+                  { label: 'Cài đặt giờ mở cửa', icon: 'schedule', done: false, screen: 'SETTINGS' },
         ].map((step, i) => (
-                  <div key= { i } className = {`flex items-center gap-3 p-3 rounded-xl border bg-white ${step.done ? 'border-green-200 opacity-60' : 'border-gray-200 hover:border-primary cursor-pointer'
-                    }`} >
+                    <div key= { i } className = {`flex items-center gap-3 p-3 rounded-xl border bg-white ${step.done ? 'border-green-200 opacity-60' : 'border-gray-200 hover:border-primary cursor-pointer'
+                      }`} >
                 <span className={
-                  `material-symbols-outlined text-xl ${step.done ? 'text-green-500' : 'text-gray-400'
-                  }`
+  `material-symbols-outlined text-xl ${step.done ? 'text-green-500' : 'text-gray-400'
+    }`
 }> { step.done ? 'check_circle' : step.icon } </span>
   < span className = {`text-sm font-medium ${step.done ? 'line-through text-gray-400' : 'text-gray-700'}`}> { step.label } </span>
     </div>

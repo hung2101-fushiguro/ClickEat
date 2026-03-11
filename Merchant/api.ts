@@ -3,7 +3,7 @@
  *  they work whether served by Tomcat (/merchant) or dev-proxy.
  */
 
-const BASE = '/merchant/api';
+const BASE = '/api';
 
 // ---------------------------------------------------------------------------
 // Token helpers

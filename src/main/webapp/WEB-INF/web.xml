@@ -8,6 +8,15 @@
 
     <display-name>ClickEat Merchant API</display-name>
 
+    <!-- ================================================================
+         Google OAuth — set your Client ID from Google Cloud Console
+         https://console.cloud.google.com/apis/credentials
+         ================================================================ -->
+    <context-param>
+        <param-name>google.client.id</param-name>
+        <param-value>791985931467-agv6l5lr044fihqsqbba65dp028cvdqc.apps.googleusercontent.com</param-value>
+    </context-param>
+
     <session-config>
         <session-timeout>30</session-timeout>
     </session-config>

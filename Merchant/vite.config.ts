@@ -8,6 +8,14 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
       host: '0.0.0.0',
+      proxy: {
+        // Dev: forward /api/* → Tomcat at localhost:8080/<context>/api/*
+        '/api': {
+          target: 'http://localhost:8080',
+          changeOrigin: true,
+          rewrite: (p) => `/ClickEat2-1.0-SNAPSHOT${p}`,
+        },
+      },
     },
     plugins: [react()],
     define: {
@@ -19,10 +27,12 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, '.'),
       }
     },
-    base: '/merchant/',
+    // Relative base so the built index.html works regardless of context path
+    base: './',
     build: {
-      outDir: path.resolve(__dirname, '../src/main/webapp'),
-      emptyOutDir: false,
+      // Output stays inside Merchant/dist — NOT inside the Java webapp
+      outDir: path.resolve(__dirname, './dist'),
+      emptyOutDir: true,
     }
   };
 });

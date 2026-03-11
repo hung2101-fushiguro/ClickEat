@@ -1,11 +1,17 @@
 package com.clickeat.dao;
 
-import com.clickeat.config.DataSourceConfig;
-import com.clickeat.model.Merchant;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Timestamp;
+import java.util.Optional;
+
 import org.mindrot.jbcrypt.BCrypt;
 
-import java.sql.*;
-import java.util.Optional;
+import com.clickeat.config.DataSourceConfig;
+import com.clickeat.model.Merchant;
 
 /**
  * DAO for dbo.Users (role='MERCHANT') joined with dbo.MerchantProfiles.
@@ -14,9 +20,9 @@ public class MerchantDAO {
 
     private static final String BASE_SELECT
             = "SELECT u.id AS user_id, u.full_name, u.email, u.phone, u.password_hash, "
-            + "u.status AS user_status, mp.shop_name, mp.shop_phone, mp.shop_address_line, "
+            + "u.status AS user_status, u.avatar_url, mp.shop_name, mp.shop_phone, mp.shop_address_line, "
             + "mp.province_name, mp.district_name, mp.ward_name, mp.status AS shop_status, "
-            + "mp.business_hours, mp.avatar_url, u.created_at "
+            + "NULL AS business_hours, mp.is_accepting_orders, u.created_at "
             + "FROM dbo.Users u JOIN dbo.MerchantProfiles mp ON mp.user_id = u.id "
             + "WHERE u.role = 'MERCHANT'";
 
@@ -146,20 +152,21 @@ public class MerchantDAO {
     }
 
     public void updateBusinessHours(long userId, String businessHoursJson) throws SQLException {
-        String sql = "UPDATE dbo.MerchantProfiles "
-                + "SET business_hours=?, updated_at=SYSUTCDATETIME() "
-                + "WHERE user_id=?";
+        // business_hours column not in current schema – no-op
+    }
+
+    public void setAcceptingOrders(long userId, boolean accepting) throws SQLException {
+        String sql = "UPDATE dbo.MerchantProfiles SET is_accepting_orders=?, updated_at=SYSUTCDATETIME() WHERE user_id=?";
         try (Connection c = DataSourceConfig.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
-            ps.setString(1, businessHoursJson);
+            ps.setBoolean(1, accepting);
             ps.setLong(2, userId);
             ps.executeUpdate();
         }
     }
 
     public void updateAvatar(long userId, String avatarUrl) throws SQLException {
-        String sql = "UPDATE dbo.MerchantProfiles "
-                + "SET avatar_url=?, updated_at=SYSUTCDATETIME() "
-                + "WHERE user_id=?";
+        // avatar_url lives in dbo.Users
+        String sql = "UPDATE dbo.Users SET avatar_url=?, updated_at=SYSUTCDATETIME() WHERE id=?";
         try (Connection c = DataSourceConfig.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, avatarUrl);
             ps.setLong(2, userId);
@@ -205,6 +212,7 @@ public class MerchantDAO {
         m.setShopStatus(rs.getString("shop_status"));
         m.setBusinessHours(rs.getString("business_hours"));
         m.setAvatarUrl(rs.getString("avatar_url"));
+        m.setAcceptingOrders(rs.getBoolean("is_accepting_orders"));
         Timestamp ts = rs.getTimestamp("created_at");
         if (ts != null) {
             m.setCreatedAt(ts.toLocalDateTime());
