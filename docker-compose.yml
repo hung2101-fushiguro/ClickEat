@@ -1,0 +1,67 @@
+services:
+
+  # ── 1. SQL Server 2022 ──────────────────────────────────────
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: clickeat-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      # SQL Server requires: upper + lower + digit + symbol, min 8 chars
+      SA_PASSWORD: "ClickEat@2024"
+      MSSQL_PID: "Express"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    healthcheck:
+      test: >
+        /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa
+        -P "ClickEat@2024" -Q "SELECT 1" -No -C
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  # ── 2. DB Init (runs once, then exits) ─────────────────────
+  #    Waits until sqlserver is healthy, then imports SQL scripts.
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: clickeat-db-init
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      ACCEPT_EULA: "Y"
+    volumes:
+      - ./ClickEat2.sql:/scripts/ClickEat2.sql:ro
+      - ./ClickEat2_addons.sql:/scripts/ClickEat2_addons.sql:ro
+    entrypoint: bash
+    command: >
+      -c "
+      echo '[db-init] Importing schema...' &&
+      /opt/mssql-tools18/bin/sqlcmd -S sqlserver -U sa -P 'ClickEat@2024'
+        -i /scripts/ClickEat2.sql -No -C &&
+      echo '[db-init] Importing addons/migrations...' &&
+      /opt/mssql-tools18/bin/sqlcmd -S sqlserver -U sa -P 'ClickEat@2024'
+        -i /scripts/ClickEat2_addons.sql -No -C &&
+      echo '[db-init] Done.'
+      "
+    restart: "no"
+
+  # ── 3. Tomcat App ───────────────────────────────────────────
+  app:
+    build: .
+    container_name: clickeat-app
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL:  "jdbc:sqlserver://sqlserver:1433;databaseName=ClickEat;encrypt=true;trustServerCertificate=true;"
+      DB_USER: "sa"
+      DB_PASS: "ClickEat@2024"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+volumes:
+  sqlserver_data:
+

@@ -11,27 +11,37 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class DBContext {
+
     public static String driverName = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
-    public static String dbURL = "jdbc:sqlserver://localhost:1433;databaseName=ClickEat;encrypt=true;trustServerCertificate=true;";
-    public static String userDB = "sa";
-    public static String passDB = "11012004";
-    
-    public static Connection getConnection(){
+    // Reads env vars so Docker can override without recompiling.
+    // Fallback values keep local dev working unchanged.
+    public static String dbURL = getEnv("DB_URL", "jdbc:sqlserver://localhost:1433;databaseName=ClickEat;encrypt=true;trustServerCertificate=true;");
+    public static String userDB = getEnv("DB_USER", "sa");
+    public static String passDB = getEnv("DB_PASS", "11012004");
+
+    private static String getEnv(String key, String fallback) {
+        String v = System.getenv(key);
+        return (v != null && !v.isBlank()) ? v : fallback;
+    }
+
+    public static Connection getConnection() {
         Connection con = null;
-        try{
+        try {
             Class.forName(driverName);
             con = DriverManager.getConnection(dbURL, userDB, passDB);
             return con;
-        } catch(ClassNotFoundException | SQLException ex){
+        } catch (ClassNotFoundException | SQLException ex) {
             Logger.getLogger(DBContext.class.getName()).log(Level.SEVERE, null, ex);
         }
         return null;
     }
+
     public static void main(String[] args) {
-        try(Connection con = getConnection()){
-            if(con!=null)
+        try (Connection con = getConnection()) {
+            if (con != null) {
                 System.out.println(" Connect to ClickEat Success");
-        } catch(SQLException ex){
+            }
+        } catch (SQLException ex) {
             Logger.getLogger(DBContext.class.getName()).log(Level.SEVERE, null, ex);
         }
     }

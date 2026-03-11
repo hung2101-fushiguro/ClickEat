@@ -1,0 +1,21 @@
+# Build artifacts
+target/
+
+# Test sources (not needed in image)
+src/test/
+
+# IDE & OS
+.idea/
+*.iml
+*.iws
+*.ipr
+.DS_Store
+Thumbs.db
+nb-configuration.xml
+
+# Logs
+*.log
+logs/
+
+# Local env overrides
+.env
