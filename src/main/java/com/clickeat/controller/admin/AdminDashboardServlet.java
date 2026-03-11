@@ -67,6 +67,10 @@ public class AdminDashboardServlet extends HttpServlet {
         String tab = request.getParameter("tab");
         request.setAttribute("activeTab", (tab != null) ? tab : "overview");
 
+        // 6. Lấy danh sách Đơn kháng cáo
+        com.clickeat.dal.impl.UserAppealDAO appealDAO = new com.clickeat.dal.impl.UserAppealDAO();
+        request.setAttribute("listAppeals", appealDAO.getPendingAppeals());
+
         request.getRequestDispatcher("/views/admin/dashboard.jsp").forward(request, response);
     }
 
@@ -141,6 +145,25 @@ public class AdminDashboardServlet extends HttpServlet {
                 request.getSession().setAttribute("toastMsg", "Đã cập nhật trạng thái tài khoản!");
             } else {
                 request.getSession().setAttribute("toastError", "Có lỗi xảy ra khi cập nhật.");
+            }
+        } // XỬ LÝ ĐƠN KHÁNG CÁO (APPEAL)
+        else if ("RESOLVE_APPEAL".equals(action)) {
+            currentTab = "users";
+            long appealId = Long.parseLong(request.getParameter("appealId"));
+            int targetUserId = Integer.parseInt(request.getParameter("targetUserId"));
+            String appealDecision = request.getParameter("appealDecision"); // APPROVE hoặc REJECT
+            String adminNote = request.getParameter("adminNote");
+
+            com.clickeat.dal.impl.UserAppealDAO appealDAO = new com.clickeat.dal.impl.UserAppealDAO();
+            UserDAO userDAO = new UserDAO();
+
+            if ("APPROVE".equals(appealDecision)) {
+                appealDAO.resolveAppeal(appealId, "APPROVED", adminNote);
+                userDAO.changeUserStatus(targetUserId, "ACTIVE"); // Phục hồi tài khoản
+                request.getSession().setAttribute("toastMsg", "Đã ÂN XÁ thành công tài khoản!");
+            } else {
+                appealDAO.resolveAppeal(appealId, "REJECTED", adminNote);
+                request.getSession().setAttribute("toastMsg", "Đã TỪ CHỐI đơn kháng cáo.");
             }
         }
 

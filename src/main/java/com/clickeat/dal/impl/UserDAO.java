@@ -20,12 +20,14 @@ public class UserDAO extends AbstractDAO<User> implements IUserDAO {
         user.setRole(rs.getString("role"));
         user.setStatus(rs.getString("status"));
         user.setCreatedAt(rs.getTimestamp("created_at"));
+        user.setAvatarUrl(rs.getString("avatar_url"));
         return user;
     }
 
     @Override
     public User checkLogin(String username, String password) {
-        String sql = "SELECT * FROM Users WHERE (phone = ? OR email = ?) AND password_hash = ? AND status = 'ACTIVE'";
+        // Đã xóa điều kiện "AND status = 'ACTIVE'"
+        String sql = "SELECT * FROM Users WHERE (phone = ? OR email = ?) AND password_hash = ?";
         return queryOne(sql, username, username, password);
     }
 
@@ -68,6 +70,31 @@ public class UserDAO extends AbstractDAO<User> implements IUserDAO {
         String sql = "UPDATE Users SET status = ?, updated_at = GETDATE() WHERE id = ?";
         // Giả định hàm update() của IGenericDAO trả về int (số dòng bị ảnh hưởng)
         return update(sql, newStatus, userId) > 0;
+    }
+
+    @Override
+    public boolean updateAvatar(int userId, String avatarUrl) {
+        String sql = "UPDATE Users SET avatar_url = ?, updated_at = GETDATE() WHERE id = ?";
+        return update(sql, avatarUrl, userId) > 0;
+    }
+
+    @Override
+    public boolean checkDuplicateForUpdate(String phone, String email, int currentUserId) {
+        String sql = "SELECT 1 FROM Users WHERE (phone = ? OR email = ?) AND id != ?";
+        try {
+            java.sql.Connection conn = getConnection();
+            java.sql.PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setString(1, phone);
+            ps.setString(2, email);
+            ps.setInt(3, currentUserId); // Dùng setInt vì ID trong Model của bạn là int
+            java.sql.ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return true; // Trùng với người khác
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false; // An toàn
     }
 
     @Override

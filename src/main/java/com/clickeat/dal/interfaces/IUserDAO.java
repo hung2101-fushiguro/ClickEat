@@ -19,4 +19,8 @@ public interface IUserDAO extends IGenericDAO<User> {
     boolean changePassword(int userId, String newPasswordHash);
 
     boolean changeUserStatus(int userId, String newStatus);
+
+    public boolean updateAvatar(int userId, String avatarUrl);
+
+    public boolean checkDuplicateForUpdate(String phone, String email, int currentUserId);
 }

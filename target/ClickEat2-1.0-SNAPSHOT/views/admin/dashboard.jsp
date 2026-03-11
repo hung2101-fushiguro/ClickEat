@@ -67,8 +67,15 @@
                         <p class="text-sm font-bold text-gray-900">Super Admin</p>
                         <p class="text-xs text-green-500 font-bold"><i class="fa-solid fa-circle text-[8px] mr-1"></i>System Online</p>
                     </div>
-                    <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center overflow-hidden border-2 border-orange-500 text-orange-600">
-                        <i class="fa-solid fa-user-tie"></i>
+                    <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center overflow-hidden border-2 border-orange-500 text-orange-600 shadow-sm">
+                        <c:choose>
+                            <c:when test="${not empty sessionScope.account.avatarUrl}">
+                                <img src="${sessionScope.account.avatarUrl}" class="w-full h-full object-cover">
+                            </c:when>
+                            <c:otherwise>
+                                <i class="fa-solid fa-user-tie"></i>
+                            </c:otherwise>
+                        </c:choose>
                     </div>
                 </div>
             </header>
@@ -169,7 +176,7 @@
                                         <input type="hidden" name="action" value="APPROVE_KYC">
                                         <input type="hidden" name="kycId" value="${kyc.id}">
                                         <input type="hidden" name="merchantId" value="${kyc.merchantUserId}">
-                                        <button type="submit" onclick="return confirm('Bạn chắc chắn muốn DUYỆT quán này?');" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl text-center transition shadow-md flex items-center justify-center gap-2">
+                                        <button type="submit" onclick="confirmAction(event, 'Bạn chắc chắn muốn DUYỆT quán này?', this);" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl text-center transition shadow-md flex items-center justify-center gap-2">
                                             <i class="fa-solid fa-check"></i> Duyệt Cho Phép Bán
                                         </button>
                                     </form>
@@ -234,14 +241,14 @@
                                         <input type="hidden" name="requestId" value="${req.id}">
                                         <input type="hidden" name="shipperId" value="${req.shipperUserId}">
                                         <input type="hidden" name="amount" value="${req.amount}">
-                                        <button type="submit" onclick="return confirm('Bạn XÁC NHẬN đã chuyển khoản và muốn trừ tiền ví tài xế?');" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-2">
+                                        <button type="submit" onclick="confirmAction(event, 'Bạn XÁC NHẬN đã chuyển khoản và muốn trừ tiền ví tài xế?', this);" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-2">
                                             <i class="fa-solid fa-check"></i> Đã Chuyển Tiền
                                         </button>
                                     </form>
                                     <form action="${pageContext.request.contextPath}/admin/dashboard" method="POST" class="w-1/3">
                                         <input type="hidden" name="action" value="REJECT_WITHDRAW">
                                         <input type="hidden" name="requestId" value="${req.id}">
-                                        <button type="submit" onclick="return confirm('Từ chối lệnh rút tiền này?');" class="w-full bg-red-100 hover:bg-red-200 text-red-600 font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-2">
+                                        <button type="submit" onclick="confirmAction(event, 'Từ chối lệnh rút tiền này?', this);" class="w-full bg-red-100 hover:bg-red-200 text-red-600 font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-2">
                                             <i class="fa-solid fa-xmark"></i> Hủy
                                         </button>
                                     </form>
@@ -297,7 +304,7 @@
                                     <form action="${pageContext.request.contextPath}/admin/dashboard" method="POST">
                                         <input type="hidden" name="action" value="RESOLVE_ISSUE">
                                         <input type="hidden" name="issueId" value="${issue.id}">
-                                        <button type="submit" onclick="return confirm('Bạn đã liên hệ đối tác và xác nhận đóng hồ sơ sự cố này?');" class="w-full md:w-auto bg-gray-800 hover:bg-black text-white font-bold py-3 px-6 rounded-xl transition flex items-center justify-center gap-2 shadow-md">
+                                        <button type="submit" onclick="confirmAction(event, 'Bạn đã liên hệ đối tác và xác nhận đóng hồ sơ sự cố này?', this);" class="w-full md:w-auto bg-gray-800 hover:bg-black text-white font-bold py-3 px-6 rounded-xl transition flex items-center justify-center gap-2 shadow-md">
                                             <i class="fa-solid fa-check-double"></i> Đánh dấu Đã Giải Quyết
                                         </button>
                                     </form>
@@ -315,16 +322,44 @@
                         <p class="text-sm text-gray-500 mt-1">Giám sát và Khóa/Mở khóa các tài khoản vi phạm chính sách.</p>
                     </div>
 
-                    <div class="flex gap-4 mb-6 border-b border-gray-200 pb-4">
+                    <div class="flex flex-wrap gap-4 mb-6 border-b border-gray-200 pb-4">
                         <button onclick="switchSubTab('customers')" id="subnav-customers" class="px-6 py-2 rounded-full font-bold text-sm bg-orange-500 text-white shadow-md transition">Khách Hàng</button>
                         <button onclick="switchSubTab('merchants')" id="subnav-merchants" class="px-6 py-2 rounded-full font-bold text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 transition">Nhà Hàng</button>
                         <button onclick="switchSubTab('shippers')" id="subnav-shippers" class="px-6 py-2 rounded-full font-bold text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 transition">Tài Xế (Shipper)</button>
-                    </div>
+                        <button onclick="switchSubTab('appeals')" id="subnav-appeals" class="px-6 py-2 rounded-full font-bold text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 transition">Đơn Kháng Cáo 
+                            <c:if test="${not empty listAppeals}"><span class="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs ml-1">${listAppeals.size()}</span></c:if>
+                            </button>
+                        </div>
 
-                    <div id="subtab-customers" class="block bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8">
-                        <div class="bg-blue-50/50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                            <h4 class="font-bold text-blue-800"><i class="fa-solid fa-users mr-2"></i>Danh sách Khách Hàng</h4>
-                            <span class="bg-blue-100 text-blue-600 text-xs font-bold px-3 py-1 rounded-full">${listCustomers.size()} tài khoản</span>
+                        <div class="flex flex-col md:flex-row gap-4 mb-6 bg-white p-4 rounded-2xl border border-gray-200 shadow-sm relative z-20">
+                            <div class="flex-1 relative">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
+                                </div>
+                                <input type="text" id="user-search-input" onkeyup="handleUserSearch()" autocomplete="off" placeholder="Tìm theo tên, một phần tên hoặc số điện thoại..." class="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white transition font-medium text-gray-700">
+                            </div>
+
+                            <div class="w-full md:w-56 shrink-0 relative">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <i class="fa-solid fa-arrow-down-a-z text-gray-400"></i>
+                                </div>
+                                <select id="user-sort-select" onchange="handleUserSort()" class="w-full pl-11 pr-8 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white transition font-bold text-gray-700 appearance-none cursor-pointer">
+                                    <option value="default">Mặc định (Mới nhất)</option>
+                                    <option value="name_asc">Tên: A -> Z</option>
+                                    <option value="name_desc">Tên: Z -> A</option>
+                                    <option value="status_active">Trạng thái: Đang hoạt động</option>
+                                    <option value="status_banned">Trạng thái: Bị khóa</option>
+                                </select>
+                                <div class="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                                    <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="subtab-customers" class="block bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8">
+                            <div class="bg-blue-50/50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                                <h4 class="font-bold text-blue-800"><i class="fa-solid fa-users mr-2"></i>Danh sách Khách Hàng</h4>
+                                <span class="bg-blue-100 text-blue-600 text-xs font-bold px-3 py-1 rounded-full">${listCustomers.size()} tài khoản</span>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left text-sm text-gray-600">
@@ -333,8 +368,27 @@
                                 </thead>
                                 <tbody class="divide-y divide-gray-100">
                                     <c:forEach var="u" items="${listCustomers}">
-                                        <tr class="hover:bg-gray-50 transition">
-                                            <td class="px-6 py-4"><p class="font-bold text-gray-900">${u.fullName}</p><p class="text-xs text-gray-400">ID: CUS-${u.id}</p></td>
+                                        <tr class="hover:bg-gray-50 transition user-row" data-name="${u.fullName.toLowerCase()}" data-phone="${u.phone}" data-status="${u.status}">
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center gap-3">
+                                                    <div class="w-10 h-10 rounded-full overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center shrink-0">
+                                                        <c:choose>
+                                                            <c:when test="${not empty u.avatarUrl}">
+                                                                <img src="${u.avatarUrl}" class="w-full h-full object-cover">
+                                                            </c:when>
+                                                            <c:otherwise>
+                                                                <i class="fa-solid fa-user text-gray-400"></i>
+                                                            </c:otherwise>
+                                                        </c:choose>
+                                                    </div>
+                                                    <div>
+                                                        <a href="${pageContext.request.contextPath}/admin/user-detail?id=${u.id}" class="font-bold text-blue-600 hover:text-blue-800 hover:underline transition">
+                                                            ${u.fullName} <i class="fa-solid fa-arrow-up-right-from-square text-[10px] ml-1 opacity-50"></i>
+                                                        </a>
+                                                        <p class="text-xs text-gray-400 mt-0.5">ID: ${u.id}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
                                             <td class="px-6 py-4"><p class="font-medium text-gray-800">${u.phone}</p><p class="text-xs text-gray-400">${u.email}</p></td>
                                             <td class="px-6 py-4 text-center"><span class="px-3 py-1 rounded-full text-xs font-bold ${u.status == 'ACTIVE' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}">${u.status}</span></td>
                                             <td class="px-6 py-4 text-center">
@@ -342,7 +396,7 @@
                                                     <input type="hidden" name="action" value="CHANGE_USER_STATUS">
                                                     <input type="hidden" name="targetUserId" value="${u.id}">
                                                     <input type="hidden" name="newStatus" value="${u.status == 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'}">
-                                                    <button type="submit" onclick="return confirm('Khóa/Mở khóa tài khoản này?');" class="w-10 h-10 rounded-lg font-bold text-white transition shadow-sm ${u.status == 'ACTIVE' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}"><i class="${u.status == 'ACTIVE' ? 'fa-solid fa-lock' : 'fa-solid fa-unlock'}"></i></button>
+                                                    <button type="submit" onclick="confirmAction(event, 'Khóa/Mở khóa tài khoản này?', this);" class="w-10 h-10 rounded-lg font-bold text-white transition shadow-sm ${u.status == 'ACTIVE' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}"><i class="${u.status == 'ACTIVE' ? 'fa-solid fa-lock' : 'fa-solid fa-unlock'}"></i></button>
                                                 </form>
                                             </td>
                                         </tr>
@@ -360,12 +414,31 @@
                         <div class="overflow-x-auto">
                             <table class="w-full text-left text-sm text-gray-600">
                                 <thead class="bg-white border-b border-gray-100 text-gray-400 uppercase">
-                                    <tr><th class="px-6 py-4 font-medium">ID / Tên Chủ Quán</th><th class="px-6 py-4 font-medium">Liên hệ</th><th class="px-6 py-4 font-medium text-center">Trạng thái Login</th><th class="px-6 py-4 font-medium text-center">Hành động</th></tr>
+                                    <tr><th class="px-6 py-4 font-medium">ID / Tên Chủ Quán</th><th class="px-6 py-4 font-medium">Liên hệ</th><th class="px-6 py-4 font-medium text-center">Trạng thái</th><th class="px-6 py-4 font-medium text-center">Hành động</th></tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100">
                                     <c:forEach var="u" items="${listMerchants}">
-                                        <tr class="hover:bg-gray-50 transition">
-                                            <td class="px-6 py-4"><p class="font-bold text-gray-900">${u.fullName}</p><p class="text-xs text-gray-400">ID: MER-${u.id}</p></td>
+                                        <tr class="hover:bg-gray-50 transition user-row" data-name="${u.fullName.toLowerCase()}" data-phone="${u.phone}" data-status="${u.status}">
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center gap-3">
+                                                    <div class="w-10 h-10 rounded-full overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center shrink-0">
+                                                        <c:choose>
+                                                            <c:when test="${not empty u.avatarUrl}">
+                                                                <img src="${u.avatarUrl}" class="w-full h-full object-cover">
+                                                            </c:when>
+                                                            <c:otherwise>
+                                                                <i class="fa-solid fa-user text-gray-400"></i>
+                                                            </c:otherwise>
+                                                        </c:choose>
+                                                    </div>
+                                                    <div>
+                                                        <a href="${pageContext.request.contextPath}/admin/user-detail?id=${u.id}" class="font-bold text-blue-600 hover:text-blue-800 hover:underline transition">
+                                                            ${u.fullName} <i class="fa-solid fa-arrow-up-right-from-square text-[10px] ml-1 opacity-50"></i>
+                                                        </a>
+                                                        <p class="text-xs text-gray-400 mt-0.5">ID: ${u.id}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
                                             <td class="px-6 py-4"><p class="font-medium text-gray-800">${u.phone}</p><p class="text-xs text-gray-400">${u.email}</p></td>
                                             <td class="px-6 py-4 text-center"><span class="px-3 py-1 rounded-full text-xs font-bold ${u.status == 'ACTIVE' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}">${u.status}</span></td>
                                             <td class="px-6 py-4 text-center">
@@ -373,7 +446,7 @@
                                                     <input type="hidden" name="action" value="CHANGE_USER_STATUS">
                                                     <input type="hidden" name="targetUserId" value="${u.id}">
                                                     <input type="hidden" name="newStatus" value="${u.status == 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'}">
-                                                    <button type="submit" onclick="return confirm('Khóa/Mở khóa tài khoản này?');" class="w-10 h-10 rounded-lg font-bold text-white transition shadow-sm ${u.status == 'ACTIVE' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}"><i class="${u.status == 'ACTIVE' ? 'fa-solid fa-lock' : 'fa-solid fa-unlock'}"></i></button>
+                                                    <button type="submit" onclick="confirmAction(event, 'Khóa/Mở khóa tài khoản này?', this);" class="w-10 h-10 rounded-lg font-bold text-white transition shadow-sm ${u.status == 'ACTIVE' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}"><i class="${u.status == 'ACTIVE' ? 'fa-solid fa-lock' : 'fa-solid fa-unlock'}"></i></button>
                                                 </form>
                                             </td>
                                         </tr>
@@ -395,8 +468,27 @@
                                 </thead>
                                 <tbody class="divide-y divide-gray-100">
                                     <c:forEach var="u" items="${listShippers}">
-                                        <tr class="hover:bg-gray-50 transition">
-                                            <td class="px-6 py-4"><p class="font-bold text-gray-900">${u.fullName}</p><p class="text-xs text-gray-400">ID: SP-${u.id}</p></td>
+                                        <tr class="hover:bg-gray-50 transition user-row" data-name="${u.fullName.toLowerCase()}" data-phone="${u.phone}" data-status="${u.status}">
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center gap-3">
+                                                    <div class="w-10 h-10 rounded-full overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center shrink-0">
+                                                        <c:choose>
+                                                            <c:when test="${not empty u.avatarUrl}">
+                                                                <img src="${u.avatarUrl}" class="w-full h-full object-cover">
+                                                            </c:when>
+                                                            <c:otherwise>
+                                                                <i class="fa-solid fa-user text-gray-400"></i>
+                                                            </c:otherwise>
+                                                        </c:choose>
+                                                    </div>
+                                                    <div>
+                                                        <a href="${pageContext.request.contextPath}/admin/user-detail?id=${u.id}" class="font-bold text-blue-600 hover:text-blue-800 hover:underline transition">
+                                                            ${u.fullName} <i class="fa-solid fa-arrow-up-right-from-square text-[10px] ml-1 opacity-50"></i>
+                                                        </a>
+                                                        <p class="text-xs text-gray-400 mt-0.5">ID: ${u.id}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
                                             <td class="px-6 py-4"><p class="font-medium text-gray-800">${u.phone}</p><p class="text-xs text-gray-400">${u.email}</p></td>
                                             <td class="px-6 py-4 text-center"><span class="px-3 py-1 rounded-full text-xs font-bold ${u.status == 'ACTIVE' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}">${u.status}</span></td>
                                             <td class="px-6 py-4 text-center">
@@ -404,7 +496,7 @@
                                                     <input type="hidden" name="action" value="CHANGE_USER_STATUS">
                                                     <input type="hidden" name="targetUserId" value="${u.id}">
                                                     <input type="hidden" name="newStatus" value="${u.status == 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'}">
-                                                    <button type="submit" onclick="return confirm('Khóa/Mở khóa tài khoản này?');" class="w-10 h-10 rounded-lg font-bold text-white transition shadow-sm ${u.status == 'ACTIVE' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}"><i class="${u.status == 'ACTIVE' ? 'fa-solid fa-lock' : 'fa-solid fa-unlock'}"></i></button>
+                                                    <button type="submit" onclick="confirmAction(event, 'Khóa/Mở khóa tài khoản này?', this);" class="w-10 h-10 rounded-lg font-bold text-white transition shadow-sm ${u.status == 'ACTIVE' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}"><i class="${u.status == 'ACTIVE' ? 'fa-solid fa-lock' : 'fa-solid fa-unlock'}"></i></button>
                                                 </form>
                                             </td>
                                         </tr>
@@ -413,15 +505,47 @@
                             </table>
                         </div>
                     </div>
+
+                    <div id="subtab-appeals" class="hidden bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8">
+                        <div class="bg-red-50/50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                            <h4 class="font-bold text-red-800"><i class="fa-solid fa-envelope-open-text mr-2"></i>Đơn xin Ân xá / Kháng cáo</h4>
+                        </div>
+                        <div class="p-6 grid grid-cols-1 gap-4">
+                            <c:forEach var="a" items="${listAppeals}">
+                                <div class="border border-gray-200 rounded-xl p-5 flex flex-col md:flex-row gap-6 relative">
+                                    <div class="w-1/3 border-r border-gray-100 pr-4">
+                                        <span class="text-xs font-bold text-gray-400">Người gửi:</span>
+                                        <h4 class="font-black text-lg text-gray-900">${a.fullName}</h4>
+                                        <p class="text-sm font-bold ${a.role == 'SHIPPER' ? 'text-orange-500' : 'text-blue-500'} mb-2">${a.role}</p>
+                                        <p class="text-sm text-gray-500"><i class="fa-solid fa-phone mr-1"></i>${a.phone}</p>
+                                    </div>
+                                    <div class="flex-1">
+                                        <span class="text-xs font-bold text-gray-400">Nội dung giải trình:</span>
+                                        <p class="font-medium text-gray-800 italic bg-gray-50 p-3 rounded-lg border border-gray-100 mt-1 mb-4">"${a.reason}"</p>
+
+                                        <form action="${pageContext.request.contextPath}/admin/dashboard" method="POST" class="flex gap-2">
+                                            <input type="hidden" name="action" value="RESOLVE_APPEAL">
+                                            <input type="hidden" name="appealId" value="${a.id}">
+                                            <input type="hidden" name="targetUserId" value="${a.userId}">
+                                            <input type="text" name="adminNote" placeholder="Ghi chú của Admin (Tùy chọn)" class="flex-1 border border-gray-300 rounded-lg px-3 outline-none focus:border-red-500 text-sm">
+                                            <button type="submit" name="appealDecision" value="APPROVE" onclick="confirmAction(event, 'Chấp nhận và mở khóa tài khoản này?', this);" class="bg-green-500 hover:bg-green-600 text-white font-bold px-4 py-2 rounded-lg text-sm transition shadow"><i class="fa-solid fa-check mr-1"></i>Ân xá</button>
+                                            <button type="submit" name="appealDecision" value="REJECT" onclick="confirmAction(event, 'Bác bỏ đơn kháng cáo này?', this);" class="bg-gray-800 hover:bg-black text-white font-bold px-4 py-2 rounded-lg text-sm transition shadow"><i class="fa-solid fa-xmark mr-1"></i>Bác bỏ</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </c:forEach>
+                            <c:if test="${empty listAppeals}"><p class="text-center text-gray-400 font-medium py-4">Không có đơn kháng cáo nào.</p></c:if>
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
+            </main>
 
-            </div>
-        </main>
-
-        <div id="reject-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center backdrop-blur-sm">
-            <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
-                <h3 class="text-xl font-bold text-gray-900 mb-4">Lý do từ chối hồ sơ</h3>
-                <form action="${pageContext.request.contextPath}/admin/dashboard" method="POST">
+            <div id="reject-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+                <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">Lý do từ chối hồ sơ</h3>
+                    <form action="${pageContext.request.contextPath}/admin/dashboard" method="POST">
                     <input type="hidden" name="action" value="REJECT_KYC">
                     <input type="hidden" name="kycId" id="reject-kyc-id">
                     <input type="hidden" name="merchantId" id="reject-merchant-id">
@@ -431,6 +555,21 @@
                         <button type="submit" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl transition shadow-md">Xác nhận Từ Chối</button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <div id="custom-confirm-modal" class="fixed inset-0 bg-black/60 z-[100] hidden flex items-center justify-center backdrop-blur-sm transition-opacity">
+            <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl relative text-center transform transition-all scale-95 opacity-0 duration-200" id="confirm-modal-content">
+                <div class="w-16 h-16 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+                    <i class="fa-solid fa-circle-exclamation animate-pulse"></i>
+                </div>
+                <h3 class="text-xl font-black text-gray-900 mb-2">Xác nhận hành động</h3>
+                <p id="confirm-message" class="text-gray-500 mb-6 font-medium">Bạn có chắc chắn không?</p>
+
+                <div class="flex gap-3">
+                    <button onclick="closeConfirmModal()" type="button" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition">Hủy bỏ</button>
+                    <button onclick="executeConfirm()" type="button" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition shadow-md">Xác nhận</button>
+                </div>
             </div>
         </div>
 
@@ -453,7 +592,6 @@
         </c:if>
 
         <script>
-            // 1. Hàm chuyển đổi các Tab chính (Sidebar)
             function switchTab(tabName) {
                 document.getElementById('tab-overview').classList.add('hidden');
                 document.getElementById('tab-kyc').classList.add('hidden');
@@ -496,11 +634,11 @@
                 }
             }
 
-            // 2. Hàm chuyển đổi Sub-Tab trong mục Quản lý Người dùng
             function switchSubTab(role) {
                 document.getElementById('subtab-customers').classList.add('hidden');
                 document.getElementById('subtab-merchants').classList.add('hidden');
                 document.getElementById('subtab-shippers').classList.add('hidden');
+                document.getElementById('subtab-appeals').classList.add('hidden');
 
                 const normalClass = "px-6 py-2 rounded-full font-bold text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 transition";
                 const activeClass = "px-6 py-2 rounded-full font-bold text-sm bg-orange-500 text-white shadow-md transition";
@@ -508,6 +646,7 @@
                 document.getElementById('subnav-customers').className = normalClass;
                 document.getElementById('subnav-merchants').className = normalClass;
                 document.getElementById('subnav-shippers').className = normalClass;
+                document.getElementById('subnav-appeals').className = normalClass;
 
                 document.getElementById('subtab-' + role).classList.remove('hidden');
                 document.getElementById('subnav-' + role).className = activeClass;
@@ -519,7 +658,6 @@
                     switchTab(activeTab);
             });
 
-            // 3. Xử lý Modal Từ chối KYC
             function openRejectModal(kycId, merchantId) {
                 document.getElementById('reject-kyc-id').value = kycId;
                 document.getElementById('reject-merchant-id').value = merchantId;
@@ -532,7 +670,6 @@
 
         <script>
             document.addEventListener('DOMContentLoaded', function () {
-                // Biểu đồ Doanh thu (Line Chart)
                 const revCtx = document.getElementById('adminRevenueChart');
                 if (revCtx) {
                     new Chart(revCtx.getContext('2d'), {
@@ -542,7 +679,7 @@
                             datasets: [{
                                     label: 'Tổng Giao Dịch (GMV)',
                                     data: [${revValues}],
-                                    borderColor: 'rgb(59, 130, 246)', // Blue 500
+                                    borderColor: 'rgb(59, 130, 246)',
                                     backgroundColor: 'rgba(59, 130, 246, 0.1)',
                                     borderWidth: 3,
                                     pointBackgroundColor: 'rgb(59, 130, 246)',
@@ -562,7 +699,6 @@
                     });
                 }
 
-                // Biểu đồ Trạng thái (Doughnut Chart)
                 const statusCtx = document.getElementById('adminStatusChart');
                 if (statusCtx) {
                     new Chart(statusCtx.getContext('2d'), {
@@ -583,6 +719,122 @@
                     });
                 }
             });
+        </script>
+
+        <script>
+            let targetAction = null;
+
+            function confirmAction(event, message, element) {
+                event.preventDefault();
+                if (element.tagName === 'A') {
+                    targetAction = {type: 'link', data: element.href};
+                } else if (element.form) {
+                    targetAction = {type: 'form', data: element.form};
+                } else if (element.tagName === 'FORM') {
+                    targetAction = {type: 'form', data: element};
+                }
+                document.getElementById('confirm-message').innerText = message;
+                const modal = document.getElementById('custom-confirm-modal');
+                const content = document.getElementById('confirm-modal-content');
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    content.classList.remove('scale-95', 'opacity-0');
+                    content.classList.add('scale-100', 'opacity-100');
+                }, 10);
+            }
+
+            function closeConfirmModal() {
+                const modal = document.getElementById('custom-confirm-modal');
+                const content = document.getElementById('confirm-modal-content');
+                content.classList.remove('scale-100', 'opacity-100');
+                content.classList.add('scale-95', 'opacity-0');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    targetAction = null;
+                }, 200);
+            }
+
+            function executeConfirm() {
+                if (!targetAction)
+                    return;
+                if (targetAction.type === 'form') {
+                    targetAction.data.submit();
+                } else if (targetAction.type === 'link') {
+                    window.location.href = targetAction.data;
+                }
+            }
+        </script>
+
+        <script>
+            function handleUserSearch() {
+                const input = document.getElementById('user-search-input').value.toLowerCase().trim();
+
+                // Lấy cả 3 bảng để kiểm tra độc lập
+                const tbodys = document.querySelectorAll('#subtab-customers tbody, #subtab-merchants tbody, #subtab-shippers tbody');
+
+                tbodys.forEach(tbody => {
+                    let hasVisibleRow = false; // Biến theo dõi xem có hàng nào khớp không
+                    const rows = tbody.querySelectorAll('.user-row');
+
+                    rows.forEach(row => {
+                        const name = row.getAttribute('data-name');
+                        const phone = row.getAttribute('data-phone');
+                        if (name.includes(input) || phone.includes(input)) {
+                            row.style.display = '';
+                            hasVisibleRow = true; 
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    });
+                    let noResultRow = tbody.querySelector('.no-result-row');
+
+                    if (!hasVisibleRow && rows.length > 0) {
+
+                        if (!noResultRow) {
+
+                            noResultRow = document.createElement('tr');
+                            noResultRow.className = 'no-result-row';
+                            noResultRow.innerHTML = '<td colspan="4" class="px-6 py-8 text-center text-gray-500 font-medium italic"><i class="fa-solid fa-magnifying-glass-minus text-2xl mb-2 block text-gray-300"></i>Không có thông tin phù hợp với từ khóa</td>';
+                            tbody.appendChild(noResultRow);
+                        }
+                        noResultRow.style.display = '';
+                    } else if (noResultRow) {
+
+                        noResultRow.style.display = 'none';
+                    }
+                });
+            }
+
+            function handleUserSort() {
+                const sortType = document.getElementById('user-sort-select').value;
+                const tbodys = document.querySelectorAll('#subtab-customers tbody, #subtab-merchants tbody, #subtab-shippers tbody');
+
+                tbodys.forEach(tbody => {
+                    let rowsArray = Array.from(tbody.querySelectorAll('.user-row'));
+
+                    rowsArray.sort((a, b) => {
+                        const nameA = a.getAttribute('data-name');
+                        const nameB = b.getAttribute('data-name');
+                        const statusA = a.getAttribute('data-status');
+                        const statusB = b.getAttribute('data-status');
+
+                        if (sortType === 'name_asc')
+                            return nameA.localeCompare(nameB);
+                        if (sortType === 'name_desc')
+                            return nameB.localeCompare(nameA);
+
+                        if (sortType === 'status_active')
+                            return statusA === 'ACTIVE' ? -1 : 1;
+                        if (sortType === 'status_banned')
+                            return statusA === 'INACTIVE' ? -1 : 1;
+
+                        return 0; // default
+                    });
+
+                    tbody.innerHTML = '';
+                    rowsArray.forEach(row => tbody.appendChild(row));
+                });
+            }
         </script>
     </body>
 </html>

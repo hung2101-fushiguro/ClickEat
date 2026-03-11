@@ -1,9 +1,3 @@
-<%-- 
-    Document   : profile
-    Created on : Mar 6, 2026, 2:31:43 PM
-    Author     : DELL
---%>
-
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@taglib prefix="c" uri="jakarta.tags.core" %>
 <!DOCTYPE html>
@@ -29,10 +23,38 @@
             <div class="flex-1 overflow-y-auto p-4 space-y-6 pb-10">
 
                 <div class="bg-white rounded-3xl p-6 flex flex-col items-center text-center shadow-sm border border-gray-100">
-                    <div class="w-24 h-24 bg-orange-100 rounded-full flex items-center justify-center mb-4 border-4 border-white shadow-md relative">
-                        <i class="fa-solid fa-user-astronaut text-4xl text-orange-500"></i>
-                        <div class="absolute bottom-0 right-0 w-6 h-6 bg-green-500 border-2 border-white rounded-full"></div>
-                    </div>
+
+                    <form action="${pageContext.request.contextPath}/upload-avatar" method="POST" enctype="multipart/form-data" class="flex flex-col items-center w-full mb-2">
+                        <div class="relative w-28 h-28 mb-3 group cursor-pointer" onclick="document.getElementById('avatar-upload').click();">
+
+                            <div class="w-full h-full rounded-full border-4 border-white shadow-md overflow-hidden bg-orange-100 flex items-center justify-center relative z-0">
+                                <c:choose>
+                                    <c:when test="${not empty sessionScope.account.avatarUrl}">
+                                        <img id="avatar-preview" src="${sessionScope.account.avatarUrl}" class="w-full h-full object-cover">
+                                    </c:when>
+                                    <c:otherwise>
+                                        <div id="avatar-preview-fallback" class="w-full h-full flex items-center justify-center text-5xl text-orange-500">
+                                            <i class="fa-solid fa-user-astronaut"></i>
+                                        </div>
+                                        <img id="avatar-preview" src="" class="w-full h-full object-cover hidden">
+                                    </c:otherwise>
+                                </c:choose>
+                            </div>
+
+                            <div class="absolute bottom-0 right-1 w-6 h-6 bg-green-500 border-2 border-white rounded-full z-10"></div>
+
+                            <div class="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                                <i class="fa-solid fa-camera text-white text-2xl"></i>
+                            </div>
+                        </div>
+
+                        <input type="file" id="avatar-upload" name="avatarFile" accept="image/png, image/jpeg, image/jpg" class="hidden" onchange="previewImage(event)">
+
+                        <button type="submit" id="btn-save-avatar" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-full shadow-md transition-colors hidden text-sm mb-2">
+                            <i class="fa-solid fa-cloud-arrow-up mr-2"></i> Lưu Ảnh Mới
+                        </button>
+                    </form>
+
                     <h2 class="text-2xl font-black text-gray-900">${sessionScope.account.fullName}</h2>
                     <p class="text-gray-500 font-medium">ID: SP-00${sessionScope.account.id}</p>
                     <span class="mt-2 bg-green-100 text-green-600 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider">Đối tác chính thức</span>
@@ -93,5 +115,35 @@
             <c:remove var="toastMsg" scope="session" />
             <script>setTimeout(() => document.getElementById('toast-success').style.display = 'none', 3000);</script>
         </c:if>
+
+        <c:if test="${not empty sessionScope.toastError}">
+            <div id="toast-error" class="fixed top-5 right-5 bg-red-500 text-white px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-bounce">
+                <i class="fa-solid fa-triangle-exclamation text-xl"></i><span class="font-medium">${sessionScope.toastError}</span>
+            </div>
+            <c:remove var="toastError" scope="session" />
+            <script>setTimeout(() => document.getElementById('toast-error').style.display = 'none', 4000);</script>
+        </c:if>
+
+        <script>
+            function previewImage(event) {
+                const input = event.target;
+                if (input.files && input.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        const preview = document.getElementById('avatar-preview');
+                        preview.src = e.target.result;
+                        preview.classList.remove('hidden');
+
+                        const fallback = document.getElementById('avatar-preview-fallback');
+                        if (fallback)
+                            fallback.classList.add('hidden');
+
+                        // Hiện nút Lưu Ảnh Mới
+                        document.getElementById('btn-save-avatar').classList.remove('hidden');
+                    }
+                    reader.readAsDataURL(input.files[0]);
+                }
+            }
+        </script>
     </body>
 </html>

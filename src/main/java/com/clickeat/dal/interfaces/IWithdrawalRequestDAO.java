@@ -14,4 +14,6 @@ public interface IWithdrawalRequestDAO {
     boolean approveRequest(long requestId, long shipperId, double amount);
 
     boolean rejectRequest(long requestId);
+
+    boolean createRequest(WithdrawalRequest req);
 }

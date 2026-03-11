@@ -9,6 +9,7 @@ com\clickeat\model\OrderIssue.class
 com\clickeat\controller\admin\AdminDashboardServlet.class
 com\clickeat\model\CustomerProfile.class
 com\clickeat\dal\interfaces\IGenericDAO.class
+com\clickeat\controller\auth\BannedServlet.class
 com\clickeat\controller\web\CartServlet.class
 com\clickeat\dal\impl\UserDAO.class
 com\clickeat\dal\interfaces\ICartItemDAO.class
@@ -19,6 +20,7 @@ com\clickeat\dal\impl\FoodItemDAO.class
 com\clickeat\dal\interfaces\IFoodItemDAO.class
 com\clickeat\dal\interfaces\IOrderItemDAO.class
 com\clickeat\config\DBContext.class
+com\clickeat\dal\impl\UserAppealDAO.class
 com\clickeat\controller\web\CheckoutServlet.class
 com\clickeat\model\OrderStatusHistory.class
 com\clickeat\model\GuestSession.class
@@ -27,12 +29,14 @@ com\clickeat\model\Address.class
 com\clickeat\model\Notification.class
 com\clickeat\dal\interfaces\IWithdrawalRequestDAO.class
 com\clickeat\model\WithdrawalRequest.class
+com\clickeat\controller\admin\AdminUserDetailServlet.class
 com\clickeat\controller\shipper\ShipperCheckNewOrderServlet.class
 com\clickeat\controller\shipper\ShipperOrderTrackingServlet.class
 com\clickeat\dal\interfaces\ICartDAO.class
 com\clickeat\dal\interfaces\IMerchantProfileDAO.class
 com\clickeat\model\VoucherUsage.class
 com\clickeat\model\UserAuthProvider.class
+com\clickeat\dal\interfaces\IUserAppealDAO.class
 com\clickeat\dal\impl\MerchantProfileDAO.class
 com\clickeat\controller\shipper\ShipperProofServlet.class
 com\clickeat\dal\interfaces\IOrderDAO.class
@@ -47,6 +51,7 @@ com\clickeat\model\Order.class
 com\clickeat\model\Voucher.class
 com\clickeat\model\MerchantKYC.class
 com\clickeat\model\ShipperWallet.class
+com\clickeat\model\UserAppeal.class
 com\clickeat\dal\impl\MerchantKYCDAO.class
 com\clickeat\main\Testconnection.class
 com\clickeat\model\UserBehaviorEvent.class
@@ -68,7 +73,9 @@ com\clickeat\model\Cart.class
 com\clickeat\dal\impl\CartDAO.class
 com\clickeat\controller\shipper\ShipperProfileServlet.class
 com\clickeat\dal\impl\WithdrawalRequestDAO.class
+com\clickeat\controller\shipper\ShipperWithdrawServlet.class
 com\clickeat\dal\impl\ShipperWalletDAO.class
 com\clickeat\model\ShipperAvailability.class
 com\clickeat\controller\shipper\ShipperOrderDetailServlet.class
+com\clickeat\controller\auth\AvatarUploadServlet.class
 com\clickeat\model\FoodItem.class

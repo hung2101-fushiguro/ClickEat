@@ -75,6 +75,7 @@
 
             <header class="h-20 bg-white flex items-center justify-between px-8 border-b border-gray-200 sticky top-0 z-10">
                 <h2 id="header-title" class="text-2xl font-bold text-gray-900">Tổng quan thu nhập</h2>
+
                 <div class="flex items-center gap-4">
                     <div class="text-right">
                         <p class="text-sm font-bold text-gray-900">${sessionScope.account.fullName}</p>
@@ -83,9 +84,23 @@
                         </div>
                         <p class="text-xs text-gray-500 mt-0.5">ID: SP-${sessionScope.account.id}</p>
                     </div>
-                    <div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden border-2 border-orange-500">
-                        <i class="fa-solid fa-user text-gray-400"></i>
+
+                    <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center overflow-hidden border-2 border-orange-500">
+                        <c:choose>
+                            <c:when test="${not empty sessionScope.account.avatarUrl}">
+                                <img src="${sessionScope.account.avatarUrl}" alt="Avatar" class="w-full h-full object-cover">
+                            </c:when>
+                            <c:otherwise>
+                                <i class="fa-solid fa-user-astronaut text-orange-400"></i>
+                            </c:otherwise>
+                        </c:choose>
                     </div>
+
+                    <a href="${pageContext.request.contextPath}/logout" 
+                       class="w-10 h-10 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-full flex items-center justify-center transition-colors shadow-sm border border-red-100" 
+                       title="Đăng xuất">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </a>
                 </div>
             </header>
 
@@ -99,7 +114,7 @@
                                 <fmt:formatNumber value="${currentBalance}" type="currency" currencySymbol="đ" maxFractionDigits="0"/>
                             </h3>
                         </div>
-                        <button class="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3.5 rounded-xl font-bold text-lg transition-colors shadow-lg shadow-orange-500/30 flex items-center gap-2">
+                        <button onclick="openWithdrawModal()" class="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3.5 rounded-xl font-bold text-lg transition-colors shadow-lg shadow-orange-500/30 flex items-center gap-2">
                             <i class="fa-solid fa-wallet"></i> Rút tiền ngay
                         </button>
                     </div>
@@ -345,7 +360,36 @@
 
             </div>
         </main>
+        <div id="withdraw-modal" class="fixed inset-0 bg-black/60 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+            <div class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl relative">
+                <button onclick="closeWithdrawModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-800 transition text-2xl"><i class="fa-solid fa-xmark"></i></button>
 
+                <div class="text-center mb-6">
+                    <div class="w-16 h-16 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-3"><i class="fa-solid fa-money-bill-transfer"></i></div>
+                    <h3 class="text-2xl font-black text-gray-900">Yêu cầu rút tiền</h3>
+                    <p class="text-gray-500 mt-1">Số dư khả dụng: <b class="text-orange-500"><fmt:formatNumber value="${currentBalance}" type="currency" currencySymbol="đ" maxFractionDigits="0"/></b></p>
+                </div>
+
+                <form action="${pageContext.request.contextPath}/shipper/withdraw" method="POST">
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Số tiền cần rút (VNĐ) <span class="text-red-500">*</span></label>
+                        <input type="number" name="amount" min="50000" max="${currentBalance}" required placeholder="Tối thiểu 50.000đ" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Ngân hàng thụ hưởng <span class="text-red-500">*</span></label>
+                        <input type="text" name="bankName" required placeholder="VD: MB Bank, Vietcombank..." class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition">
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Số tài khoản <span class="text-red-500">*</span></label>
+                        <input type="text" name="bankAccountNumber" required placeholder="Nhập chính xác số tài khoản" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 transition tracking-wider font-medium">
+                    </div>
+
+                    <button type="submit" onclick="confirmAction(event, 'Xác nhận thông tin chính xác và gửi yêu cầu?', this);" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-orange-500/30">
+                        Gửi Yêu Cầu
+                    </button>
+                </form>
+            </div>
+        </div>
         <c:if test="${not empty sessionScope.toastMsg}">
             <div id="toast-success" class="fixed top-5 right-5 bg-green-500 text-white px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-bounce">
                 <i class="fa-solid fa-circle-check text-xl"></i>
@@ -376,6 +420,20 @@
             <button onclick="location.reload()" class="bg-white text-blue-600 font-bold px-5 py-2 rounded-full hover:bg-gray-100 transition shadow-sm ml-4">
                 Tải lại trang ngay
             </button>
+        </div>
+        <div id="custom-confirm-modal" class="fixed inset-0 bg-black/60 z-[100] hidden flex items-center justify-center backdrop-blur-sm transition-opacity">
+            <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl relative text-center transform transition-all scale-95 opacity-0 duration-200" id="confirm-modal-content">
+                <div class="w-16 h-16 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+                    <i class="fa-solid fa-circle-exclamation animate-pulse"></i>
+                </div>
+                <h3 class="text-xl font-black text-gray-900 mb-2">Xác nhận hành động</h3>
+                <p id="confirm-message" class="text-gray-500 mb-6 font-medium">Bạn có chắc chắn không?</p>
+
+                <div class="flex gap-3">
+                    <button onclick="closeConfirmModal()" type="button" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition">Hủy bỏ</button>
+                    <button onclick="executeConfirm()" type="button" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition shadow-md">Xác nhận</button>
+                </div>
+            </div>
         </div>
         <script>
             // Hàm chuyển Tab
@@ -502,6 +560,18 @@
                             statusText.innerHTML = '<span class="text-red-500"><i class="fa-solid fa-wifi"></i> Lỗi kết nối mạng!</span>';
                         });
             }
+            // Hàm mở/đóng Modal Rút tiền
+            function openWithdrawModal() {
+                const balance = ${currentBalance != null ? currentBalance : 0};
+                if (balance < 50000) {
+                    alert("Số dư phải từ 50.000đ trở lên mới có thể rút!");
+                    return;
+                }
+                document.getElementById('withdraw-modal').classList.remove('hidden');
+            }
+            function closeWithdrawModal() {
+                document.getElementById('withdraw-modal').classList.add('hidden');
+            }
         </script>
         <script>
             document.addEventListener('DOMContentLoaded', function () {
@@ -589,6 +659,60 @@
                     });
                 }
             }, 5000);
+        </script>
+        <script>
+            let targetAction = null; // Biến lưu trữ hành động đang chờ xác nhận
+
+            // Hàm gọi Popblock hiện lên
+            function confirmAction(event, message, element) {
+                event.preventDefault(); // Chặn hành động mặc định ngay lập tức (chặn form submit / chặn link)
+
+                // Xác định xem người dùng đang bấm vào Form hay thẻ Link <a>
+                if (element.tagName === 'A') {
+                    targetAction = {type: 'link', data: element.href};
+                } else if (element.form) {
+                    targetAction = {type: 'form', data: element.form}; // Dùng cho <button type="submit">
+                } else if (element.tagName === 'FORM') {
+                    targetAction = {type: 'form', data: element};
+                }
+
+                // Cập nhật câu chữ và tạo hiệu ứng bật lên
+                document.getElementById('confirm-message').innerText = message;
+                const modal = document.getElementById('custom-confirm-modal');
+                const content = document.getElementById('confirm-modal-content');
+
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    content.classList.remove('scale-95', 'opacity-0');
+                    content.classList.add('scale-100', 'opacity-100');
+                }, 10);
+            }
+
+            // Hàm tắt Popblock
+            function closeConfirmModal() {
+                const modal = document.getElementById('custom-confirm-modal');
+                const content = document.getElementById('confirm-modal-content');
+
+                content.classList.remove('scale-100', 'opacity-100');
+                content.classList.add('scale-95', 'opacity-0');
+
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    targetAction = null; // Xóa dữ liệu chờ
+                }, 200);
+            }
+
+            // Hàm thực thi khi người dùng bấm "Xác nhận"
+            function executeConfirm() {
+                if (!targetAction)
+                    return;
+
+                if (targetAction.type === 'form') {
+                    targetAction.data.submit(); // Cho phép form gửi đi
+                } else if (targetAction.type === 'link') {
+                    window.location.href = targetAction.data; // Cho phép link chuyển hướng
+                }
+            }
         </script>
     </body>
 </html>

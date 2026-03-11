@@ -93,7 +93,12 @@ public class WithdrawalRequestDAO extends AbstractDAO<WithdrawalRequest> impleme
         return update(sql, requestId) > 0;
     }
 
-    
+    @Override
+    public boolean createRequest(WithdrawalRequest req) {
+        String sql = "INSERT INTO WithdrawalRequests (shipper_user_id, amount, bank_name, bank_account_number, status) VALUES (?, ?, ?, ?, 'PENDING')";
+        return update(sql, req.getShipperUserId(), req.getAmount(), req.getBankName(), req.getBankAccountNumber()) > 0;
+    }
+
     @Override
     public List<WithdrawalRequest> findAll() {
         return null;

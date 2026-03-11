@@ -101,7 +101,7 @@
                                 <form action="${pageContext.request.contextPath}/shipper/order-detail" method="POST" class="w-1/3">
                                     <input type="hidden" name="orderId" value="${order.id}">
                                     <input type="hidden" name="action" value="yield">
-                                    <button type="submit" class="w-full h-full bg-red-50 hover:bg-red-100 text-red-500 font-bold text-sm py-2 rounded-xl transition border border-red-200 flex flex-col items-center justify-center" onclick="return confirm('Bạn có chắc chắn muốn nhường đơn này không?');">
+                                    <button type="submit" class="w-full h-full bg-red-50 hover:bg-red-100 text-red-500 font-bold text-sm py-2 rounded-xl transition border border-red-200 flex flex-col items-center justify-center" onclick="confirmAction(event, 'Bạn có chắc chắn muốn nhường đơn này không?', this);">
                                         <i class="fa-solid fa-rotate-left mb-1"></i> Nhường đơn
                                     </button>
                                 </form>
@@ -113,6 +113,20 @@
                         </div>
                     </c:otherwise>
                 </c:choose>
+            </div>
+        </div>
+        <div id="custom-confirm-modal" class="fixed inset-0 bg-black/60 z-[100] hidden flex items-center justify-center backdrop-blur-sm transition-opacity">
+            <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl relative text-center transform transition-all scale-95 opacity-0 duration-200" id="confirm-modal-content">
+                <div class="w-16 h-16 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+                    <i class="fa-solid fa-circle-exclamation animate-pulse"></i>
+                </div>
+                <h3 class="text-xl font-black text-gray-900 mb-2">Xác nhận hành động</h3>
+                <p id="confirm-message" class="text-gray-500 mb-6 font-medium">Bạn có chắc chắn không?</p>
+
+                <div class="flex gap-3">
+                    <button onclick="closeConfirmModal()" type="button" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition">Hủy bỏ</button>
+                    <button onclick="executeConfirm()" type="button" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition shadow-md">Xác nhận</button>
+                </div>
             </div>
         </div>
 
@@ -168,6 +182,61 @@
                             }
                         });
             });
+        </script>
+        <script>
+            
+            let targetAction = null; // Biến lưu trữ hành động đang chờ xác nhận
+
+            // Hàm gọi Popblock hiện lên
+            function confirmAction(event, message, element) {
+                event.preventDefault(); // Chặn hành động mặc định ngay lập tức (chặn form submit / chặn link)
+
+                // Xác định xem người dùng đang bấm vào Form hay thẻ Link <a>
+                if (element.tagName === 'A') {
+                    targetAction = {type: 'link', data: element.href};
+                } else if (element.form) {
+                    targetAction = {type: 'form', data: element.form}; // Dùng cho <button type="submit">
+                } else if (element.tagName === 'FORM') {
+                    targetAction = {type: 'form', data: element};
+                }
+
+                // Cập nhật câu chữ và tạo hiệu ứng bật lên
+                document.getElementById('confirm-message').innerText = message;
+                const modal = document.getElementById('custom-confirm-modal');
+                const content = document.getElementById('confirm-modal-content');
+
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    content.classList.remove('scale-95', 'opacity-0');
+                    content.classList.add('scale-100', 'opacity-100');
+                }, 10);
+            }
+
+            // Hàm tắt Popblock
+            function closeConfirmModal() {
+                const modal = document.getElementById('custom-confirm-modal');
+                const content = document.getElementById('confirm-modal-content');
+
+                content.classList.remove('scale-100', 'opacity-100');
+                content.classList.add('scale-95', 'opacity-0');
+
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    targetAction = null; // Xóa dữ liệu chờ
+                }, 200);
+            }
+
+            // Hàm thực thi khi người dùng bấm "Xác nhận"
+            function executeConfirm() {
+                if (!targetAction)
+                    return;
+
+                if (targetAction.type === 'form') {
+                    targetAction.data.submit(); // Cho phép form gửi đi
+                } else if (targetAction.type === 'link') {
+                    window.location.href = targetAction.data; // Cho phép link chuyển hướng
+                }
+            }
         </script>
     </body>
 </html>

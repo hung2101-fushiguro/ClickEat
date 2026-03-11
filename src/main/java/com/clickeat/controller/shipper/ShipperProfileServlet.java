@@ -36,53 +36,49 @@ public class ShipperProfileServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        User account = (User) request.getSession().getAttribute("account");
+        com.clickeat.model.User account = (com.clickeat.model.User) request.getSession().getAttribute("account");
+        if (account == null) {
+            response.sendRedirect(request.getContextPath() + "/login");
+            return;
+        }
 
-        // 1. Lấy dữ liệu từ Form
+        // Lấy dữ liệu từ form
         String phone = request.getParameter("phone");
         String email = request.getParameter("email");
         String vehicleType = request.getParameter("vehicleType");
         String vehicleName = request.getParameter("vehicleName");
         String licensePlate = request.getParameter("licensePlate");
 
-        boolean isSuccess = true;
+        com.clickeat.dal.impl.UserDAO userDAO = new com.clickeat.dal.impl.UserDAO();
 
-        // 2. Cập nhật thông tin CÁ NHÂN (Bảng Users)
-        if (phone != null && email != null) {
+        // 1. Kiểm tra xem có bị trùng với AI KHÁC không
+        if (userDAO.checkDuplicateForUpdate(phone, email, account.getId())) {
+            request.getSession().setAttribute("toastError", "Số điện thoại hoặc Email đã được sử dụng!");
+            response.sendRedirect(request.getContextPath() + "/shipper/profile");
+            return;
+        }
+
+        // 2. Tiến hành cập nhật
+        try {
+            // Update thông tin User chung
+            String sqlUser = "UPDATE Users SET phone = ?, email = ?, updated_at = GETDATE() WHERE id = ?";
+            userDAO.update(sqlUser, phone, email, account.getId());
+
+            // Update thông tin xe của Shipper
+            String sqlShipper = "UPDATE ShipperProfiles SET vehicle_type = ?, vehicle_name = ?, license_plate = ? WHERE user_id = ?";
+            userDAO.update(sqlShipper, vehicleType, vehicleName, licensePlate, account.getId());
+
+            // 3. Cập nhật thành công -> Đổi lại Session
             account.setPhone(phone);
             account.setEmail(email);
+            request.getSession().setAttribute("account", account);
 
-            UserDAO userDAO = new UserDAO();
-            if (!userDAO.update(account)) {
-                isSuccess = false;
-            } else {
-                // Cập nhật lại session để góc phải màn hình đổi theo
-                request.getSession().setAttribute("account", account);
-            }
+            request.getSession().setAttribute("toastMsg", "Đã lưu thay đổi hồ sơ thành công!");
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.getSession().setAttribute("toastError", "Lỗi hệ thống khi lưu hồ sơ!");
         }
 
-        // 3. Cập nhật thông tin PHƯƠNG TIỆN (Bảng ShipperProfiles)
-        ShipperDAO shipperDAO = new ShipperDAO();
-        ShipperProfile profile = shipperDAO.findById(account.getId());
-
-        if (profile != null) {
-            profile.setVehicleType(vehicleType);
-            profile.setVehicleName(vehicleName);
-            profile.setLicensePlate(licensePlate);
-
-            if (!shipperDAO.update(profile)) {
-                isSuccess = false;
-            }
-        }
-
-        // 4. Thông báo kết quả
-        if (isSuccess) {
-            request.getSession().setAttribute("toastMsg", "Cập nhật hồ sơ thành công!");
-        } else {
-            request.getSession().setAttribute("toastError", "Cập nhật thất bại, vui lòng kiểm tra lại (có thể trùng SĐT).");
-        }
-
-        // Tải lại trang Profile
         response.sendRedirect(request.getContextPath() + "/shipper/profile");
     }
 }

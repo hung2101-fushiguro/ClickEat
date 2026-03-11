@@ -1,3 +1,4 @@
+E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\controller\auth\BannedServlet.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\interfaces\IOrderIssueDAO.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\controller\auth\RegisterServlet.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\config\DBContext.java
@@ -21,10 +22,12 @@ E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\impl\UserDAO.ja
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\interfaces\IMerchantProfileDAO.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\interfaces\IShipperWalletDAO.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\model\Voucher.java
+E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\controller\admin\AdminUserDetailServlet.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\controller\admin\AdminDashboardServlet.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\impl\CartItemDAO.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\model\CustomerProfile.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\impl\MerchantKYCDAO.java
+E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\impl\UserAppealDAO.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\model\MerchantKYC.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\model\OrderStatusHistory.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\model\Rating.java
@@ -40,11 +43,13 @@ E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\impl\CartDAO.ja
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\model\PaymentTransaction.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\model\UserBehaviorEvent.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\interfaces\IMerchantKYCDAO.java
+E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\controller\shipper\ShipperWithdrawServlet.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\impl\OrderIssueDAO.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\filter\AdminFilter.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\controller\shipper\ShipperStatusServlet.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\impl\WithdrawalRequestDAO.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\interfaces\IGenericDAO.java
+E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\controller\auth\AvatarUploadServlet.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\model\FoodItem.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\impl\OrderDAO.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\interfaces\IFoodItemDAO.java
@@ -58,8 +63,10 @@ E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\interfaces\IWit
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\model\WithdrawalRequest.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\impl\ShipperWalletDAO.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\controller\shipper\ShipperReportServlet.java
+E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\interfaces\IUserAppealDAO.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\impl\AdminStatsDAO.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\model\Order.java
+E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\model\UserAppeal.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\interfaces\IAdminStatsDAO.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\controller\shipper\ShipperProfileServlet.java
 E:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\impl\ShipperDAO.java

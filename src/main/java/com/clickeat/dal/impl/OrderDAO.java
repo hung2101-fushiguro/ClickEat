@@ -9,6 +9,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -258,6 +259,22 @@ public class OrderDAO extends AbstractDAO<Order> implements IOrderDAO {
     public List<Order> getHistoryOrdersForShipper(int shipperId) {
         String sql = "SELECT * FROM Orders WHERE shipper_user_id = ? AND order_status IN ('DELIVERED', 'CANCELLED') ORDER BY created_at DESC";
         return query(sql, shipperId);
+    }
+    @Override
+    public List<Order> getOrderHistoryByUser(int userId, String role) {
+        String sql = "";
+        
+        if ("CUSTOMER".equals(role)) {
+            sql = "SELECT * FROM Orders WHERE customer_user_id = ? ORDER BY created_at DESC";
+        } else if ("SHIPPER".equals(role)) {
+            sql = "SELECT * FROM Orders WHERE shipper_user_id = ? ORDER BY created_at DESC";
+        } else if ("MERCHANT".equals(role)) {
+            sql = "SELECT * FROM Orders WHERE merchant_user_id = ? ORDER BY created_at DESC";
+        } else {
+            return new ArrayList<>();
+        }
+        
+        return query(sql, userId);
     }
 
     @Override
