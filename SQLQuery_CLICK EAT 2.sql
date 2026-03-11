@@ -90,7 +90,7 @@ CREATE TABLE ShipperReviews (
     comment NVARCHAR(500),
     created_at DATETIME DEFAULT GETDATE()
 );
-
+   
 CREATE TABLE dbo.Users (
     id            BIGINT IDENTITY(1,1) PRIMARY KEY,
     full_name     NVARCHAR(100)    NOT NULL,
@@ -133,13 +133,27 @@ CREATE TABLE OrderIssues (
     status VARCHAR(20) DEFAULT 'PENDING',
     created_at DATETIME DEFAULT GETDATE()
 );
+CREATE TABLE dbo.UserAppeals (
+    id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    reason NVARCHAR(1000) NOT NULL,
+    status NVARCHAR(20) NOT NULL CONSTRAINT DF_UserAppeals_Status DEFAULT 'PENDING', -- PENDING/APPROVED/REJECTED
+    admin_note NVARCHAR(500) NULL,
+    created_at DATETIME2 NOT NULL CONSTRAINT DF_UserAppeals_Created DEFAULT SYSUTCDATETIME(),
+    resolved_at DATETIME2 NULL,
 
+    CONSTRAINT FK_UserAppeals_User FOREIGN KEY (user_id) REFERENCES dbo.Users(id) ON DELETE CASCADE
+);
+GO
+GO
 ALTER TABLE dbo.UserAuthProviders
 ADD CONSTRAINT CK_UserAuthProviders_Provider CHECK (provider IN (N'GOOGLE'));
 
 CREATE UNIQUE INDEX UX_UserAuthProviders_ProviderUser ON dbo.UserAuthProviders(provider, provider_user_id);
 GO
-
+ALTER TABLE dbo.Users
+ADD avatar_url NVARCHAR(500) NULL;
+GO
 
 /* =========================
    3) GUEST SESSION
