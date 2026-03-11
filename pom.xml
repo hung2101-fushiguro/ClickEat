@@ -114,6 +114,30 @@
             <version>2.2.0</version>
         </dependency>
 
+        <!-- ===== TEST: JUnit 5 ===== -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.10.3</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- ===== TEST: Selenium WebDriver 4 ===== -->
+        <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>selenium-java</artifactId>
+            <version>4.21.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- ===== TEST: WebDriverManager (auto-download ChromeDriver) ===== -->
+        <dependency>
+            <groupId>io.github.bonigarcia</groupId>
+            <artifactId>webdrivermanager</artifactId>
+            <version>5.9.1</version>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -140,6 +164,21 @@
                 <version>3.4.0</version>
                 <configuration>
                     <failOnMissingWebXml>true</failOnMissingWebXml>
+                </configuration>
+            </plugin>
+            <!-- JUnit 5 runner -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <useModulePath>false</useModulePath>
+                    <systemPropertyVariables>
+                        <app.base.url>http://localhost:8080/ClickEat2</app.base.url>
+                        <test.username>merchant1@shop.vn</test.username>
+                        <test.password>123456</test.password>
+                        <webdriver.headless>true</webdriver.headless>
+                    </systemPropertyVariables>
                 </configuration>
             </plugin>
         </plugins>
