@@ -7,14 +7,10 @@ target/
 *.nar
 hs_err_pid*
 
-# ===== Node / React (Merchant frontend) =====
+# ===== Node =====
 node_modules/
-Merchant/node_modules/
-Merchant/dist/
-Merchant/.env
-Merchant/.env.local
-Merchant/.env.*.local
-Merchant/test.tmp
+package.json
+package-lock.json
 
 # ===== IDE =====
 .idea/
@@ -26,13 +22,14 @@ nbproject/private/
 nbbuild/
 nbdist/
 .nb-gradle/
+nb-configuration.xml
 
 # ===== OS =====
 .DS_Store
 Thumbs.db
 desktop.ini
-$PROJDIR_BACKUP/
 
-# ===== Logs =====
+# ===== Logs & temp =====
 *.log
 npm-debug.log*
+*.txt
