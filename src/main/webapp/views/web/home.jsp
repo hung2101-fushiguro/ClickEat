@@ -214,8 +214,8 @@
                             <p class="text-gray-500 text-xs mt-1 line-clamp-2 min-h-[32px]">${f.description}</p>
 
                             <div class="flex items-center justify-between mt-4">
-                                <span class="text-orange-500 font-black text-base">${f.price}đ</span>
-                                <a href="cart?action=add&id=${f.id}" class="bg-gray-50 border border-gray-200 w-8 h-8 rounded-full flex items-center justify-center hover:bg-orange-500 hover:text-white hover:border-orange-500 transition-colors text-gray-600">
+                                <span class="text-orange-500 font-black text-base"><fmt:formatNumber value="${f.price}" type="number" maxFractionDigits="0"/>đ</span>
+                                <a href="${pageContext.request.contextPath}/cart?action=add&id=${f.id}" class="bg-gray-50 border border-gray-200 w-8 h-8 rounded-full flex items-center justify-center hover:bg-orange-500 hover:text-white hover:border-orange-500 transition-colors text-gray-600">
                                     <i class="fa-solid fa-plus text-sm"></i>
                                 </a>
                             </div>

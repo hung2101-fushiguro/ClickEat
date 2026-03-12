@@ -32,6 +32,15 @@
 
         <main class="flex-grow max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
 
+            <%-- Breadcrumb --%>
+            <nav class="flex items-center gap-2 text-sm text-gray-400 mb-6">
+                <a href="${pageContext.request.contextPath}/home" class="hover:text-orange-500 transition-colors font-medium flex items-center gap-1">
+                    <i class="fa-solid fa-house text-xs"></i> Trang chủ
+                </a>
+                <i class="fa-solid fa-chevron-right text-xs text-gray-300"></i>
+                <span class="text-gray-700 font-semibold">Tài khoản của tôi</span>
+            </nav>
+
             <%-- Page heading --%>
             <div class="mb-8">
                 <h1 class="text-2xl font-black text-gray-900">Tài khoản của tôi</h1>

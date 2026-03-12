@@ -31,6 +31,19 @@
 
         <jsp:include page="header.jsp" />
 
+        <%-- Breadcrumb --%>
+        <div class="bg-white border-b border-gray-100">
+            <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+                <nav class="flex items-center gap-2 text-sm text-gray-400">
+                    <a href="${pageContext.request.contextPath}/home" class="hover:text-orange-500 transition-colors font-medium flex items-center gap-1">
+                        <i class="fa-solid fa-house text-xs"></i> Trang chủ
+                    </a>
+                    <i class="fa-solid fa-chevron-right text-xs text-gray-300"></i>
+                    <span class="text-gray-700 font-semibold">${merchant.shopName}</span>
+                </nav>
+            </div>
+        </div>
+
         <%-- Hero --%>
         <div class="bg-white border-b border-gray-100">
             <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
