@@ -1,6 +1,6 @@
 <%-- 
     Document   : order-tracking
-    Created on : Mar 4, 2026, 4:26:53 PM
+    Created on : Mar 4, 2026, 4:26:53 PM
     Author     : DELL
 --%>
 
@@ -12,6 +12,8 @@
         <meta charset="UTF-8">
         <title>Theo dõi Đơn hàng - ClickEat Shipper</title>
         <script src="https://cdn.tailwindcss.com"></script>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     </head>
     <body class="bg-gray-100 flex justify-center min-h-screen">
@@ -44,6 +46,15 @@
                         </div>
                     </c:when>
                 </c:choose>
+
+                <div class="bg-white rounded-2xl p-2 shadow-sm border border-gray-100 relative z-0 mb-2">
+                    <div id="map" class="w-full h-64 rounded-xl z-0 relative"></div>
+
+                    <div class="absolute bottom-4 left-4 z-[400] bg-white px-3 py-2 rounded-lg shadow-lg border border-gray-100 flex items-center gap-2">
+                        <i class="fa-solid fa-route text-blue-500"></i>
+                        <span id="distance-text" class="font-bold text-gray-800 text-sm">Đang tính toán...</span>
+                    </div>
+                </div>
 
                 <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                     <div class="flex justify-between items-center mb-3">
@@ -106,6 +117,73 @@
             </div>
 
         </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                // 1. Lấy tọa độ
+                const shopLat = ${not empty merchant.latitude ? merchant.latitude : 10.7769};
+                const shopLng = ${not empty merchant.longitude ? merchant.longitude : 106.7009};
+
+                const customerLat = ${not empty order.latitude && order.latitude != 0.0 ? order.latitude : 10.7926};
+                const customerLng = ${not empty order.longitude && order.longitude != 0.0 ? order.longitude : 106.6853};
+
+                // 2. Khởi tạo bản đồ
+                const map = L.map('map').setView([shopLat, shopLng], 14);
+
+                // 3. Load lớp bản đồ (OpenStreetMap)
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap',
+                    maxZoom: 19
+                }).addTo(map);
+
+                // 4. Tạo icon Tùy chỉnh
+                const shopIcon = L.divIcon({
+                    html: '<div class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center border-2 border-white shadow-lg"><i class="fa-solid fa-store"></i></div>',
+                    className: '', iconSize: [32, 32], iconAnchor: [16, 16]
+                });
+
+                const customerIcon = L.divIcon({
+                    html: '<div class="w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center border-2 border-white shadow-lg"><i class="fa-solid fa-house"></i></div>',
+                    className: '', iconSize: [32, 32], iconAnchor: [16, 16]
+                });
+
+                // Gắn Marker
+                L.marker([shopLat, shopLng], {icon: shopIcon}).addTo(map).bindPopup("<b>Lấy hàng tại đây</b>");
+                L.marker([customerLat, customerLng], {icon: customerIcon}).addTo(map).bindPopup("<b>Giao hàng đến đây</b>");
+
+                // 5. Gọi OSRM API để vẽ đường
+                const osrmUrl = `https://router.project-osrm.org/route/v1/driving/\${shopLng},\${shopLat};\${customerLng},\${customerLat}?overview=full&geometries=geojson`;
+
+                fetch(osrmUrl)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.routes && data.routes.length > 0) {
+                                const route = data.routes[0];
+
+                                // Cập nhật text khoảng cách
+                                const distanceKm = (route.distance / 1000).toFixed(1);
+                                const durationMin = Math.round(route.duration / 60);
+                                document.getElementById('distance-text').innerHTML = `\${distanceKm} km • \${durationMin} phút`;
+
+                                // Vẽ đường đi
+                                const coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                                const polyline = L.polyline(coordinates, {
+                                    color: '#3B82F6',
+                                    weight: 5,
+                                    opacity: 0.8,
+                                    dashArray: '10, 10'
+                                }).addTo(map);
+
+                                // Zoom bản đồ vừa vặn
+                                map.fitBounds(polyline.getBounds(), {padding: [30, 30]});
+                            }
+                        })
+                        .catch(err => {
+                            console.error("Lỗi vẽ đường đi: ", err);
+                            document.getElementById('distance-text').innerHTML = "Không thể tính khoảng cách";
+                        });
+            });
+        </script>
 
     </body>
 </html>

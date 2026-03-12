@@ -2,9 +2,17 @@ package com.clickeat.dal.impl;
 
 import com.clickeat.dal.interfaces.IOrderDAO;
 import com.clickeat.model.Order;
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class OrderDAO extends AbstractDAO<Order> implements IOrderDAO {
 
@@ -142,10 +150,15 @@ public class OrderDAO extends AbstractDAO<Order> implements IOrderDAO {
     }
 
     @Override
-    public Order getCurrentOrderForShipper(int shipperId) {
-        // Tìm đơn hàng của tài xế này và đang ở trạng thái Đang giao (DELIVERING)
-        String sql = "SELECT * FROM Orders WHERE shipper_user_id = ? AND order_status IN ('DELIVERING','PICKED_UP')";
-        return queryOne(sql, shipperId);
+    public List<Order> getCurrentOrdersForShipper(int shipperId) {
+        // Đã sửa ORDER BY updated_at thành ORDER BY created_at
+        String sql = "SELECT * FROM Orders WHERE shipper_user_id = ? AND order_status IN ('DELIVERING', 'PICKED_UP') ORDER BY created_at DESC";
+        return query(sql, shipperId);
+    }
+
+    public boolean yieldOrder(int orderId, int shipperId) {
+        String sql = "UPDATE Orders SET shipper_user_id = NULL, order_status = 'READY_FOR_PICKUP' WHERE id = ? AND shipper_user_id = ?";
+        return update(sql, orderId, shipperId) > 0;
     }
 
     @Override
@@ -191,6 +204,77 @@ public class OrderDAO extends AbstractDAO<Order> implements IOrderDAO {
             e.printStackTrace();
         }
         return 0;
+    }
+
+    //Đếm số đơn hoàn thành hôm nay
+    @Override
+    public int countDeliveredOrdersToday(int shipperId) {
+        String sql = "SELECT COUNT(id) as total FROM Orders WHERE shipper_user_id = ? AND order_status = 'DELIVERED' AND CAST(delivered_at AS DATE) = CAST(GETDATE() AS DATE)";
+        try (java.sql.Connection conn = getConnection(); java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, shipperId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("total");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    @Override
+    public Map<String, Double> getLast7DaysIncome(int shipperId) {
+        Map<String, Double> incomeMap = new LinkedHashMap<>();
+
+        // Khởi tạo 7 ngày gần nhất với giá trị 0
+        LocalDate today = LocalDate.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM");
+        for (int i = 6; i >= 0; i--) {
+            incomeMap.put(today.minusDays(i).format(formatter), 0.0);
+        }
+
+        String sql = "SELECT CAST(delivered_at AS DATE) as delivery_date, SUM(delivery_fee) as daily_income "
+                + "FROM Orders "
+                + "WHERE shipper_user_id = ? AND order_status = 'DELIVERED' AND delivered_at >= DATEADD(day, -6, CAST(GETDATE() AS DATE)) "
+                + "GROUP BY CAST(delivered_at AS DATE)";
+
+        try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, shipperId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Date dbDate = rs.getDate("delivery_date");
+                    String dateStr = dbDate.toLocalDate().format(formatter);
+                    if (incomeMap.containsKey(dateStr)) {
+                        incomeMap.put(dateStr, rs.getDouble("daily_income"));
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return incomeMap;
+    }
+    @Override
+    public List<Order> getHistoryOrdersForShipper(int shipperId) {
+        String sql = "SELECT * FROM Orders WHERE shipper_user_id = ? AND order_status IN ('DELIVERED', 'CANCELLED') ORDER BY created_at DESC";
+        return query(sql, shipperId);
+    }
+    @Override
+    public List<Order> getOrderHistoryByUser(int userId, String role) {
+        String sql = "";
+        
+        if ("CUSTOMER".equals(role)) {
+            sql = "SELECT * FROM Orders WHERE customer_user_id = ? ORDER BY created_at DESC";
+        } else if ("SHIPPER".equals(role)) {
+            sql = "SELECT * FROM Orders WHERE shipper_user_id = ? ORDER BY created_at DESC";
+        } else if ("MERCHANT".equals(role)) {
+            sql = "SELECT * FROM Orders WHERE merchant_user_id = ? ORDER BY created_at DESC";
+        } else {
+            return new ArrayList<>();
+        }
+        
+        return query(sql, userId);
     }
 
     @Override
