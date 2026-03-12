@@ -81,7 +81,7 @@
                             </div>
                         </div>
 
-                        <a href="checkout" class="block w-full text-center bg-gray-900 text-white py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors">
+                        <a href="${pageContext.request.contextPath}/checkout" class="block w-full text-center bg-gray-900 text-white py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors">
                             Tiến hành Thanh toán
                         </a>
                     </div>
