@@ -6,7 +6,7 @@
         <title>Đăng Nhập - ClickEat</title>
         <style>
             body {
-                font-family: Arial, sans-serif;
+                font-family: 'Inter', sans-serif;
                 display: flex;
                 justify-content: center;
                 margin-top: 50px;

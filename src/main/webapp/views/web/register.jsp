@@ -7,7 +7,7 @@
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <title>Đăng Ký - ClickEat</title>
         <style>
-            body { font-family: Arial, sans-serif; display: flex; justify-content: center; margin-top: 30px; }
+            body { font-family: 'Inter', sans-serif; display: flex; justify-content: center; margin-top: 30px; }
             .register-container { border: 1px solid #ccc; padding: 20px; border-radius: 8px; width: 350px; }
             input { width: 100%; padding: 8px; margin: 5px 0 15px 0; box-sizing: border-box; }
             button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px;}
