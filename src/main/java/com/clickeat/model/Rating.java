@@ -1,81 +1,119 @@
 package com.clickeat.model;
+
 import java.sql.Timestamp;
 
 public class Rating {
-    private int id;
-    private int orderId;
-    private int raterCustomerId;
-    private int raterGuestId;
-    private String targetType;
-    private int targetUserId;
+
+    private long id;
+    private long orderId;
+    private Long raterCustomerId;
+    private String raterGuestId;
+    private String targetType; // MERCHANT hoặc SHIPPER
+    private long targetUserId;
     private int stars;
     private String comment;
     private Timestamp createdAt;
+    private String replyComment;
+
+    private String customerName;
+    private String orderCode;
+
     public Rating() {
     }
-    public Rating(int id, int orderId, int raterCustomerId, int raterGuestId, String targetType, int targetUserId, int stars, String comment, Timestamp createdAt) {
-        this.id = id;
-        this.orderId = orderId;
-        this.raterCustomerId = raterCustomerId;
-        this.raterGuestId = raterGuestId;
-        this.targetType = targetType;
-        this.targetUserId = targetUserId;
-        this.stars = stars;
-        this.comment = comment;
-        this.createdAt = createdAt;
-    }
-    public int getId() {
+
+    public long getId() {
         return id;
     }
-    public void setId(int id) {
+
+    public void setId(long id) {
         this.id = id;
     }
-    public int getOrderId() {
+
+    public long getOrderId() {
         return orderId;
     }
-    public void setOrderId(int orderId) {
+
+    public void setOrderId(long orderId) {
         this.orderId = orderId;
     }
-    public int getRaterCustomerId() {
+
+    public Long getRaterCustomerId() {
         return raterCustomerId;
     }
-    public void setRaterCustomerId(int raterCustomerId) {
+
+    public void setRaterCustomerId(Long raterCustomerId) {
         this.raterCustomerId = raterCustomerId;
     }
-    public int getRaterGuestId() {
+
+    public String getRaterGuestId() {
         return raterGuestId;
     }
-    public void setRaterGuestId(int raterGuestId) {
+
+    public void setRaterGuestId(String raterGuestId) {
         this.raterGuestId = raterGuestId;
     }
+
     public String getTargetType() {
         return targetType;
     }
+
     public void setTargetType(String targetType) {
         this.targetType = targetType;
     }
-    public int getTargetUserId() {
+
+    public long getTargetUserId() {
         return targetUserId;
     }
-    public void setTargetUserId(int targetUserId) {
+
+    public void setTargetUserId(long targetUserId) {
         this.targetUserId = targetUserId;
     }
+
     public int getStars() {
         return stars;
     }
+
     public void setStars(int stars) {
         this.stars = stars;
     }
+
     public String getComment() {
         return comment;
     }
+
     public void setComment(String comment) {
         this.comment = comment;
     }
+
     public Timestamp getCreatedAt() {
         return createdAt;
     }
+
     public void setCreatedAt(Timestamp createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getCustomerName() {
+        return customerName;
+    }
+
+    public void setCustomerName(String customerName) {
+        this.customerName = customerName;
+    }
+
+    public String getOrderCode() {
+        return orderCode;
+    }
+
+    public void setOrderCode(String orderCode) {
+        this.orderCode = orderCode;
+    }
+
+    public String getReplyComment() {
+        return replyComment;
+    }
+
+    public void setReplyComment(String replyComment) {
+        this.replyComment = replyComment;
     }
 }

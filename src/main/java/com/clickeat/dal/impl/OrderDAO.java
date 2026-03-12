@@ -10,6 +10,7 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -255,15 +256,17 @@ public class OrderDAO extends AbstractDAO<Order> implements IOrderDAO {
         }
         return incomeMap;
     }
+
     @Override
     public List<Order> getHistoryOrdersForShipper(int shipperId) {
         String sql = "SELECT * FROM Orders WHERE shipper_user_id = ? AND order_status IN ('DELIVERED', 'CANCELLED') ORDER BY created_at DESC";
         return query(sql, shipperId);
     }
+
     @Override
     public List<Order> getOrderHistoryByUser(int userId, String role) {
         String sql = "";
-        
+
         if ("CUSTOMER".equals(role)) {
             sql = "SELECT * FROM Orders WHERE customer_user_id = ? ORDER BY created_at DESC";
         } else if ("SHIPPER".equals(role)) {
@@ -273,8 +276,79 @@ public class OrderDAO extends AbstractDAO<Order> implements IOrderDAO {
         } else {
             return new ArrayList<>();
         }
-        
+
         return query(sql, userId);
+    }
+
+    public List<Order> getOrdersByMerchantAndStatus(int merchantId, String statusGroup) {
+        String sql = "SELECT * FROM Orders WHERE merchant_user_id = ? ";
+
+        if ("pending".equals(statusGroup)) {
+            sql += "AND order_status = 'CREATED' ORDER BY created_at ASC";
+        } else if ("preparing".equals(statusGroup)) {
+            sql += "AND order_status IN ('MERCHANT_ACCEPTED', 'PREPARING') ORDER BY created_at ASC";
+        } else if ("ready".equals(statusGroup)) {
+            sql += "AND order_status = 'READY_FOR_PICKUP' ORDER BY created_at DESC";
+        } else if ("completed".equals(statusGroup)) {
+            sql += "AND order_status IN ('DELIVERED', 'CANCELLED', 'FAILED', 'MERCHANT_REJECTED') ORDER BY created_at DESC";
+        } else {
+            sql += "ORDER BY created_at DESC";
+        }
+
+        return query(sql, merchantId);
+    }
+
+    public boolean updateOrderStatus(long orderId, int merchantId, String newStatus) {
+        String sql = "UPDATE Orders SET order_status = ?, updated_at = GETDATE() WHERE id = ? AND merchant_user_id = ?";
+        return update(sql, newStatus, orderId, merchantId) > 0;
+    }
+
+    public Map<String, Double> getRevenueByPeriod(int merchantId, int days) {
+        Map<String, Double> data = new LinkedHashMap<>();
+        String sql = "SELECT CAST(created_at AS DATE) as OrderDate, SUM(total_amount) as DailyRevenue "
+                + "FROM Orders "
+                + "WHERE merchant_user_id = ? AND order_status = 'DELIVERED' "
+                + "AND created_at >= DATEADD(day, -?, GETDATE()) "
+                + "GROUP BY CAST(created_at AS DATE) "
+                + "ORDER BY OrderDate ASC";
+        try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, merchantId);
+            ps.setInt(2, days);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    data.put(rs.getDate("OrderDate").toString(), rs.getDouble("DailyRevenue"));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return data;
+    }
+
+// 2. Lấy danh sách 5 món ăn bán chạy nhất
+    public List<Map<String, Object>> getTopSellingFoods(int merchantId, int limit) {
+        List<Map<String, Object>> list = new ArrayList<>();
+        String sql = "SELECT TOP (?) item_name_snapshot, SUM(quantity) as TotalQty, SUM(unit_price_snapshot * quantity) as TotalRevenue "
+                + "FROM OrderItems oi JOIN Orders o ON oi.order_id = o.id "
+                + "WHERE o.merchant_user_id = ? AND o.order_status = 'DELIVERED' "
+                + "GROUP BY item_name_snapshot "
+                + "ORDER BY TotalQty DESC";
+        try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            ps.setInt(2, merchantId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("name", rs.getString("item_name_snapshot"));
+                    map.put("qty", rs.getInt("TotalQty"));
+                    map.put("revenue", rs.getDouble("TotalRevenue"));
+                    list.add(map);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
     }
 
     @Override

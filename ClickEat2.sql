@@ -59,7 +59,60 @@ IF OBJECT_ID('dbo.Addresses','U') IS NOT NULL DROP TABLE dbo.Addresses;
 IF OBJECT_ID('dbo.GuestSessions','U') IS NOT NULL DROP TABLE dbo.GuestSessions;
 IF OBJECT_ID('dbo.UserAuthProviders','U') IS NOT NULL DROP TABLE dbo.UserAuthProviders;
 IF OBJECT_ID('dbo.Users','U') IS NOT NULL DROP TABLE dbo.Users;
+/*Chinh lai*/
 GO
+CREATE TABLE dbo.MerchantWallets (
+    merchant_user_id BIGINT NOT NULL PRIMARY KEY,
+    balance DECIMAL(18,2) NOT NULL CONSTRAINT DF_MerchantWallets_Balance DEFAULT 0,
+    updated_at DATETIME2 NOT NULL CONSTRAINT DF_MerchantWallets_Updated DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT FK_MerchantWallets_Merchant FOREIGN KEY (merchant_user_id) REFERENCES dbo.MerchantProfiles(user_id) ON DELETE CASCADE
+);
+GO
+CREATE TABLE dbo.MerchantWithdrawals (
+    id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    merchant_user_id BIGINT NOT NULL,
+    amount DECIMAL(18,2) NOT NULL,
+    bank_name NVARCHAR(100) NULL, 
+    bank_account_number NVARCHAR(50)  NULL, 
+    status NVARCHAR(20) NOT NULL CONSTRAINT DF_MerchantWithdrawals_Status DEFAULT 'PENDING',
+    created_at DATETIME2 NOT NULL CONSTRAINT DF_MerchantWithdrawals_Created DEFAULT SYSUTCDATETIME(),
+    processed_at DATETIME2 NULL,
+    CONSTRAINT FK_MerchantWithdrawals_Merchant FOREIGN KEY (merchant_user_id) REFERENCES dbo.MerchantProfiles(user_id) ON DELETE CASCADE
+);
+GO
+UPDATE MerchantWallets SET balance = 5000000 WHERE merchant_user_id = 2;
+ALTER TABLE dbo.Ratings ADD reply_comment NVARCHAR(MAX) NULL;
+GO
+
+
+IF NOT EXISTS (
+    SELECT * FROM sys.columns 
+    WHERE object_id = OBJECT_ID(N'[dbo].[MerchantProfiles]') AND name = 'business_hours'
+)
+BEGIN
+    ALTER TABLE dbo.MerchantProfiles ADD business_hours NVARCHAR(MAX) NULL;
+    PRINT N'✅ Đã thêm cột business_hours thành công!';
+END
+ELSE
+BEGIN
+    PRINT N'✅ Cột business_hours đã tồn tại!';
+END
+ALTER TABLE dbo.MerchantProfiles ADD shop_avatar NVARCHAR(MAX) NULL;
+ALTER TABLE dbo.MerchantProfiles ADD shop_description NVARCHAR(MAX) NULL;
+ALTER TABLE dbo.MerchantProfiles ADD notification_settings NVARCHAR(MAX) NULL;
+GO
+CREATE TABLE dbo.RefundRequests (
+    id BIGINT IDENTITY(1,1) PRIMARY KEY,
+    order_id BIGINT NOT NULL,
+    merchant_user_id BIGINT NOT NULL,
+    refund_amount DECIMAL(18,2) NOT NULL,
+    reason NVARCHAR(255) NOT NULL,
+    status NVARCHAR(20) DEFAULT 'COMPLETED', -- Xử lý ngay lập tức theo logic của bạn
+    created_at DATETIME2 DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT FK_Refund_Order FOREIGN KEY (order_id) REFERENCES dbo.Orders(id)
+);
+GO
+
 
 /* =========================
    2) USERS, AUTH & APPEALS
@@ -82,7 +135,7 @@ CREATE UNIQUE INDEX UX_Users_Email ON dbo.Users(email) WHERE email IS NOT NULL;
 ALTER TABLE dbo.Users ADD CONSTRAINT CK_Users_Role CHECK (role IN (N'GUEST',N'CUSTOMER',N'MERCHANT',N'SHIPPER',N'ADMIN'));
 ALTER TABLE dbo.Users ADD CONSTRAINT CK_Users_Status CHECK (status IN (N'ACTIVE',N'INACTIVE'));
 GO
-
+UPDATE MerchantWallets SET balance = 5000000 WHERE merchant_user_id = <ID_Của_Nhà_Hàng_Bạn>;
 CREATE TABLE dbo.UserAuthProviders (
     id               BIGINT IDENTITY(1,1) PRIMARY KEY,
     user_id          BIGINT         NOT NULL,

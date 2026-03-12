@@ -45,7 +45,10 @@ public class LoginServlet extends HttpServlet {
                 response.sendRedirect("admin/dashboard");
             } else if ("SHIPPER".equals(user.getRole())) {
                 response.sendRedirect("shipper/dashboard");
-            } else {
+            }else if("MERCHANT".equals(user.getRole())){
+                response.sendRedirect("merchant/dashboard");
+            }
+            else {
                 response.sendRedirect("home");
             }
         } else {
