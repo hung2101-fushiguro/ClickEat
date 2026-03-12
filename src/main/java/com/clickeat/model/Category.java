@@ -45,4 +45,12 @@ public class Category {
     public void setSortOrder(int sortOrder) {
         this.sortOrder = sortOrder;
     }
+
+    private String shopName;
+    public String getShopName() {
+        return shopName;
+    }
+    public void setShopName(String shopName) {
+        this.shopName = shopName;
+    }
 }

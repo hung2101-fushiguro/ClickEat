@@ -57,40 +57,40 @@
                                         <span class="font-medium text-gray-700">SL: ${item.quantity}</span>
                                     </div>
 
-                                    <a href="${pageContext.request.contextPath}/cart?action=delete&itemId=${item.id}" 
-                                       class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors ml-2"
-                                       onclick="return confirm('Bạn có chắc chắn muốn xóa món này không?');">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </a>
-                                </div>
-                            </c:forEach>
-                        </div>
-
-                        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-fit sticky top-24">
-                            <h3 class="text-xl font-bold text-gray-900 mb-4">Tổng cộng</h3>
-
-                            <div class="flex justify-between items-center mb-4 text-gray-600">
-                                <span>Tạm tính:</span>
-                                <span class="font-bold text-gray-900">${totalMoney} VNĐ</span>
+                                    <a href="${pageContext.request.contextPath}/cart?action=delete&itemId=${item.id}"
+                                    class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors ml-2"
+                                    onclick="return confirm('Bạn có chắc chắn muốn xóa món này không?');">
+                                    <i class="fa-solid fa-trash"></i>
+                                </a>
                             </div>
-
-                            <div class="border-t border-gray-100 pt-4 mb-6">
-                                <div class="flex justify-between items-center">
-                                    <span class="font-bold text-gray-900">Thành tiền:</span>
-                                    <span class="font-black text-2xl text-orange-500">${totalMoney} VNĐ</span>
-                                </div>
-                            </div>
-
-                            <a href="checkout" class="block w-full text-center bg-gray-900 text-white py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors">
-                                Tiến hành Thanh toán
-                            </a>
-                        </div>
+                        </c:forEach>
                     </div>
-                </c:otherwise>
-            </c:choose>
-        </main>
 
-        <jsp:include page="footer.jsp" />
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-fit sticky top-24">
+                        <h3 class="text-xl font-bold text-gray-900 mb-4">Tổng cộng</h3>
 
-    </body>
+                        <div class="flex justify-between items-center mb-4 text-gray-600">
+                            <span>Tạm tính:</span>
+                            <span class="font-bold text-gray-900">${totalMoney} VNĐ</span>
+                        </div>
+
+                        <div class="border-t border-gray-100 pt-4 mb-6">
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-gray-900">Thành tiền:</span>
+                                <span class="font-black text-2xl text-orange-500">${totalMoney} VNĐ</span>
+                            </div>
+                        </div>
+
+                        <a href="checkout" class="block w-full text-center bg-gray-900 text-white py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors">
+                            Tiến hành Thanh toán
+                        </a>
+                    </div>
+                </div>
+            </c:otherwise>
+        </c:choose>
+    </main>
+
+    <jsp:include page="footer.jsp" />
+
+</body>
 </html>

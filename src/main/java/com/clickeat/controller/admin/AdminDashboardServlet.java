@@ -1,10 +1,12 @@
 package com.clickeat.controller.admin;
 
 import com.clickeat.dal.impl.AdminStatsDAO;
+import com.clickeat.dal.impl.CategoryDAO;
 import com.clickeat.dal.impl.MerchantKYCDAO;
 import com.clickeat.dal.impl.OrderIssueDAO;
 import com.clickeat.dal.impl.UserDAO;
 import com.clickeat.dal.impl.WithdrawalRequestDAO;
+import com.clickeat.model.Category;
 import com.clickeat.model.User;
 import java.io.IOException;
 import java.util.Map;
@@ -70,6 +72,10 @@ public class AdminDashboardServlet extends HttpServlet {
         // 6. Lấy danh sách Đơn kháng cáo
         com.clickeat.dal.impl.UserAppealDAO appealDAO = new com.clickeat.dal.impl.UserAppealDAO();
         request.setAttribute("listAppeals", appealDAO.getPendingAppeals());
+
+        // 7. Danh mục món ăn
+        CategoryDAO categoryDAO = new CategoryDAO();
+        request.setAttribute("listCategories", categoryDAO.findAllWithMerchantName());
 
         request.getRequestDispatcher("/views/admin/dashboard.jsp").forward(request, response);
     }
@@ -164,6 +170,38 @@ public class AdminDashboardServlet extends HttpServlet {
             } else {
                 appealDAO.resolveAppeal(appealId, "REJECTED", adminNote);
                 request.getSession().setAttribute("toastMsg", "Đã TỪ CHỐI đơn kháng cáo.");
+            }
+        } // XỬ LÝ DANH MỤC MÓN ĂN
+        else if ("ADD_CATEGORY".equals(action)) {
+            currentTab = "categories";
+            int merchantId = Integer.parseInt(request.getParameter("merchantId"));
+            String catName = request.getParameter("name").trim();
+            int sortOrder = Integer.parseInt(request.getParameter("sortOrder"));
+            CategoryDAO catDAO = new CategoryDAO();
+            Category cat = new Category(0, merchantId, catName, true, sortOrder);
+            if (catDAO.insert(cat) > 0) {
+                request.getSession().setAttribute("toastMsg", "Đã thêm danh mục mới thành công!");
+            } else {
+                request.getSession().setAttribute("toastError", "Có lỗi khi thêm danh mục.");
+            }
+        } else if ("TOGGLE_CATEGORY".equals(action)) {
+            currentTab = "categories";
+            int catId = Integer.parseInt(request.getParameter("categoryId"));
+            CategoryDAO catDAO = new CategoryDAO();
+            Category cat = catDAO.findById(catId);
+            if (cat != null) {
+                cat.setActive(!cat.isActive());
+                catDAO.update(cat);
+                request.getSession().setAttribute("toastMsg", "Đã cập nhật trạng thái danh mục!");
+            }
+        } else if ("DELETE_CATEGORY".equals(action)) {
+            currentTab = "categories";
+            int catId = Integer.parseInt(request.getParameter("categoryId"));
+            CategoryDAO catDAO = new CategoryDAO();
+            if (catDAO.delete(catId)) {
+                request.getSession().setAttribute("toastMsg", "Đã xóa danh mục thành công!");
+            } else {
+                request.getSession().setAttribute("toastError", "Không thể xóa danh mục (có thể đang được sử dụng).");
             }
         }
 

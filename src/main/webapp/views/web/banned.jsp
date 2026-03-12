@@ -76,7 +76,7 @@
 
         <c:if test="${not empty sessionScope.toastMsg}">
             <div id="toast" class="fixed top-5 right-5 bg-green-500 text-white px-6 py-4 rounded-xl shadow-2xl z-50"><i class="fa-solid fa-check mr-2"></i>${sessionScope.toastMsg}</div>
-                <c:remove var="toastMsg" scope="session" />
+            <c:remove var="toastMsg" scope="session" />
             <script>setTimeout(() => document.getElementById('toast').style.display = 'none', 4000);</script>
         </c:if>
     </body>

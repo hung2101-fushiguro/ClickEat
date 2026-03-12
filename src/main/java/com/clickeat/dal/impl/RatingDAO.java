@@ -110,6 +110,37 @@ public class RatingDAO extends AbstractDAO<Rating> {
         return update(sql, replyText, ratingId, merchantId) > 0;
     }
 
+    public boolean hasRatedOrder(int orderId, long customerId, String targetType) {
+        String sql = "SELECT 1 FROM Ratings WHERE order_id = ? AND rater_customer_id = ? AND target_type = ?";
+        try (java.sql.Connection conn = getConnection(); java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, orderId);
+            ps.setLong(2, customerId);
+            ps.setString(3, targetType);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public boolean submitRating(int orderId, long customerId, long targetUserId, String targetType, int stars, String comment) {
+        String sql = "INSERT INTO Ratings (order_id, rater_customer_id, target_type, target_user_id, stars, comment, created_at) "
+                + "VALUES (?, ?, ?, ?, ?, ?, GETDATE())";
+        return update(sql, orderId, customerId, targetType, targetUserId, stars, comment) > 0;
+    }
+
+    public List<Rating> getLatestReviewsForRestaurant(int merchantId, int limit) {
+        String sql = "SELECT TOP (?) r.*, u.full_name, o.order_code "
+                + "FROM Ratings r "
+                + "LEFT JOIN Users u ON r.rater_customer_id = u.id "
+                + "LEFT JOIN Orders o ON r.order_id = o.id "
+                + "WHERE r.target_type = 'MERCHANT' AND r.target_user_id = ? "
+                + "ORDER BY r.created_at DESC";
+        return query(sql, limit, merchantId);
+    }
+
     @Override
     public List<Rating> findAll() {
         throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody

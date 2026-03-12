@@ -56,6 +56,18 @@ public class MerchantProfileDAO extends AbstractDAO<MerchantProfile> {
             p.setNotificationSettings(rs.getString("notification_settings"));
         } catch (Exception e) {
         }
+        try {
+            p.setAvgRating(rs.getDouble("avg_rating"));
+        } catch (Exception e) {
+        }
+        try {
+            p.setTotalRatings(rs.getInt("total_ratings"));
+        } catch (Exception e) {
+        }
+        try {
+            p.setFoodCount(rs.getInt("food_count"));
+        } catch (Exception e) {
+        }
 
         return p;
     }
@@ -91,6 +103,16 @@ public class MerchantProfileDAO extends AbstractDAO<MerchantProfile> {
     @Override
     public List<MerchantProfile> findAll() {
         return query("SELECT * FROM MerchantProfiles");
+    }
+
+    public List<MerchantProfile> getAllApprovedWithStats() {
+        String sql = "SELECT mp.*, "
+                + "ISNULL((SELECT AVG(CAST(stars AS FLOAT)) FROM Ratings WHERE target_type = 'MERCHANT' AND target_user_id = mp.user_id), 0) as avg_rating, "
+                + "(SELECT COUNT(*) FROM Ratings WHERE target_type = 'MERCHANT' AND target_user_id = mp.user_id) as total_ratings, "
+                + "(SELECT COUNT(*) FROM FoodItems WHERE merchant_user_id = mp.user_id AND is_available = 1) as food_count "
+                + "FROM MerchantProfiles mp WHERE mp.status = 'APPROVED' "
+                + "ORDER BY avg_rating DESC";
+        return query(sql);
     }
 
     @Override

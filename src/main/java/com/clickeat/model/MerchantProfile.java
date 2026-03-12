@@ -23,8 +23,36 @@ public class MerchantProfile {
     private String businessHours;
     private String shopDescription;
     private String notificationSettings;
+    // Transient stats – populated by JOIN queries
+    private double avgRating;
+    private int totalRatings;
+    private int foodCount;
 
     public MerchantProfile() {
+    }
+
+    public double getAvgRating() {
+        return avgRating;
+    }
+
+    public void setAvgRating(double avgRating) {
+        this.avgRating = avgRating;
+    }
+
+    public int getTotalRatings() {
+        return totalRatings;
+    }
+
+    public void setTotalRatings(int totalRatings) {
+        this.totalRatings = totalRatings;
+    }
+
+    public int getFoodCount() {
+        return foodCount;
+    }
+
+    public void setFoodCount(int foodCount) {
+        this.foodCount = foodCount;
     }
 
     public long getUserId() {

@@ -145,11 +145,11 @@
                         const preview = document.getElementById('avatar-preview');
                         preview.src = e.target.result;
                         preview.classList.remove('hidden');
-
+                        
                         const fallback = document.getElementById('avatar-preview-fallback');
                         if (fallback)
-                            fallback.classList.add('hidden');
-
+                        fallback.classList.add('hidden');
+                        
                         // Hiện nút Lưu Ảnh Mới
                         document.getElementById('btn-save-avatar').classList.remove('hidden');
                     }

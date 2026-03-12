@@ -14,7 +14,7 @@ public class DBContext {
     public static String driverName = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
     public static String dbURL = "jdbc:sqlserver://localhost:1433;databaseName=ClickEat;encrypt=true;trustServerCertificate=true;";
     public static String userDB = "sa";
-    public static String passDB = "hungsatoru";
+    public static String passDB = "11012004";
     
     public static Connection getConnection(){
         Connection con = null;

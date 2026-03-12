@@ -1,7 +1,7 @@
-<%-- 
-    Document   : proof-of-delivery
-    Created on : Mar 6, 2026, 1:02:16 PM
-    Author     : DELL
+<%--
+Document   : proof-of-delivery
+Created on : Mar 6, 2026, 1:02:16 PM
+Author     : DELL
 --%>
 
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
@@ -67,7 +67,7 @@
             const imagePreview = document.getElementById('imagePreview');
             const uploadPlaceholder = document.getElementById('uploadPlaceholder');
             const submitBtn = document.getElementById('submitBtn');
-
+            
             imageInput.addEventListener('change', function () {
                 const file = this.files[0];
                 if (file) {

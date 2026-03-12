@@ -32,8 +32,8 @@
         <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 overflow-hidden">
 
             <div class="text-sm font-bold text-gray-400 mb-8 flex items-center gap-2">
-                <a href="${pageContext.request.contextPath}/home" class="hover:text-gray-700 transition">Trang chủ</a> 
-                <span class="text-gray-300">/</span> 
+                <a href="${pageContext.request.contextPath}/home" class="hover:text-gray-700 transition">Trang chủ</a>
+                <span class="text-gray-300">/</span>
                 <span class="text-orange-500">Về chúng tôi</span>
             </div>
 

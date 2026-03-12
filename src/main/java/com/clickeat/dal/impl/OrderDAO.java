@@ -133,6 +133,9 @@ public class OrderDAO extends AbstractDAO<Order> implements IOrderDAO {
         if (columns.contains("cancelled_at")) {
             order.setCancelledAt(rs.getTimestamp("cancelled_at"));
         }
+        if (columns.contains("shop_name")) {
+            order.setShopName(rs.getString("shop_name"));
+        }
 
         return order;
     }
@@ -374,5 +377,20 @@ public class OrderDAO extends AbstractDAO<Order> implements IOrderDAO {
     @Override
     public boolean delete(int id) {
         return false;
+    }
+
+    // --- Customer-facing queries ---
+    public List<Order> getCustomerOrders(int customerId) {
+        String sql = "SELECT o.*, mp.shop_name FROM Orders o "
+                + "LEFT JOIN MerchantProfiles mp ON o.merchant_user_id = mp.user_id "
+                + "WHERE o.customer_user_id = ? ORDER BY o.created_at DESC";
+        return query(sql, customerId);
+    }
+
+    public Order getOrderByIdAndCustomer(int orderId, int customerId) {
+        String sql = "SELECT o.*, mp.shop_name FROM Orders o "
+                + "LEFT JOIN MerchantProfiles mp ON o.merchant_user_id = mp.user_id "
+                + "WHERE o.id = ? AND o.customer_user_id = ?";
+        return queryOne(sql, orderId, customerId);
     }
 }

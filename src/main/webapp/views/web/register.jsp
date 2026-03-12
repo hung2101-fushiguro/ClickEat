@@ -19,7 +19,7 @@
     <body>
         <div class="register-container">
             <h2 style="text-align: center;">Tạo Tài Khoản ClickEat</h2>
-            
+
             <c:if test="${not empty error}">
                 <p class="error">❌ ${error}</p>
             </c:if>
@@ -33,16 +33,16 @@
 
                 <label>Số điện thoại:</label>
                 <input type="text" name="phone" required placeholder="Nhập số điện thoại">
-                
+
                 <label>Mật khẩu:</label>
                 <input type="password" name="password" required>
 
                 <label>Xác nhận mật khẩu:</label>
                 <input type="password" name="confirmPassword" required>
-                
+
                 <button type="submit">Đăng Ký</button>
             </form>
-            
+
             <a href="login" class="link">Đã có tài khoản? Đăng nhập ngay</a>
         </div>
     </body>
