@@ -22,7 +22,7 @@ RUN rm -rf /usr/local/tomcat/webapps/ROOT
 
 # Deploy as ROOT so app is served at / instead of /ClickEat2
 COPY --from=build /app/target/ClickEat2-1.0-SNAPSHOT.war \
-                  /usr/local/tomcat/webapps/ROOT.war
+    /usr/local/tomcat/webapps/ROOT.war
 
 EXPOSE 8080
 CMD ["catalina.sh", "run"]

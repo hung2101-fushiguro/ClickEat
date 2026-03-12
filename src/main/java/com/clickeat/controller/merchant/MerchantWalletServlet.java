@@ -64,7 +64,7 @@ public class MerchantWalletServlet extends HttpServlet {
             try (PreparedStatement ps = conn.prepareStatement(sqlRecent)) {
                 ps.setInt(1, merchantId);
                 ResultSet rs = ps.executeQuery();
-                NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
+                NumberFormat nf = NumberFormat.getNumberInstance(Locale.of("vi", "VN"));
                 while (rs.next()) {
                     String code = rs.getString("order_code");
                     long amount = rs.getLong("total_amount");
@@ -79,7 +79,7 @@ public class MerchantWalletServlet extends HttpServlet {
         }
 
         // Format for display
-        NumberFormat nf = NumberFormat.getNumberInstance(new Locale("vi", "VN"));
+        NumberFormat nf = NumberFormat.getNumberInstance(Locale.of("vi", "VN"));
 
         req.setAttribute("currentPage", "wallet");
         req.setAttribute("availableBalance", nf.format(availableBalance) + "₫");

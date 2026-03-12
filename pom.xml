@@ -11,8 +11,9 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.release>21</maven.compiler.release>
+        <!-- Default: skip E2E tests. Override with -De2e=true to run them. -->
+        <e2e.exclude>**/MerchantPortalTest.java</e2e.exclude>
         <jjwt.version>0.12.5</jjwt.version>
         <jackson.version>2.17.1</jackson.version>
         <hikari.version>5.1.0</hikari.version>
@@ -147,8 +148,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
                 <configuration>
-                    <source>21</source>
-                    <target>21</target>
+                    <release>21</release>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
@@ -173,6 +173,11 @@
                 <version>3.3.0</version>
                 <configuration>
                     <useModulePath>false</useModulePath>
+                    <!-- E2E Selenium tests require a running Tomcat server.
+                         Run with: mvn test -De2e=true (after deploying the WAR) -->
+                    <excludes>
+                        <exclude>${e2e.exclude}</exclude>
+                    </excludes>
                     <systemPropertyVariables>
                         <app.base.url>http://localhost:8080/ClickEat2</app.base.url>
                         <test.username>merchant1@shop.vn</test.username>
@@ -183,4 +188,18 @@
             </plugin>
         </plugins>
     </build>
+
+    <!-- Run E2E Selenium tests with: mvn test -De2e=true (requires live Tomcat) -->
+    <profiles>
+        <profile>
+            <id>e2e</id>
+            <activation>
+                <property><name>e2e</name><value>true</value></property>
+            </activation>
+            <properties>
+                <e2e.exclude>NOTHING_TO_EXCLUDE</e2e.exclude>
+            </properties>
+        </profile>
+    </profiles>
+
 </project>

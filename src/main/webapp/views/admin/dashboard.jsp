@@ -29,32 +29,42 @@
                     <button onclick="switchTab('overview')" id="nav-overview" class="w-full flex items-center gap-3 px-4 py-3 bg-orange-500/20 text-orange-400 rounded-xl font-bold transition-colors">
                         <i class="fa-solid fa-chart-line w-5"></i> Báo cáo tổng quan
                     </button>
-                    <button onclick="switchTab('kyc')" id="nav-kyc" class="w-full flex items-center justify-between px-4 py-3 text-slate-400 hover:bg-slate-800 hover:text-white rounded-xl font-medium transition-colors">
+                    <button onclick="switchTab('kyc')" id="nav-kyc" class="w-full flex items-center justify-between px-4 py-3 text-gray-500 hover:bg-orange-50 hover:text-orange-600 rounded-xl font-medium transition-colors">
                         <div class="flex items-center gap-3"><i class="fa-solid fa-id-card-clip w-5"></i> Duyệt Quán Ăn</div>
                         <c:if test="${not empty pendingKYCs}">
                             <span class="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">${pendingKYCs.size()}</span>
                         </c:if>
                     </button>
-                    <button onclick="switchTab('finance')" id="nav-finance" class="w-full flex items-center justify-between px-4 py-3 text-slate-400 hover:bg-slate-800 hover:text-white rounded-xl font-medium transition-colors">
+                    <button onclick="switchTab('finance')" id="nav-finance" class="w-full flex items-center justify-between px-4 py-3 text-gray-500 hover:bg-orange-50 hover:text-orange-600 rounded-xl font-medium transition-colors">
                         <div class="flex items-center gap-3"><i class="fa-solid fa-money-bill-transfer w-5"></i> Quản lý Rút tiền</div>
                         <c:if test="${not empty pendingWithdrawals}">
                             <span class="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">${pendingWithdrawals.size()}</span>
                         </c:if>
                     </button>
-                    <button onclick="switchTab('dispute')" id="nav-dispute" class="w-full flex items-center justify-between px-4 py-3 text-slate-400 hover:bg-slate-800 hover:text-white rounded-xl font-medium transition-colors">
+                    <button onclick="switchTab('dispute')" id="nav-dispute" class="w-full flex items-center justify-between px-4 py-3 text-gray-500 hover:bg-orange-50 hover:text-orange-600 rounded-xl font-medium transition-colors">
                         <div class="flex items-center gap-3"><i class="fa-solid fa-scale-balanced w-5"></i> Giải quyết Sự cố</div>
                         <c:if test="${not empty pendingIssues}">
                             <span class="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">${pendingIssues.size()}</span>
                         </c:if>
                     </button>
-                    <button onclick="switchTab('users')" id="nav-users" class="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-slate-800 hover:text-white rounded-xl font-medium transition-colors">
+                    <button onclick="switchTab('users')" id="nav-users" class="w-full flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-orange-50 hover:text-orange-600 rounded-xl font-medium transition-colors">
                         <i class="fa-solid fa-users-gear w-5"></i> Quản lý Người dùng
                     </button>
                 </nav>
             </div>
-            <div class="p-6 border-t border-gray-800">
-                <a href="${pageContext.request.contextPath}/logout" class="flex items-center gap-3 text-slate-400 hover:text-red-400 transition">
-                    <i class="fa-solid fa-right-from-bracket"></i> Đăng xuất
+            <div class="p-4 border-t border-gray-200 space-y-1">
+                <!-- Cross-portal links -->
+                <a href="${pageContext.request.contextPath}/merchant/login" target="_blank"
+                   class="flex items-center gap-3 px-3 py-2.5 text-gray-500 hover:bg-orange-50 hover:text-orange-600 rounded-xl text-sm font-medium transition-colors">
+                    <i class="fa-solid fa-store w-4"></i> Cổng Merchant
+                </a>
+                <a href="${pageContext.request.contextPath}/shipper/dashboard" target="_blank"
+                   class="flex items-center gap-3 px-3 py-2.5 text-gray-500 hover:bg-blue-50 hover:text-blue-600 rounded-xl text-sm font-medium transition-colors">
+                    <i class="fa-solid fa-motorcycle w-4"></i> Cổng Shipper
+                </a>
+                <a href="${pageContext.request.contextPath}/logout"
+                   class="flex items-center gap-3 px-3 py-2.5 text-gray-500 hover:bg-red-50 hover:text-red-500 rounded-xl text-sm font-medium transition-colors">
+                    <i class="fa-solid fa-right-from-bracket w-4"></i> Đăng xuất
                 </a>
             </div>
         </aside>
@@ -64,7 +74,7 @@
                 <h2 id="header-title" class="text-2xl font-bold text-gray-900">Báo cáo tổng quan</h2>
                 <div class="flex items-center gap-4">
                     <div class="text-right">
-                        <p class="text-sm font-bold text-gray-900">Super Admin</p>
+                        <p class="text-sm font-bold text-gray-900">${sessionScope.account.fullName}</p>
                         <p class="text-xs text-green-500 font-bold"><i class="fa-solid fa-circle text-[8px] mr-1"></i>System Online</p>
                     </div>
                     <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center overflow-hidden border-2 border-orange-500 text-orange-600 shadow-sm">

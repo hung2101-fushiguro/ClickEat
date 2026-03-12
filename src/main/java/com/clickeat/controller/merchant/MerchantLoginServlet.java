@@ -21,13 +21,13 @@ public class MerchantLoginServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
 
-        // If already logged in, redirect to dashboard
+        // Redirect to unified login — all roles handled there
         HttpSession session = req.getSession(false);
         if (session != null && session.getAttribute("merchantId") != null) {
             resp.sendRedirect(req.getContextPath() + "/merchant/dashboard");
             return;
         }
-        req.getRequestDispatcher("/views/merchant/login.jsp").forward(req, resp);
+        resp.sendRedirect(req.getContextPath() + "/login");
     }
 
     @Override
