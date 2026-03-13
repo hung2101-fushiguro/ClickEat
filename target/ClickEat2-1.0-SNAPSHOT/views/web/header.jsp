@@ -17,14 +17,14 @@
                     <a href="${pageContext.request.contextPath}/about" class="text-sm text-gray-600 hover:text-orange-500 font-medium transition-colors">Về chúng tôi</a>
                     <a href="${pageContext.request.contextPath}/menu" class="text-sm text-gray-600 hover:text-orange-500 font-medium transition-colors">Thực đơn</a>
                     <a href="${pageContext.request.contextPath}/store" class="text-sm text-gray-600 hover:text-orange-500 font-medium transition-colors">Cửa hàng</a>
-                    <a href="${pageContext.request.contextPath}/aichat" class="text-sm text-orange-500 hover:text-orange-600 font-bold flex items-center gap-1 transition-colors">
+
+                    <a href="${pageContext.request.contextPath}/ai/ai-chat" class="text-sm text-orange-500 hover:text-orange-600 font-bold flex items-center gap-1 transition-colors">
                         <i class="fa-solid fa-wand-magic-sparkles"></i> AI Gợi ý
                     </a>
                 </nav>
             </div>
 
             <div class="flex items-center gap-4">
-
                 <a href="${pageContext.request.contextPath}/cart" class="p-2 text-gray-600 hover:text-gray-900 transition-colors relative block cursor-pointer">
                     <i class="fa-solid fa-cart-shopping text-xl"></i>
                     <span class="absolute top-0 right-0 bg-orange-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center transform translate-x-1 -translate-y-1 shadow-sm">
@@ -54,6 +54,7 @@
 
         </div>
     </div>
+
     <c:if test="${not empty sessionScope.toastError}">
         <div id="toast-error" class="fixed bottom-5 right-5 bg-red-500 text-white px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-bounce">
             <i class="fa-solid fa-triangle-exclamation text-xl"></i>
@@ -62,7 +63,6 @@
         <c:remove var="toastError" scope="session" />
 
         <script>
-            // Tự động ẩn sau 4 giây
             setTimeout(() => document.getElementById('toast-error').style.display = 'none', 4000);
         </script>
     </c:if>

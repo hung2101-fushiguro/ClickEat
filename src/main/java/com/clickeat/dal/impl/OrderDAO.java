@@ -137,6 +137,87 @@ public class OrderDAO extends AbstractDAO<Order> implements IOrderDAO {
         return order;
     }
 
+    // Thêm hàm này vào OrderDAO.java
+    public String getCustomerFoodHistory(long customerId, int days) {
+        // Truy vấn các món đã đặt trong X ngày qua, kèm theo thông tin is_fried (đồ chiên) và lượng calo
+        String sql = "SELECT fi.name, COUNT(oi.id) as times_ordered, fi.is_fried, fi.calories "
+                + "FROM Orders o "
+                + "JOIN OrderItems oi ON o.id = oi.order_id "
+                + "JOIN FoodItems fi ON oi.food_item_id = fi.id "
+                + "WHERE o.customer_user_id = ? AND o.created_at >= DATEADD(DAY, -?, GETDATE()) "
+                + "GROUP BY fi.name, fi.is_fried, fi.calories";
+
+        StringBuilder history = new StringBuilder("Lịch sử ăn uống trong " + days + " ngày qua:\n");
+        boolean hasData = false;
+
+        try (java.sql.Connection conn = getConnection(); java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, customerId);
+            ps.setInt(2, days);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    hasData = true;
+                    String name = rs.getString("name");
+                    int times = rs.getInt("times_ordered");
+                    boolean isFried = rs.getBoolean("is_fried");
+                    int calories = rs.getInt("calories");
+
+                    history.append("- Món: ").append(name)
+                            .append(" | Đã ăn: ").append(times).append(" lần")
+                            .append(" | Đồ chiên rán: ").append(isFried ? "Có" : "Không")
+                            .append(" | Calo: ").append(calories).append(" kcal\n");
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Lỗi khi truy xuất lịch sử ăn uống.";
+        }
+
+        if (!hasData) {
+            return "Khách hàng chưa đặt món nào trên hệ thống trong " + days + " ngày qua.";
+        }
+        return history.toString();
+    }
+
+    public String getAvailableMenuContext() {
+        // Chỉ lấy món ăn của nhà hàng đã được APPROVED và món ăn đang AVAILABLE
+        String sql = "SELECT m.shop_name, c.name AS category_name, f.name AS food_name, f.price, f.is_fried, f.calories "
+                + "FROM FoodItems f "
+                + "JOIN Categories c ON f.category_id = c.id "
+                + "JOIN MerchantProfiles m ON f.merchant_user_id = m.user_id "
+                + "WHERE f.is_available = 1 AND m.status = 'APPROVED'";
+
+        StringBuilder menu = new StringBuilder("DANH SÁCH MÓN ĂN HIỆN CÓ TRÊN HỆ THỐNG:\n");
+        boolean hasData = false;
+
+        try (java.sql.Connection conn = getConnection(); java.sql.PreparedStatement ps = conn.prepareStatement(sql); java.sql.ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                hasData = true;
+                String shopName = rs.getString("shop_name");
+                String category = rs.getString("category_name");
+                String foodName = rs.getString("food_name");
+                long price = rs.getLong("price");
+                boolean isFried = rs.getBoolean("is_fried");
+                int calories = rs.getInt("calories");
+
+                // Format: [Tên Quán] - Thể loại: Cơm/Gà - Món: Gà rán (45000đ) - Chiên: Có, Calo: 500
+                menu.append("- Quán [").append(shopName).append("] | Thể loại: ").append(category)
+                        .append(" | Món: ").append(foodName).append(" (").append(price).append("đ)")
+                        .append(isFried ? " [Đồ chiên]" : "")
+                        .append(calories > 0 ? " [" + calories + " kcal]" : "")
+                        .append("\n");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "Lỗi truy xuất thực đơn.";
+        }
+
+        if (!hasData) {
+            return "Hiện tại hệ thống chưa có món ăn nào mở bán.";
+        }
+        return menu.toString();
+    }
+
     @Override
     public List<Order> getAvailableOrdersForShipper() {
         String sql = "SELECT * FROM Orders WHERE shipper_user_id IS NULL AND order_status IN ('MERCHANT_ACCEPTED', 'PREPARING', 'READY_FOR_PICKUP') ORDER BY created_at ASC";

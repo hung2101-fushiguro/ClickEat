@@ -88,6 +88,7 @@ com\clickeat\dal\interfaces\IUserAppealDAO.class
 com\clickeat\controller\shipper\ShipperProofServlet.class
 com\clickeat\controller\shipper\ShipperRegisterServlet.class
 com\clickeat\dal\impl\ShipperDAO.class
+com\clickeat\controller\ai\AIChatServlet.class
 com\clickeat\dal\interfaces\IOrderIssueDAO.class
 com\clickeat\controller\merchant\MerchantLogoutServlet.class
 com\clickeat\controller\auth\LoginServlet.class
