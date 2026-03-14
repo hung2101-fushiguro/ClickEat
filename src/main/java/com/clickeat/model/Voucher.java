@@ -4,29 +4,37 @@ import java.sql.Timestamp;
 
 public class Voucher {
 
-    private long id;
+    private int id;
     private int merchantUserId;
     private String code;
     private String title;
     private String description;
-    private String discountType; // PERCENT hoặc FIXED
+    private String discountType;
     private double discountValue;
     private Double maxDiscountAmount;
     private Double minOrderAmount;
     private Timestamp startAt;
     private Timestamp endAt;
     private Integer maxUsesTotal;
+    private Integer maxUsesPerUser;
     private boolean isPublished;
-    private String status; // ACTIVE hoặc INACTIVE
+    private String status;
+    private Timestamp createdAt;
+    private Timestamp updatedAt;
+
+    // field hiển thị
+    private String merchantName;
+    private String displayDiscount;
+    private String themeClass;
 
     public Voucher() {
     }
 
-    public long getId() {
+    public int getId() {
         return id;
     }
 
-    public void setId(long id) {
+    public void setId(int id) {
         this.id = id;
     }
 
@@ -118,13 +126,20 @@ public class Voucher {
         this.maxUsesTotal = maxUsesTotal;
     }
 
-    // Đã sửa lại chuẩn Getter/Setter cho biến boolean
+    public Integer getMaxUsesPerUser() {
+        return maxUsesPerUser;
+    }
+
+    public void setMaxUsesPerUser(Integer maxUsesPerUser) {
+        this.maxUsesPerUser = maxUsesPerUser;
+    }
+
     public boolean isPublished() {
         return isPublished;
     }
 
-    public void setPublished(boolean isPublished) {
-        this.isPublished = isPublished;
+    public void setPublished(boolean published) {
+        isPublished = published;
     }
 
     public String getStatus() {
@@ -133,5 +148,45 @@ public class Voucher {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public Timestamp getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Timestamp createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Timestamp getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Timestamp updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public String getMerchantName() {
+        return merchantName;
+    }
+
+    public void setMerchantName(String merchantName) {
+        this.merchantName = merchantName;
+    }
+
+    public String getDisplayDiscount() {
+        return displayDiscount;
+    }
+
+    public void setDisplayDiscount(String displayDiscount) {
+        this.displayDiscount = displayDiscount;
+    }
+
+    public String getThemeClass() {
+        return themeClass;
+    }
+
+    public void setThemeClass(String themeClass) {
+        this.themeClass = themeClass;
     }
 }

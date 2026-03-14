@@ -3,8 +3,7 @@ package com.clickeat.model;
 import java.sql.Timestamp;
 
 public class MerchantProfile {
-
-    private long userId;
+    private int userId;
     private String shopName;
     private String shopPhone;
     private String shopAddressLine;
@@ -14,24 +13,42 @@ public class MerchantProfile {
     private String districtName;
     private String wardCode;
     private String wardName;
-    private Double latitude;
-    private Double longitude;
+    private double latitude;
+    private double longitude;
+    private Boolean isDefault;
+    private String note;
     private String status;
     private Timestamp createdAt;
     private Timestamp updatedAt;
+    
+    // Missing settings fields from original project
     private String shopAvatar;
     private String businessHours;
     private String shopDescription;
     private String notificationSettings;
 
+
+    // field phục vụ hiển thị
+    private String imageUrl;
+    private String coverImageUrl;
+    private double rating;
+    private int reviewCount;
+    private int itemCount;
+    private double minPrice;
+    private String categoryName;
+    private String voucherTitle;
+    private String deliveryTime;
+    private String distance;
+    private boolean open;
+
     public MerchantProfile() {
     }
 
-    public long getUserId() {
+    public int getUserId() {
         return userId;
     }
 
-    public void setUserId(long userId) {
+    public void setUserId(int userId) {
         this.userId = userId;
     }
 
@@ -107,20 +124,36 @@ public class MerchantProfile {
         this.wardName = wardName;
     }
 
-    public Double getLatitude() {
+    public double getLatitude() {
         return latitude;
     }
 
-    public void setLatitude(Double latitude) {
+    public void setLatitude(double latitude) {
         this.latitude = latitude;
     }
 
-    public Double getLongitude() {
+    public double getLongitude() {
         return longitude;
     }
 
-    public void setLongitude(Double longitude) {
+    public void setLongitude(double longitude) {
         this.longitude = longitude;
+    }
+
+    public Boolean getIsDefault() {
+        return isDefault;
+    }
+
+    public void setIsDefault(Boolean isDefault) {
+        this.isDefault = isDefault;
+    }
+
+    public String getNote() {
+        return note;
+    }
+
+    public void setNote(String note) {
+        this.note = note;
     }
 
     public String getStatus() {
@@ -147,35 +180,103 @@ public class MerchantProfile {
         this.updatedAt = updatedAt;
     }
 
-    public String getShopAvatar() {
-        return shopAvatar;
+    public String getImageUrl() {
+        return imageUrl;
     }
 
-    public void setShopAvatar(String shopAvatar) {
-        this.shopAvatar = shopAvatar;
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
-    public String getBusinessHours() {
-        return businessHours;
+    public String getCoverImageUrl() {
+        return coverImageUrl;
     }
 
-    public void setBusinessHours(String businessHours) {
-        this.businessHours = businessHours;
+    public void setCoverImageUrl(String coverImageUrl) {
+        this.coverImageUrl = coverImageUrl;
     }
 
-    public String getShopDescription() {
-        return shopDescription;
+    public double getRating() {
+        return rating;
     }
 
-    public void setShopDescription(String shopDescription) {
-        this.shopDescription = shopDescription;
+    public void setRating(double rating) {
+        this.rating = rating;
     }
 
-    public String getNotificationSettings() {
-        return notificationSettings;
+    public int getReviewCount() {
+        return reviewCount;
     }
 
-    public void setNotificationSettings(String notificationSettings) {
-        this.notificationSettings = notificationSettings;
+    public void setReviewCount(int reviewCount) {
+        this.reviewCount = reviewCount;
     }
+
+    public int getItemCount() {
+        return itemCount;
+    }
+
+    public void setItemCount(int itemCount) {
+        this.itemCount = itemCount;
+    }
+
+    public double getMinPrice() {
+        return minPrice;
+    }
+
+    public void setMinPrice(double minPrice) {
+        this.minPrice = minPrice;
+    }
+
+    public String getCategoryName() {
+        return categoryName;
+    }
+
+    public void setCategoryName(String categoryName) {
+        this.categoryName = categoryName;
+    }
+
+    public String getVoucherTitle() {
+        return voucherTitle;
+    }
+
+    public void setVoucherTitle(String voucherTitle) {
+        this.voucherTitle = voucherTitle;
+    }
+
+    public String getDeliveryTime() {
+        return deliveryTime;
+    }
+
+    public void setDeliveryTime(String deliveryTime) {
+        this.deliveryTime = deliveryTime;
+    }
+
+    public String getDistance() {
+        return distance;
+    }
+
+    public void setDistance(String distance) {
+        this.distance = distance;
+    }
+
+    public boolean isOpen() {
+        return open;
+    }
+
+    public void setOpen(boolean open) {
+        this.open = open;
+    }
+
+    public String getShopAvatar() { return shopAvatar; }
+    public void setShopAvatar(String shopAvatar) { this.shopAvatar = shopAvatar; }
+
+    public String getBusinessHours() { return businessHours; }
+    public void setBusinessHours(String businessHours) { this.businessHours = businessHours; }
+
+    public String getShopDescription() { return shopDescription; }
+    public void setShopDescription(String shopDescription) { this.shopDescription = shopDescription; }
+
+    public String getNotificationSettings() { return notificationSettings; }
+    public void setNotificationSettings(String notificationSettings) { this.notificationSettings = notificationSettings; }
 }

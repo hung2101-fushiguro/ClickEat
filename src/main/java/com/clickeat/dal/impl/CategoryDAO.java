@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.clickeat.dal.impl;
 
 import com.clickeat.model.Category;
@@ -14,41 +10,92 @@ public class CategoryDAO extends AbstractDAO<Category> {
     @Override
     protected Category mapRow(ResultSet rs) throws SQLException {
         Category c = new Category();
+
         c.setId(rs.getInt("id"));
         c.setMerchantUserId(rs.getInt("merchant_user_id"));
         c.setName(rs.getString("name"));
-        c.setActive(rs.getBoolean("is_active"));
-        c.setSortOrder(rs.getInt("sort_order"));
+
+        try {
+            c.setActive(rs.getBoolean("is_active"));
+        } catch (Exception e) {
+            c.setActive(true);
+        }
+
+        try {
+            c.setSortOrder(rs.getInt("sort_order"));
+        } catch (Exception e) {
+            c.setSortOrder(0);
+        }
+
         return c;
     }
 
     @Override
     public List<Category> findAll() {
-        return query("SELECT * FROM Categories ORDER BY sort_order ASC");
+        String sql = "SELECT * FROM Categories ORDER BY merchant_user_id ASC, sort_order ASC, id ASC";
+        return query(sql);
     }
 
     @Override
     public Category findById(int id) {
-        return queryOne("SELECT * FROM Categories WHERE id = ?", id);
+        String sql = "SELECT * FROM Categories WHERE id = ?";
+        return queryOne(sql, id);
     }
 
     @Override
     public int insert(Category c) {
-        String sql = "INSERT INTO Categories (merchant_user_id, name, is_active, sort_order) VALUES (?, ?, ?, ?)";
-        return update(sql, c.getMerchantUserId(), c.getName(), c.isActive(), c.getSortOrder());
+        String sql = """
+            INSERT INTO Categories (merchant_user_id, name, is_active, sort_order)
+            VALUES (?, ?, ?, ?)
+        """;
+        return update(sql,
+                c.getMerchantUserId(),
+                c.getName(),
+                c.isActive(),
+                c.getSortOrder());
     }
 
     @Override
     public boolean update(Category c) {
-        String sql = "UPDATE Categories SET name = ?, is_active = ?, sort_order = ? WHERE id = ?";
-        return update(sql, c.getName(), c.isActive(), c.getSortOrder(), c.getId()) > 0;
+        String sql = """
+            UPDATE Categories
+            SET name = ?, is_active = ?, sort_order = ?
+            WHERE id = ?
+        """;
+        return update(sql,
+                c.getName(),
+                c.isActive(),
+                c.getSortOrder(),
+                c.getId()) > 0;
     }
 
     @Override
     public boolean delete(int id) {
-        return update("DELETE FROM Categories WHERE id = ?", id) > 0;
+        String sql = "UPDATE Categories SET is_active = 0 WHERE id = ?";
+        return update(sql, id) > 0;
     }
 
+    public List<Category> getActiveByMerchant(int merchantUserId) {
+        String sql = """
+            SELECT *
+            FROM Categories
+            WHERE merchant_user_id = ?
+              AND is_active = 1
+            ORDER BY sort_order ASC, id ASC
+        """;
+        return query(sql, merchantUserId);
+    }
+
+    public List<Category> getAllByMerchant(int merchantUserId) {
+        String sql = """
+            SELECT *
+            FROM Categories
+            WHERE merchant_user_id = ?
+            ORDER BY sort_order ASC, id ASC
+        """;
+        return query(sql, merchantUserId);
+    }
+    
     public List<Category> getByMerchantId(int merchantId) {
         String sql = "SELECT * FROM Categories WHERE merchant_user_id = ? ORDER BY sort_order ASC";
         return query(sql, merchantId);

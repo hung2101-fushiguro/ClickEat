@@ -3,7 +3,6 @@ package com.clickeat.model;
 import java.sql.Timestamp;
 
 public class FoodItem {
-
     private int id;
     private int merchantUserId;
     private int categoryId;
@@ -13,34 +12,21 @@ public class FoodItem {
     private String imageUrl;
     private boolean isAvailable;
     private boolean isFried;
-    // Thêm 4 biến này vào dưới biến isFried
-    private int calories;
-    private double proteinG;
-    private double carbsG;
-    private double fatG;
-
+    private Integer calories;
+    private Double proteinG;
+    private Double carbsG;
+    private Double fatG;
     private Timestamp createdAt;
     private Timestamp updatedAt;
 
-    public FoodItem() {
-    }
+    private String merchantName;
+    private String categoryName;
+    private double originalPrice;
+    private int discountPercent;
+    private double rating;
+    private String badgeText;
 
-    public FoodItem(int id, int merchantUserId, int categoryId, String name, String description, double price, String imageUrl, boolean isAvailable, boolean isFried,int calories,double proteinG,double carbsG,double fatG, Timestamp createdAt, Timestamp updatedAt) {
-        this.id = id;
-        this.merchantUserId = merchantUserId;
-        this.categoryId = categoryId;
-        this.name = name;
-        this.description = description;
-        this.price = price;
-        this.imageUrl = imageUrl;
-        this.isAvailable = isAvailable;
-        this.isFried = isFried;
-        this.calories = calories;
-        this.proteinG = proteinG;
-        this.carbsG = carbsG;
-        this.fatG = fatG;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
+    public FoodItem() {
     }
 
     public int getId() {
@@ -115,54 +101,37 @@ public class FoodItem {
         isFried = fried;
     }
 
-    public boolean isIsAvailable() {
-        return isAvailable;
-    }
-
-    public void setIsAvailable(boolean isAvailable) {
-        this.isAvailable = isAvailable;
-    }
-
-    public boolean isIsFried() {
-        return isFried;
-    }
-
-    public void setIsFried(boolean isFried) {
-        this.isFried = isFried;
-    }
-
-    public int getCalories() {
+    public Integer getCalories() {
         return calories;
     }
 
-    public void setCalories(int calories) {
+    public void setCalories(Integer calories) {
         this.calories = calories;
     }
 
-    public double getProteinG() {
+    public Double getProteinG() {
         return proteinG;
     }
 
-    public void setProteinG(double proteinG) {
+    public void setProteinG(Double proteinG) {
         this.proteinG = proteinG;
     }
 
-    public double getCarbsG() {
+    public Double getCarbsG() {
         return carbsG;
     }
 
-    public void setCarbsG(double carbsG) {
+    public void setCarbsG(Double carbsG) {
         this.carbsG = carbsG;
     }
 
-    public double getFatG() {
+    public Double getFatG() {
         return fatG;
     }
 
-    public void setFatG(double fatG) {
+    public void setFatG(Double fatG) {
         this.fatG = fatG;
     }
-    
 
     public Timestamp getCreatedAt() {
         return createdAt;
@@ -178,5 +147,53 @@ public class FoodItem {
 
     public void setUpdatedAt(Timestamp updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getMerchantName() {
+        return merchantName;
+    }
+
+    public void setMerchantName(String merchantName) {
+        this.merchantName = merchantName;
+    }
+
+    public String getCategoryName() {
+        return categoryName;
+    }
+
+    public void setCategoryName(String categoryName) {
+        this.categoryName = categoryName;
+    }
+
+    public double getOriginalPrice() {
+        return originalPrice;
+    }
+
+    public void setOriginalPrice(double originalPrice) {
+        this.originalPrice = originalPrice;
+    }
+
+    public int getDiscountPercent() {
+        return discountPercent;
+    }
+
+    public void setDiscountPercent(int discountPercent) {
+        this.discountPercent = discountPercent;
+    }
+
+    public double getRating() {
+        return rating;
+    }
+
+    public void setRating(double rating) {
+        this.rating = rating;
+    }
+
+    public String getBadgeText() {
+        return badgeText;
+    }
+
+    public void setBadgeText(String badgeText) {
+        this.badgeText = badgeText;
     }
 }

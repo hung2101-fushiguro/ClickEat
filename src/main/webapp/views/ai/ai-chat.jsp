@@ -38,7 +38,9 @@
     </head>
     <body class="h-screen flex flex-col overflow-hidden">
 
-        <jsp:include page="../web/header.jsp" />
+        <jsp:include page="../web/header.jsp">
+            <jsp:param name="activePage" value="ai" />
+        </jsp:include>
 
         <div class="flex-1 max-w-[1400px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 flex flex-col min-h-0">
 
@@ -128,7 +130,7 @@
                             <button onclick="setQuickAsk('Ăn Bún/Phở cho nhẹ bụng')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200 text-xs font-semibold text-gray-600 hover:border-primary hover:text-primary transition-colors whitespace-nowrap"><span class="material-symbols-outlined text-[14px]">ramen_dining</span> Bún/Phở</button>
                         </div>
 
-                        <form method="POST" action="${pageContext.request.contextPath}/ai/ai-chat" onsubmit="showLoading()" class="flex items-center gap-2 bg-gray-50 p-1.5 rounded-full border border-gray-200 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
+                        <form method="POST" action="${pageContext.request.contextPath}/ai" onsubmit="showLoading()" class="flex items-center gap-2 bg-gray-50 p-1.5 rounded-full border border-gray-200 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
                             <button type="button" class="p-2 text-gray-400 hover:text-gray-600 ml-1 shrink-0"><span class="material-symbols-outlined">attach_file</span></button>
                             <input type="text" name="message" id="msgInput" placeholder="Hỏi AI ClickEat bất cứ điều gì..." required autocomplete="off" autofocus class="flex-1 bg-transparent border-none outline-none text-sm font-medium text-gray-900 placeholder:text-gray-400 py-2"/>
                             <button type="submit" class="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center hover:bg-orange-600 shadow-md shrink-0 transition-transform active:scale-95"><span class="material-symbols-outlined text-[20px]">send</span></button>

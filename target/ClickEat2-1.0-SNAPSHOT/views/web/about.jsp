@@ -16,8 +16,9 @@
     </head>
     <body class="bg-[#fafbfc] text-gray-800">
 
-        <%-- Nhúng Header của bạn ở đây --%>
-        <%-- <jsp:include page="/views/components/header.jsp" /> --%>
+        <jsp:include page="header.jsp">
+            <jsp:param name="activePage" value="about" />
+        </jsp:include>
 
         <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 overflow-hidden">
 
@@ -154,8 +155,7 @@
 
         </main>
 
-        <%-- Nhúng Footer của bạn ở đây --%>
-        <%-- <jsp:include page="/views/components/footer.jsp" /> --%>
+        <jsp:include page="footer.jsp" />
 
     </body>
 </html>

@@ -444,7 +444,39 @@ public class OrderDAO extends AbstractDAO<Order> implements IOrderDAO {
 
     @Override
     public int insert(Order order) {
-        return 0;
+        String sql = """
+            INSERT INTO Orders (
+                order_code, customer_user_id, guest_id, merchant_user_id, 
+                receiver_name, receiver_phone, delivery_address_line, 
+                province_code, province_name, district_code, district_name, 
+                ward_code, ward_name, payment_method, payment_status, 
+                order_status, subtotal_amount, delivery_fee, discount_amount, total_amount,
+                created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, SYSUTCDATETIME())
+        """;
+        
+        return update(sql, 
+            order.getOrderCode(),
+            order.getCustomerUserId() > 0 ? order.getCustomerUserId() : null,
+            order.getGuestId(),
+            order.getMerchantId(),
+            order.getReceiverName(),
+            order.getReceiverPhone(),
+            order.getDeliveryAddressLine(),
+            order.getProvinceCode() != null ? order.getProvinceCode() : "",
+            order.getProvinceName() != null ? order.getProvinceName() : "",
+            order.getDistrictCode() != null ? order.getDistrictCode() : "",
+            order.getDistrictName() != null ? order.getDistrictName() : "",
+            order.getWardCode() != null ? order.getWardCode() : "",
+            order.getWardName() != null ? order.getWardName() : "",
+            order.getPaymentMethod(),
+            order.getPaymentStatus() != null ? order.getPaymentStatus() : "UNPAID",
+            order.getOrderStatus() != null ? order.getOrderStatus() : "CREATED",
+            order.getSubtotalAmount(),
+            order.getDeliveryFee(),
+            order.getDiscountAmount(),
+            order.getTotalAmount()
+        );
     }
 
     @Override
@@ -455,5 +487,10 @@ public class OrderDAO extends AbstractDAO<Order> implements IOrderDAO {
     @Override
     public boolean delete(int id) {
         return false;
+    }
+
+    public Order findByCode(String code) {
+        String sql = "SELECT * FROM Orders WHERE order_code = ?";
+        return queryOne(sql, code);
     }
 }
