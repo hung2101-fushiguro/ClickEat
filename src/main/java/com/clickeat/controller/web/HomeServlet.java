@@ -7,7 +7,6 @@ import com.clickeat.dal.impl.MerchantProfileDAO;
 import com.clickeat.model.Cart;
 import com.clickeat.model.CartItem;
 import com.clickeat.model.FoodItem;
-import com.clickeat.model.MerchantProfile;
 import com.clickeat.model.User;
 import java.io.IOException;
 import jakarta.servlet.ServletException;
@@ -26,16 +25,10 @@ public class HomeServlet extends HttpServlet {
             throws ServletException, IOException {
 
         // 1. Lấy thông tin User từ Session
-        HttpSession session = request.getSession();
-        User account = (User) session.getAttribute("account");
+        HttpSession session = request.getSession(false);
+        User account = (session != null) ? (User) session.getAttribute("account") : null;
 
-        // 2. Nếu chưa đăng nhập -> Đẩy về trang Login ngay
-        if (account == null) {
-            response.sendRedirect("login");
-            return;
-        }
-
-        // 3. (Sau này) Gọi FoodDAO để lấy danh sách món ăn hiển thị
+        // 2. (Sau này) Gọi FoodDAO để lấy danh sách món ăn hiển thị
         FoodItemDAO foodDAO = new FoodItemDAO();
         List<FoodItem> topFoods = foodDAO.getTopFoods(6); // Lấy 6 món
         int cartCount = 0;
@@ -64,7 +57,7 @@ public class HomeServlet extends HttpServlet {
         MerchantProfileDAO merchantDAO = new MerchantProfileDAO();
         request.setAttribute("merchants", merchantDAO.getAllApprovedWithStats());
 
-        // 4. Chuyển sang giao diện Home
+        // 3. Chuyển sang giao diện Home
         request.getRequestDispatcher("views/web/home.jsp").forward(request, response);
     }
 }

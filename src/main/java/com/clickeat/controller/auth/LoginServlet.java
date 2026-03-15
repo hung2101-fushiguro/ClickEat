@@ -26,6 +26,19 @@ public class LoginServlet extends HttpServlet {
         String userRaw = request.getParameter("username");
         String passRaw = request.getParameter("password");
 
+        if (userRaw != null) {
+            userRaw = userRaw.trim();
+        }
+        if (passRaw != null) {
+            passRaw = passRaw.trim();
+        }
+
+        if (userRaw == null || userRaw.isEmpty() || passRaw == null || passRaw.isEmpty()) {
+            request.setAttribute("error", "Vui lòng nhập đầy đủ tài khoản và mật khẩu!");
+            request.getRequestDispatcher("views/web/login.jsp").forward(request, response);
+            return;
+        }
+
         UserDAO userDAO = new UserDAO();
         User user = userDAO.checkLogin(userRaw, passRaw);
 
@@ -35,21 +48,21 @@ public class LoginServlet extends HttpServlet {
             if ("INACTIVE".equals(user.getStatus())) {
                 session.setAttribute("bannedUserId", user.getId());
 
-                response.sendRedirect("banned");
+                response.sendRedirect(request.getContextPath() + "/banned");
                 return;
             }
 
             session.setAttribute("account", user);
 
-            if ("ADMIN".equals(user.getRole())) {
-                response.sendRedirect("admin/dashboard");
-            } else if ("SHIPPER".equals(user.getRole())) {
-                response.sendRedirect("shipper/dashboard");
-            }else if("MERCHANT".equals(user.getRole())){
-                response.sendRedirect("merchant/dashboard");
-            }
-            else {
-                response.sendRedirect("home");
+            switch (user.getRole()) {
+                case "ADMIN" ->
+                    response.sendRedirect(request.getContextPath() + "/admin/dashboard");
+                case "SHIPPER" ->
+                    response.sendRedirect(request.getContextPath() + "/shipper/dashboard");
+                case "MERCHANT" ->
+                    response.sendRedirect(request.getContextPath() + "/merchant/dashboard");
+                default ->
+                    response.sendRedirect(request.getContextPath() + "/home");
             }
         } else {
             request.setAttribute("error", "Sai tài khoản hoặc mật khẩu!");

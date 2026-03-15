@@ -27,27 +27,67 @@ public class RegisterServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
+
         // Giữ font tiếng Việt không bị lỗi font khi lưu vào DB
         request.setCharacterEncoding("UTF-8");
-        
+
         // 1. Lấy dữ liệu từ JSP và trim khoảng trắng
         String fullName = request.getParameter("fullName");
-        if (fullName != null) fullName = fullName.trim();
-        
-        String email = request.getParameter("email");
-        if (email != null) email = email.trim();
-        
-        String phone = request.getParameter("phone");
-        if (phone != null) phone = phone.trim();
-        
-        String password = request.getParameter("password");
-        if (password != null) password = password.trim();
-        
-        String confirmPassword = request.getParameter("confirmPassword");
-        if (confirmPassword != null) confirmPassword = confirmPassword.trim();
+        if (fullName != null) {
+            fullName = fullName.trim();
+        }
 
-        // 2. Kiểm tra mật khẩu khớp nhau
+        String email = request.getParameter("email");
+        if (email != null) {
+            email = email.trim();
+        }
+
+        String phone = request.getParameter("phone");
+        if (phone != null) {
+            phone = phone.trim();
+        }
+
+        String password = request.getParameter("password");
+        if (password != null) {
+            password = password.trim();
+        }
+
+        String confirmPassword = request.getParameter("confirmPassword");
+        if (confirmPassword != null) {
+            confirmPassword = confirmPassword.trim();
+        }
+
+        // 2. Validate dữ liệu bắt buộc
+        if (fullName == null || fullName.isEmpty()
+                || email == null || email.isEmpty()
+                || phone == null || phone.isEmpty()
+                || password == null || password.isEmpty()
+                || confirmPassword == null || confirmPassword.isEmpty()) {
+            request.setAttribute("error", "Vui lòng nhập đầy đủ thông tin!");
+            request.getRequestDispatcher("views/web/register.jsp").forward(request, response);
+            return;
+        }
+
+        // Validate đơn giản theo format chung
+        if (!email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")) {
+            request.setAttribute("error", "Email không đúng định dạng!");
+            request.getRequestDispatcher("views/web/register.jsp").forward(request, response);
+            return;
+        }
+
+        if (!phone.matches("^0\\d{9,10}$")) {
+            request.setAttribute("error", "Số điện thoại không đúng định dạng!");
+            request.getRequestDispatcher("views/web/register.jsp").forward(request, response);
+            return;
+        }
+
+        if (password.length() < 6) {
+            request.setAttribute("error", "Mật khẩu phải có ít nhất 6 ký tự!");
+            request.getRequestDispatcher("views/web/register.jsp").forward(request, response);
+            return;
+        }
+
+        // 3. Kiểm tra mật khẩu khớp nhau
         if (!password.equals(confirmPassword)) {
             request.setAttribute("error", "Mật khẩu xác nhận không khớp!");
             request.getRequestDispatcher("views/web/register.jsp").forward(request, response);
@@ -56,30 +96,30 @@ public class RegisterServlet extends HttpServlet {
 
         UserDAO userDAO = new UserDAO();
 
-        // 3. Kiểm tra trùng lặp (Logic DAO bạn đã viết sẵn)
+        // 4. Kiểm tra trùng lặp (Logic DAO bạn đã viết sẵn)
         if (userDAO.checkPhoneExist(phone)) {
             request.setAttribute("error", "Số điện thoại này đã được đăng ký!");
             request.getRequestDispatcher("views/web/register.jsp").forward(request, response);
             return;
         }
-        
+
         if (userDAO.checkEmailExist(email)) {
             request.setAttribute("error", "Email này đã được đăng ký!");
             request.getRequestDispatcher("views/web/register.jsp").forward(request, response);
             return;
         }
 
-        // 4. Tạo Object User và lưu xuống DB
+        // 5. Tạo Object User và lưu xuống DB
         User newUser = new User();
         newUser.setFullName(fullName);
         newUser.setEmail(email);
         newUser.setPhone(phone);
         newUser.setPasswordHash(password); // Lưu ý: Thực tế chỗ này cần mã hóa MD5/BCrypt
         newUser.setRole("CUSTOMER");       // Mặc định đăng ký mới là Khách hàng
-        
+
         int newId = userDAO.insert(newUser);
 
-        // 5. Kiểm tra kết quả
+        // 6. Kiểm tra kết quả
         if (newId > 0) {
             // Đăng ký thành công, đẩy về trang Login kèm thông báo
             request.setAttribute("message", "Đăng ký thành công! Vui lòng đăng nhập.");
