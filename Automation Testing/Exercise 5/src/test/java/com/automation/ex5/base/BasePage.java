@@ -1,7 +1,9 @@
 package com.automation.ex5.base;
 
 import java.time.Duration;
+
 import org.openqa.selenium.By;
+import org.openqa.selenium.ElementClickInterceptedException;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -19,7 +21,13 @@ public abstract class BasePage {
     }
 
     protected void click(By locator) {
-        wait.until(ExpectedConditions.elementToBeClickable(locator)).click();
+        WebElement element = wait.until(ExpectedConditions.presenceOfElementLocated(locator));
+        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block:'center'});", element);
+        try {
+            wait.until(ExpectedConditions.elementToBeClickable(locator)).click();
+        } catch (ElementClickInterceptedException exception) {
+            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", element);
+        }
     }
 
     protected void type(By locator, String value) {

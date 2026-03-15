@@ -1,10 +1,12 @@
 package com.automation.ex5.pages;
 
-import com.automation.ex5.base.BasePage;
 import java.nio.file.Path;
+
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
+
+import com.automation.ex5.base.BasePage;
 
 public class PracticeFormPage extends BasePage {
 
@@ -20,8 +22,8 @@ public class PracticeFormPage extends BasePage {
     private final By addressInput = By.id("currentAddress");
     private final By stateDropdown = By.id("state");
     private final By cityDropdown = By.id("city");
-    private final By stateNcrOption = By.xpath("//div[contains(@id,'react-select') and text()='NCR']");
-    private final By cityDelhiOption = By.xpath("//div[contains(@id,'react-select') and text()='Delhi']");
+    private final By stateInput = By.id("react-select-3-input");
+    private final By cityInput = By.id("react-select-4-input");
     private final By submitButton = By.id("submit");
 
     private final By resultModalTitle = By.id("example-modal-sizes-title-lg");
@@ -34,6 +36,13 @@ public class PracticeFormPage extends BasePage {
 
     public PracticeFormPage open(String url) {
         driver.get(url);
+        ((JavascriptExecutor) driver).executeScript(
+                "var fixed = document.getElementById('fixedban'); if (fixed) fixed.style.display='none';"
+                + "var footer = document.querySelector('footer'); if (footer) footer.style.display='none';"
+                + "document.querySelectorAll('iframe').forEach(function(frame){"
+                + "  if(frame.id && frame.id.toLowerCase().includes('google_ads')) frame.style.display='none';"
+                + "});"
+        );
         return this;
     }
 
@@ -79,9 +88,11 @@ public class PracticeFormPage extends BasePage {
     public PracticeFormPage setStateAndCity() {
         scrollIntoView(stateDropdown);
         click(stateDropdown);
-        click(stateNcrOption);
+        typeWithoutClear(stateInput, "NCR");
+        typeWithoutClear(stateInput, "\n");
         click(cityDropdown);
-        click(cityDelhiOption);
+        typeWithoutClear(cityInput, "Delhi");
+        typeWithoutClear(cityInput, "\n");
         return this;
     }
 
