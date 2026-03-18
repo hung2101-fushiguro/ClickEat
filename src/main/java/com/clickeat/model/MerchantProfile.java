@@ -23,6 +23,9 @@ public class MerchantProfile {
     private String businessHours;
     private String shopDescription;
     private String notificationSettings;
+    private Double minOrderAmount;
+    private Boolean isOpen;
+    private String rejectionReason;
     // Transient stats – populated by JOIN queries
     private double avgRating;
     private int totalRatings;
@@ -205,5 +208,29 @@ public class MerchantProfile {
 
     public void setNotificationSettings(String notificationSettings) {
         this.notificationSettings = notificationSettings;
+    }
+
+    public Double getMinOrderAmount() {
+        return minOrderAmount;
+    }
+
+    public void setMinOrderAmount(Double minOrderAmount) {
+        this.minOrderAmount = minOrderAmount;
+    }
+
+    public Boolean getIsOpen() {
+        return isOpen;
+    }
+
+    public void setIsOpen(Boolean open) {
+        isOpen = open;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
     }
 }

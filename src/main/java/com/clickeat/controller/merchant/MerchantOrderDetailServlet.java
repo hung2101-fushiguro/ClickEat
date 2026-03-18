@@ -79,16 +79,14 @@ public class MerchantOrderDetailServlet extends HttpServlet {
             if (order != null && order.getMerchantId() == account.getId()) {
 
                 if ("accept".equals(action)) {
-                    // Cập nhật trạng thái thành Đang chuẩn bị (Đã thêm account.getId() vào)
-                    orderDAO.updateOrderStatus(orderId, account.getId(), "PREPARING");
+                    orderDAO.transitionMerchantOrderStatus(orderId, account.getId(), "PREPARING", "Merchant accepted order from detail");
 
                 } else if ("reject".equals(action)) {
-                    // Từ chối đơn (Đã thêm account.getId() vào)
-                    orderDAO.updateOrderStatus(orderId, account.getId(), "MERCHANT_REJECTED");
+                    String reason = request.getParameter("cancelReason");
+                    orderDAO.transitionMerchantOrderStatus(orderId, account.getId(), "CANCELLED", reason);
 
                 } else if ("ready".equals(action)) {
-                    // Món đã xong, đợi Shipper (Đã thêm account.getId() vào)
-                    orderDAO.updateOrderStatus(orderId, account.getId(), "READY_FOR_PICKUP");
+                    orderDAO.transitionMerchantOrderStatus(orderId, account.getId(), "READY_FOR_PICKUP", "Merchant marked ready from detail");
                 }
             }
 

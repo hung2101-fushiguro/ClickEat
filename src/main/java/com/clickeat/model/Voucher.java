@@ -26,6 +26,7 @@ public class Voucher {
     private String merchantName;
     private String displayDiscount;
     private String themeClass;
+    private Integer usedOrderCount;
 
     public Voucher() {
     }
@@ -188,5 +189,13 @@ public class Voucher {
 
     public void setThemeClass(String themeClass) {
         this.themeClass = themeClass;
+    }
+
+    public Integer getUsedOrderCount() {
+        return usedOrderCount;
+    }
+
+    public void setUsedOrderCount(Integer usedOrderCount) {
+        this.usedOrderCount = usedOrderCount;
     }
 }

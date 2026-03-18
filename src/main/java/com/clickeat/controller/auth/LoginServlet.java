@@ -1,6 +1,8 @@
 package com.clickeat.controller.auth;
 
 import com.clickeat.dal.impl.UserDAO;
+import com.clickeat.dal.impl.MerchantProfileDAO;
+import com.clickeat.model.MerchantProfile;
 import com.clickeat.model.User;
 import java.io.IOException;
 import jakarta.servlet.ServletException;
@@ -59,8 +61,15 @@ public class LoginServlet extends HttpServlet {
                     response.sendRedirect(request.getContextPath() + "/admin/dashboard");
                 case "SHIPPER" ->
                     response.sendRedirect(request.getContextPath() + "/shipper/dashboard");
-                case "MERCHANT" ->
+                case "MERCHANT" -> {
+                    MerchantProfile profile = new MerchantProfileDAO().findById(user.getId());
+                    if (profile != null) {
+                        session.setAttribute("merchantShopName", profile.getShopName());
+                        session.setAttribute("merchantName", profile.getShopName());
+                        session.setAttribute("merchantIsOpen", profile.getIsOpen() == null ? true : profile.getIsOpen());
+                    }
                     response.sendRedirect(request.getContextPath() + "/merchant/dashboard");
+                }
                 default ->
                     response.sendRedirect(request.getContextPath() + "/home");
             }

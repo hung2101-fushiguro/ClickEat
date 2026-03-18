@@ -284,26 +284,172 @@ public class OrderDAO extends AbstractDAO<Order> implements IOrderDAO {
     }
 
     public List<Order> getOrdersByMerchantAndStatus(int merchantId, String statusGroup) {
-        String sql = "SELECT * FROM Orders WHERE merchant_user_id = ? ";
+        return getOrdersByMerchantAndStatus(merchantId, statusGroup, null, null, null);
+    }
 
-        if ("pending".equals(statusGroup)) {
-            sql += "AND order_status = 'CREATED' ORDER BY created_at ASC";
+    public List<Order> getOrdersByMerchantAndStatus(int merchantId, String statusGroup, String statusFilter, String fromDateTime, String toDateTime) {
+        String sql = "SELECT * FROM Orders WHERE merchant_user_id = ? ";
+        List<Object> params = new ArrayList<>();
+        params.add(merchantId);
+
+        if (statusFilter != null && !statusFilter.trim().isEmpty()) {
+            String normalized = statusFilter.trim().toUpperCase();
+            if ("PENDING".equals(normalized)) {
+                sql += "AND order_status IN ('CREATED', 'PAID') ";
+            } else if ("CONFIRMED".equals(normalized)) {
+                sql += "AND order_status IN ('MERCHANT_ACCEPTED', 'PREPARING') ";
+            } else if ("CANCELLED".equals(normalized)) {
+                sql += "AND order_status IN ('CANCELLED', 'MERCHANT_REJECTED', 'FAILED') ";
+            } else {
+                sql += "AND order_status = ? ";
+                params.add(normalized);
+            }
+        } else if ("pending".equals(statusGroup)) {
+            sql += "AND order_status IN ('CREATED', 'PAID') ";
         } else if ("preparing".equals(statusGroup)) {
-            sql += "AND order_status IN ('MERCHANT_ACCEPTED', 'PREPARING') ORDER BY created_at ASC";
+            sql += "AND order_status IN ('MERCHANT_ACCEPTED', 'PREPARING') ";
         } else if ("ready".equals(statusGroup)) {
-            sql += "AND order_status = 'READY_FOR_PICKUP' ORDER BY created_at DESC";
+            sql += "AND order_status IN ('READY_FOR_PICKUP', 'DELIVERING', 'PICKED_UP') ";
         } else if ("completed".equals(statusGroup)) {
-            sql += "AND order_status IN ('DELIVERED', 'CANCELLED', 'FAILED', 'MERCHANT_REJECTED') ORDER BY created_at DESC";
-        } else {
-            sql += "ORDER BY created_at DESC";
+            sql += "AND order_status IN ('DELIVERED', 'CANCELLED', 'FAILED', 'MERCHANT_REJECTED', 'REFUNDED') ";
         }
 
-        return query(sql, merchantId);
+        if (fromDateTime != null && !fromDateTime.trim().isEmpty()) {
+            sql += "AND created_at >= ? ";
+            params.add(java.sql.Timestamp.valueOf(fromDateTime.trim().replace("T", " ") + ":00"));
+        }
+
+        if (toDateTime != null && !toDateTime.trim().isEmpty()) {
+            sql += "AND created_at <= ? ";
+            params.add(java.sql.Timestamp.valueOf(toDateTime.trim().replace("T", " ") + ":59"));
+        }
+
+        sql += "ORDER BY created_at DESC";
+        return query(sql, params.toArray());
     }
 
     public boolean updateOrderStatus(long orderId, int merchantId, String newStatus) {
-        String sql = "UPDATE Orders SET order_status = ?, updated_at = GETDATE() WHERE id = ? AND merchant_user_id = ?";
-        return update(sql, newStatus, orderId, merchantId) > 0;
+        return transitionMerchantOrderStatus(orderId, merchantId, newStatus, null);
+    }
+
+    public boolean transitionMerchantOrderStatus(long orderId, int merchantId, String newStatus, String note) {
+        String targetStatus = normalizeStatusForWrite(newStatus);
+
+        String currentStatus = null;
+        String fetchSql = "SELECT order_status FROM Orders WHERE id = ? AND merchant_user_id = ?";
+        try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(fetchSql)) {
+            ps.setLong(1, orderId);
+            ps.setInt(2, merchantId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    currentStatus = rs.getString("order_status");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+
+        if (currentStatus == null) {
+            return false;
+        }
+
+        String fromStatus = normalizeStatusForTransition(currentStatus);
+        if (!isMerchantTransitionAllowed(fromStatus, targetStatus)) {
+            return false;
+        }
+
+        if (fromStatus.equals(targetStatus)) {
+            return true;
+        }
+
+        String updateSql = "UPDATE Orders SET order_status = ?, "
+                + "accepted_at = CASE WHEN ? = 'PREPARING' AND accepted_at IS NULL THEN SYSUTCDATETIME() ELSE accepted_at END, "
+                + "ready_at = CASE WHEN ? = 'READY_FOR_PICKUP' AND ready_at IS NULL THEN SYSUTCDATETIME() ELSE ready_at END, "
+                + "cancelled_at = CASE WHEN ? = 'CANCELLED' AND cancelled_at IS NULL THEN SYSUTCDATETIME() ELSE cancelled_at END "
+                + "WHERE id = ? AND merchant_user_id = ? AND order_status = ?";
+
+        try (Connection conn = getConnection()) {
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
+                ps.setString(1, targetStatus);
+                ps.setString(2, targetStatus);
+                ps.setString(3, targetStatus);
+                ps.setString(4, targetStatus);
+                ps.setLong(5, orderId);
+                ps.setInt(6, merchantId);
+                ps.setString(7, currentStatus);
+
+                int updated = ps.executeUpdate();
+                if (updated <= 0) {
+                    conn.rollback();
+                    return false;
+                }
+            }
+
+            String historySql = "INSERT INTO OrderStatusHistory(order_id, from_status, to_status, updated_by_role, updated_by_user_id, note, created_at) "
+                    + "VALUES (?, ?, ?, 'MERCHANT', ?, ?, SYSUTCDATETIME())";
+
+            try (PreparedStatement hs = conn.prepareStatement(historySql)) {
+                hs.setLong(1, orderId);
+                hs.setString(2, currentStatus);
+                hs.setString(3, targetStatus);
+                hs.setInt(4, merchantId);
+                hs.setString(5, note);
+                hs.executeUpdate();
+            }
+
+            conn.commit();
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    private String normalizeStatusForWrite(String status) {
+        if (status == null) {
+            return "";
+        }
+        String normalized = status.trim().toUpperCase();
+        if ("MERCHANT_REJECTED".equals(normalized)) {
+            return "CANCELLED";
+        }
+        if ("PENDING".equals(normalized)) {
+            return "CREATED";
+        }
+        if ("CONFIRMED".equals(normalized)) {
+            return "PREPARING";
+        }
+        return normalized;
+    }
+
+    private String normalizeStatusForTransition(String status) {
+        if (status == null) {
+            return "";
+        }
+        String normalized = status.trim().toUpperCase();
+        if ("PAID".equals(normalized) || "CREATED".equals(normalized)) {
+            return "PENDING";
+        }
+        if ("MERCHANT_ACCEPTED".equals(normalized) || "PREPARING".equals(normalized)) {
+            return "CONFIRMED";
+        }
+        if ("MERCHANT_REJECTED".equals(normalized)) {
+            return "CANCELLED";
+        }
+        return normalized;
+    }
+
+    private boolean isMerchantTransitionAllowed(String fromStatus, String targetStatus) {
+        if ("PENDING".equals(fromStatus)) {
+            return "PREPARING".equals(targetStatus) || "CANCELLED".equals(targetStatus);
+        }
+        if ("CONFIRMED".equals(fromStatus)) {
+            return "READY_FOR_PICKUP".equals(targetStatus) || "CANCELLED".equals(targetStatus);
+        }
+        return false;
     }
 
     public Map<String, Double> getRevenueByPeriod(int merchantId, int days) {
@@ -326,6 +472,75 @@ public class OrderDAO extends AbstractDAO<Order> implements IOrderDAO {
             e.printStackTrace();
         }
         return data;
+    }
+
+    public Map<String, Object> getDashboardSummary(int merchantId) {
+        Map<String, Object> summary = new HashMap<>();
+        String sql = "SELECT "
+                + "SUM(CASE WHEN o.order_status = 'DELIVERED' AND CAST(o.created_at AS DATE) = CAST(GETDATE() AS DATE) THEN o.total_amount ELSE 0 END) AS revenue_today, "
+                + "SUM(CASE WHEN o.order_status = 'DELIVERED' AND CAST(o.created_at AS DATE) = DATEADD(day, -1, CAST(GETDATE() AS DATE)) THEN o.total_amount ELSE 0 END) AS revenue_yesterday, "
+                + "SUM(CASE WHEN o.order_status = 'DELIVERED' AND o.created_at >= DATEADD(day, -6, CAST(GETDATE() AS DATE)) THEN o.total_amount ELSE 0 END) AS revenue_7d, "
+                + "SUM(CASE WHEN CAST(o.created_at AS DATE) = CAST(GETDATE() AS DATE) THEN 1 ELSE 0 END) AS orders_today, "
+                + "SUM(CASE WHEN CAST(o.created_at AS DATE) = CAST(GETDATE() AS DATE) AND o.order_status IN ('CANCELLED', 'MERCHANT_REJECTED', 'FAILED') THEN 1 ELSE 0 END) AS canceled_today, "
+                + "SUM(CASE WHEN o.order_status = 'DELIVERED' AND o.created_at >= DATEADD(day, -6, CAST(GETDATE() AS DATE)) AND o.discount_amount > 0 THEN 1 ELSE 0 END) AS voucher_used_7d, "
+                + "SUM(CASE WHEN o.order_status = 'DELIVERED' AND o.created_at >= DATEADD(day, -6, CAST(GETDATE() AS DATE)) AND ISNULL(o.discount_amount, 0) <= 0 THEN 1 ELSE 0 END) AS voucher_not_used_7d "
+                + "FROM Orders o WHERE o.merchant_user_id = ?";
+
+        try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, merchantId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    double revenueToday = rs.getDouble("revenue_today");
+                    double revenueYesterday = rs.getDouble("revenue_yesterday");
+                    double revenue7d = rs.getDouble("revenue_7d");
+                    int ordersToday = rs.getInt("orders_today");
+                    int canceledToday = rs.getInt("canceled_today");
+                    int voucherUsed7d = rs.getInt("voucher_used_7d");
+                    int voucherNotUsed7d = rs.getInt("voucher_not_used_7d");
+
+                    double cancelRate = ordersToday == 0 ? 0 : (canceledToday * 100.0 / ordersToday);
+
+                    summary.put("revenueToday", revenueToday);
+                    summary.put("revenueYesterday", revenueYesterday);
+                    summary.put("revenue7d", revenue7d);
+                    summary.put("ordersToday", ordersToday);
+                    summary.put("canceledToday", canceledToday);
+                    summary.put("cancelRate", cancelRate);
+                    summary.put("voucherUsed7d", voucherUsed7d);
+                    summary.put("voucherNotUsed7d", voucherNotUsed7d);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return summary;
+    }
+
+    public Map<Integer, Integer> getOrderCountByHourToday(int merchantId) {
+        Map<Integer, Integer> result = new LinkedHashMap<>();
+        for (int hour = 0; hour <= 23; hour++) {
+            result.put(hour, 0);
+        }
+
+        String sql = "SELECT DATEPART(HOUR, created_at) AS hour_of_day, COUNT(*) AS total_orders "
+                + "FROM Orders "
+                + "WHERE merchant_user_id = ? AND CAST(created_at AS DATE) = CAST(GETDATE() AS DATE) "
+                + "GROUP BY DATEPART(HOUR, created_at)";
+
+        try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, merchantId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    int hour = rs.getInt("hour_of_day");
+                    result.put(hour, rs.getInt("total_orders"));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return result;
     }
 
 // 2. Lấy danh sách 5 món ăn bán chạy nhất
@@ -364,6 +579,13 @@ public class OrderDAO extends AbstractDAO<Order> implements IOrderDAO {
         return queryOne("SELECT * FROM Orders WHERE id = ?", id);
     }
 
+    public Order findByCode(String orderCode) {
+        String sql = "SELECT o.*, mp.shop_name FROM Orders o "
+                + "LEFT JOIN MerchantProfiles mp ON o.merchant_user_id = mp.user_id "
+                + "WHERE o.order_code = ?";
+        return queryOne(sql, orderCode);
+    }
+
     @Override
     public int insert(Order order) {
         return 0;
@@ -392,5 +614,54 @@ public class OrderDAO extends AbstractDAO<Order> implements IOrderDAO {
                 + "LEFT JOIN MerchantProfiles mp ON o.merchant_user_id = mp.user_id "
                 + "WHERE o.id = ? AND o.customer_user_id = ?";
         return queryOne(sql, orderId, customerId);
+    }
+
+    public String getCustomerFoodHistory(int customerId, int days) {
+        String sql = "SELECT TOP 12 oi.item_name_snapshot, SUM(oi.quantity) AS total_qty "
+                + "FROM Orders o "
+                + "JOIN OrderItems oi ON oi.order_id = o.id "
+                + "WHERE o.customer_user_id = ? AND o.created_at >= DATEADD(day, -?, GETDATE()) "
+                + "GROUP BY oi.item_name_snapshot "
+                + "ORDER BY total_qty DESC";
+
+        List<Object[]> rows = queryRaw(sql, customerId, days);
+        if (rows.isEmpty()) {
+            return "Không có lịch sử ăn uống gần đây.";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        for (Object[] row : rows) {
+            sb.append("- ")
+                    .append(String.valueOf(row[0]))
+                    .append(" (")
+                    .append(((Number) row[1]).intValue())
+                    .append(" phần)\n");
+        }
+        return sb.toString();
+    }
+
+    public String getAvailableMenuContext() {
+        String sql = "SELECT TOP 100 fi.name, fi.price, mp.shop_name "
+                + "FROM FoodItems fi "
+                + "JOIN MerchantProfiles mp ON fi.merchant_user_id = mp.user_id "
+                + "WHERE fi.is_available = 1 AND mp.status = 'APPROVED' "
+                + "ORDER BY mp.shop_name ASC, fi.name ASC";
+
+        List<Object[]> rows = queryRaw(sql);
+        if (rows.isEmpty()) {
+            return "Chưa có thực đơn khả dụng trong hệ thống.";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        for (Object[] row : rows) {
+            sb.append("- ")
+                    .append(String.valueOf(row[0]))
+                    .append(" | ")
+                    .append(String.valueOf(row[1]))
+                    .append("đ | ")
+                    .append(String.valueOf(row[2]))
+                    .append("\n");
+        }
+        return sb.toString();
     }
 }

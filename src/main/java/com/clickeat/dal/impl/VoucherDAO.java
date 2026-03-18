@@ -60,6 +60,14 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
         } catch (SQLException e) {
             v.setMerchantName(null);
         }
+        try {
+            Object usedCount = rs.getObject("used_order_count");
+            if (usedCount != null) {
+                v.setUsedOrderCount(((Number) usedCount).intValue());
+            }
+        } catch (SQLException e) {
+            v.setUsedOrderCount(0);
+        }
 
         v.setDisplayDiscount(buildDiscountLabel(v.getDiscountType(), v.getDiscountValue()));
 
@@ -101,9 +109,15 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
     public List<Voucher> findByMerchant(int merchantUserId) {
         String sql = """
             SELECT v.*,
-                   mp.shop_name AS merchant_name
+                   mp.shop_name AS merchant_name,
+                   ISNULL(vu.used_order_count, 0) AS used_order_count
             FROM Vouchers v
             INNER JOIN MerchantProfiles mp ON mp.user_id = v.merchant_user_id
+            LEFT JOIN (
+                SELECT voucher_id, COUNT(*) AS used_order_count
+                FROM VoucherUsages
+                GROUP BY voucher_id
+            ) vu ON vu.voucher_id = v.id
             WHERE v.merchant_user_id = ?
             ORDER BY v.id DESC
         """;
@@ -251,6 +265,11 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
     public boolean unpublishVoucher(int id) {
         String sql = "UPDATE Vouchers SET is_published = 0 WHERE id = ?";
         return update(sql, id) > 0;
+    }
+
+    public boolean togglePublishByMerchant(int voucherId, int merchantId, boolean publish) {
+        String sql = "UPDATE Vouchers SET is_published = ?, updated_at = SYSUTCDATETIME() WHERE id = ? AND merchant_user_id = ?";
+        return update(sql, publish, voucherId, merchantId) > 0;
     }
 
     private String buildDiscountLabel(String discountType, double discountValue) {

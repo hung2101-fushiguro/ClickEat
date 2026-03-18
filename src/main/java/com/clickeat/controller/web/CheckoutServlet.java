@@ -3,10 +3,12 @@ package com.clickeat.controller.web;
 import com.clickeat.dal.impl.CartDAO;
 import com.clickeat.dal.impl.CartItemDAO;
 import com.clickeat.dal.impl.FoodItemDAO;
+import com.clickeat.dal.impl.MerchantProfileDAO;
 import com.clickeat.dal.impl.OrderDAO;
 import com.clickeat.dal.impl.OrderItemDAO;
 import com.clickeat.model.Cart;
 import com.clickeat.model.CartItem;
+import com.clickeat.model.MerchantProfile;
 import com.clickeat.model.User;
 import java.io.IOException;
 import java.util.List;
@@ -24,7 +26,7 @@ public class CheckoutServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
+
         HttpSession session = request.getSession();
         User account = (User) session.getAttribute("account");
 
@@ -34,13 +36,13 @@ public class CheckoutServlet extends HttpServlet {
             return;
         }
 
-        int customerId = account.getId(); 
-        
+        int customerId = account.getId();
+
         CartDAO cartDAO = new CartDAO();
 
         // 2. Lấy Giỏ hàng hiện tại
         Cart cart = cartDAO.getActiveCartByCustomerId(customerId);
-        
+
         // Nếu không có giỏ hàng hoặc giỏ hàng trống thì đuổi về trang chủ
         if (cart == null) {
             response.sendRedirect(request.getContextPath() + "/home");
@@ -58,7 +60,7 @@ public class CheckoutServlet extends HttpServlet {
         for (com.clickeat.model.CartItemView item : cartItems) {
             subTotal += item.getLineTotal();
         }
-        
+
         double deliveryFee = 15000; // Phí ship mặc định tạm thời
         double totalAmount = subTotal + deliveryFee;
 
@@ -68,9 +70,9 @@ public class CheckoutServlet extends HttpServlet {
         request.setAttribute("deliveryFee", deliveryFee);
         request.setAttribute("totalAmount", totalAmount);
         request.setAttribute("user", account); // Truyền user sang để điền sẵn Tên, SĐT
-        
+
         FoodItemDAO foodDAO = new FoodItemDAO();
-        request.setAttribute("foodDAO", foodDAO); 
+        request.setAttribute("foodDAO", foodDAO);
 
         // 5. Chuyển hướng
         request.getRequestDispatcher("/views/web/checkout.jsp").forward(request, response);
@@ -80,7 +82,7 @@ public class CheckoutServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
+
         HttpSession session = request.getSession();
         User account = (User) session.getAttribute("account");
 
@@ -116,13 +118,35 @@ public class CheckoutServlet extends HttpServlet {
             return;
         }
 
+        double subtotal = 0;
+        for (CartItem ci : cartItems) {
+            subtotal += ci.getUnitPriceSnapshot() * ci.getQuantity();
+        }
+
+        Integer merchantIdFromCart = cart.getMerchantUserId();
+        int merchantId = merchantIdFromCart != null ? merchantIdFromCart : 0;
+        MerchantProfile merchant = new MerchantProfileDAO().findById(merchantId);
+        if (merchant != null) {
+            boolean isOpen = merchant.getIsOpen() == null || merchant.getIsOpen();
+            if (!isOpen) {
+                request.setAttribute("toastError", "Cửa hàng hiện đang tạm đóng, vui lòng quay lại sau.");
+                doGet(request, response);
+                return;
+            }
+            Double minOrderAmount = merchant.getMinOrderAmount();
+            if (minOrderAmount != null && subtotal < minOrderAmount) {
+                request.setAttribute("toastError", "Đơn chưa đạt mức tối thiểu " + String.format("%,.0f", minOrderAmount) + "đ.");
+                doGet(request, response);
+                return;
+            }
+        }
+
         com.clickeat.model.Order order = new com.clickeat.model.Order();
         String orderCode = "ORD-" + System.currentTimeMillis();
         order.setOrderCode(orderCode);
         order.setCustomerUserId(account.getId());
-        
-        Integer merchantId = cart.getMerchantUserId();
-        order.setMerchantId(merchantId != null ? merchantId : 0);
+
+        order.setMerchantId(merchantId);
         order.setReceiverName(receiverName);
         order.setReceiverPhone(receiverPhone);
         order.setDeliveryAddressLine(addressLine);
@@ -130,7 +154,7 @@ public class CheckoutServlet extends HttpServlet {
         order.setPaymentMethod(paymentMethod);
         order.setPaymentStatus("UNPAID");
         order.setOrderStatus("CREATED");
-        order.setSubtotalAmount(totalAmount - 15000); // Tạm tính subtotal bằng total - phí ship
+        order.setSubtotalAmount(subtotal);
         order.setDeliveryFee(15000);
         order.setDiscountAmount(0);
         order.setTotalAmount(totalAmount);
@@ -143,11 +167,11 @@ public class CheckoutServlet extends HttpServlet {
                 com.clickeat.model.OrderItem oi = new com.clickeat.model.OrderItem();
                 oi.setOrderId(orderId);
                 oi.setFoodItemId(ci.getFoodItemId());
-                
+
                 // Lấy tên món từ FoodItem (Do snapshot có thể thay đổi hoặc để DB an toàn hơn)
                 com.clickeat.model.FoodItem food = foodDAO.findById(ci.getFoodItemId());
                 oi.setItemNameSnapshot(food != null ? food.getName() : "Món ăn");
-                
+
                 oi.setUnitPriceSnapshot(ci.getUnitPriceSnapshot());
                 oi.setQuantity(ci.getQuantity());
                 oi.setNote(ci.getNote());

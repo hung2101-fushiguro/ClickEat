@@ -53,6 +53,7 @@ public class FoodItemDAO extends AbstractDAO<FoodItem> implements IFoodItemDAO {
             originalPrice = Math.round(food.getPrice() / (1 - discountPercent / 100.0));
         }
         food.setOriginalPrice(originalPrice);
+        food.setOutOfStockReason(getNullableString(rs, "out_of_stock_reason"));
 
         return food;
     }
@@ -335,9 +336,37 @@ public class FoodItemDAO extends AbstractDAO<FoodItem> implements IFoodItemDAO {
         String sql = "SELECT * FROM FoodItems WHERE merchant_user_id = ? ORDER BY id DESC";
         return query(sql, merchantId);
     }
-    
+
     public boolean toggleStatus(int itemId, int merchantId, boolean isAvailable) {
-        String sql = "UPDATE FoodItems SET is_available = ?, updated_at = SYSUTCDATETIME() WHERE id = ? AND merchant_user_id = ?";
-        return update(sql, isAvailable, itemId, merchantId) > 0;
+        return toggleStatus(itemId, merchantId, isAvailable, null);
+    }
+
+    public boolean toggleStatus(int itemId, int merchantId, boolean isAvailable, String reason) {
+        String sqlWithReason = "UPDATE FoodItems SET is_available = ?, out_of_stock_reason = ?, updated_at = SYSUTCDATETIME() WHERE id = ? AND merchant_user_id = ?";
+        String finalReason = isAvailable ? null : reason;
+        int updated = update(sqlWithReason, isAvailable, finalReason, itemId, merchantId);
+        if (updated > 0) {
+            return true;
+        }
+
+        String fallbackSql = "UPDATE FoodItems SET is_available = ?, updated_at = SYSUTCDATETIME() WHERE id = ? AND merchant_user_id = ?";
+        return update(fallbackSql, isAvailable, itemId, merchantId) > 0;
+    }
+
+    public int bulkToggleStatus(List<Integer> itemIds, int merchantId, boolean isAvailable, String reason) {
+        if (itemIds == null || itemIds.isEmpty()) {
+            return 0;
+        }
+
+        int affected = 0;
+        for (Integer itemId : itemIds) {
+            if (itemId == null) {
+                continue;
+            }
+            if (toggleStatus(itemId, merchantId, isAvailable, reason)) {
+                affected++;
+            }
+        }
+        return affected;
     }
 }

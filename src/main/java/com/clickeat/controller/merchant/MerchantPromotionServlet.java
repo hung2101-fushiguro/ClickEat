@@ -13,7 +13,6 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.List;
 
 /**
  *
@@ -33,6 +32,10 @@ public class MerchantPromotionServlet extends HttpServlet {
 
         VoucherDAO voucherDAO = new VoucherDAO();
         request.setAttribute("vouchers", voucherDAO.getByMerchantId((int) account.getId()));
+        request.setAttribute("successMsg", request.getSession().getAttribute("promotionSuccess"));
+        request.setAttribute("errorMsg", request.getSession().getAttribute("promotionError"));
+        request.getSession().removeAttribute("promotionSuccess");
+        request.getSession().removeAttribute("promotionError");
         request.getRequestDispatcher("/views/merchant/promotions.jsp").forward(request, response);
     }
 
@@ -40,6 +43,35 @@ public class MerchantPromotionServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         User account = (User) request.getSession().getAttribute("account");
+        if (account == null || !"MERCHANT".equals(account.getRole())) {
+            response.sendRedirect(request.getContextPath() + "/login");
+            return;
+        }
+
+        String action = request.getParameter("action");
+        VoucherDAO voucherDAO = new VoucherDAO();
+
+        if ("togglePublish".equals(action)) {
+            int voucherId = Integer.parseInt(request.getParameter("voucherId"));
+            boolean publish = Boolean.parseBoolean(request.getParameter("publish"));
+            boolean ok = voucherDAO.togglePublishByMerchant(voucherId, account.getId(), publish);
+            request.getSession().setAttribute(ok ? "promotionSuccess" : "promotionError", ok ? "Đã cập nhật trạng thái publish voucher." : "Không thể cập nhật voucher.");
+            response.sendRedirect(request.getContextPath() + "/merchant/promotions");
+            return;
+        }
+
+        if ("delete".equals(action)) {
+            int voucherId = Integer.parseInt(request.getParameter("voucherId"));
+            Voucher ownVoucher = voucherDAO.findById(voucherId);
+            if (ownVoucher != null && ownVoucher.getMerchantUserId() == account.getId()) {
+                voucherDAO.softDelete(voucherId);
+                request.getSession().setAttribute("promotionSuccess", "Đã ẩn voucher khỏi danh sách hoạt động.");
+            } else {
+                request.getSession().setAttribute("promotionError", "Không tìm thấy voucher hợp lệ để xóa.");
+            }
+            response.sendRedirect(request.getContextPath() + "/merchant/promotions");
+            return;
+        }
 
         Voucher v = new Voucher();
         v.setMerchantUserId((int) account.getId());
@@ -49,11 +81,13 @@ public class MerchantPromotionServlet extends HttpServlet {
         v.setDiscountValue(Double.parseDouble(request.getParameter("value")));
         v.setMinOrderAmount(Double.parseDouble(request.getParameter("minOrder")));
         v.setMaxUsesTotal(Integer.parseInt(request.getParameter("maxUses")));
+        v.setStatus("ACTIVE");
         v.setStartAt(java.sql.Timestamp.valueOf(request.getParameter("startDate") + " 00:00:00"));
         v.setEndAt(java.sql.Timestamp.valueOf(request.getParameter("endDate") + " 23:59:59"));
         v.setPublished(true);
 
-        new VoucherDAO().insert(v);
+        int created = voucherDAO.insert(v);
+        request.getSession().setAttribute(created > 0 ? "promotionSuccess" : "promotionError", created > 0 ? "Tạo voucher thành công." : "Không thể tạo voucher.");
         response.sendRedirect(request.getContextPath() + "/merchant/promotions");
     }
 }

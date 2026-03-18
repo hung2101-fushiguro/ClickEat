@@ -19,7 +19,10 @@ public class CategoryDAO extends AbstractDAO<Category> {
         c.setName(rs.getString("name"));
         c.setActive(rs.getBoolean("is_active"));
         c.setSortOrder(rs.getInt("sort_order"));
-        try { c.setShopName(rs.getString("shop_name")); } catch (Exception ignored) {}
+        try {
+            c.setShopName(rs.getString("shop_name"));
+        } catch (Exception ignored) {
+        }
         return c;
     }
 
@@ -55,10 +58,15 @@ public class CategoryDAO extends AbstractDAO<Category> {
         return query(sql, merchantId);
     }
 
+    public List<Category> getActiveByMerchant(int merchantId) {
+        String sql = "SELECT * FROM Categories WHERE merchant_user_id = ? AND is_active = 1 ORDER BY sort_order ASC";
+        return query(sql, merchantId);
+    }
+
     public List<Category> findAllWithMerchantName() {
         String sql = "SELECT c.*, ISNULL(mp.shop_name, 'Chưa xác định') AS shop_name "
-                   + "FROM Categories c LEFT JOIN MerchantProfiles mp ON c.merchant_user_id = mp.user_id "
-                   + "ORDER BY mp.shop_name, c.sort_order";
+                + "FROM Categories c LEFT JOIN MerchantProfiles mp ON c.merchant_user_id = mp.user_id "
+                + "ORDER BY mp.shop_name, c.sort_order";
         return query(sql);
     }
 }
