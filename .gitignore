@@ -1,2 +1,21 @@
 
 Automation Testing/
+
+# Maven / Java build outputs
+target/
+*.log
+
+# Local bootstrap/tools
+.tools/
+
+# IDE metadata
+.idea/
+.vscode/
+*.iml
+.classpath
+.project
+.settings/
+
+# OS files
+.DS_Store
+Thumbs.db
