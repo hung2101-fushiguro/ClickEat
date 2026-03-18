@@ -6,19 +6,7 @@
     <head>
         <title>Tài khoản bị khóa - ClickEat</title>
         <script src="https://cdn.tailwindcss.com"></script>
-        <script>
-            tailwind.config = {
-                theme: {
-                    extend: {
-                        fontFamily: {sans: ['Inter', 'sans-serif']},
-                        colors: {primary: '#c86601', 'primary-dark': '#a05201'}
-                    }
-                }
-            };
-        </script>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-        <style>body { font-family: 'Inter', sans-serif; }</style>
     </head>
     <body class="bg-gray-100 h-screen flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-8 text-center relative overflow-hidden">
@@ -76,7 +64,7 @@
 
         <c:if test="${not empty sessionScope.toastMsg}">
             <div id="toast" class="fixed top-5 right-5 bg-green-500 text-white px-6 py-4 rounded-xl shadow-2xl z-50"><i class="fa-solid fa-check mr-2"></i>${sessionScope.toastMsg}</div>
-            <c:remove var="toastMsg" scope="session" />
+                <c:remove var="toastMsg" scope="session" />
             <script>setTimeout(() => document.getElementById('toast').style.display = 'none', 4000);</script>
         </c:if>
     </body>

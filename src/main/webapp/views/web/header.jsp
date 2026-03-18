@@ -1,98 +1,102 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@taglib prefix="c" uri="jakarta.tags.core" %>
 
-<header class="bg-white shadow-sm sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center h-16">
+<c:set var="ctx" value="${pageContext.request.contextPath}" />
+<c:set var="activePage" value="${param.activePage}" />
 
-            <div class="flex items-center gap-8">
-                <a href="${pageContext.request.contextPath}/home" class="flex items-center gap-2 shrink-0">
-                    <div class="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
-                        <i class="fa-solid fa-utensils text-white font-bold text-sm"></i>
-                    </div>
-                    <span class="text-xl font-bold text-gray-900 tracking-tight">ClickEat</span>
+<header class="bg-white sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="h-16 flex items-center justify-between">
+
+            <!-- Logo -->
+            <a href="${ctx}/home" class="flex items-center gap-2">
+                <div class="w-9 h-9 rounded-xl bg-orange-500 flex items-center justify-center shadow-sm">
+                    <span class="block w-4 h-4 bg-white rounded-sm"
+                          style="clip-path: polygon(0 20%, 70% 20%, 70% 0, 100% 0, 100% 100%, 0 100%);"></span>
+                </div>
+                <span class="text-xl font-extrabold tracking-tight text-gray-900">ClickEat</span>
+            </a>
+
+            <!-- Menu -->
+            <nav class="hidden lg:flex items-center gap-8">
+                <a href="${ctx}/home"
+                   class="text-[15px] font-semibold transition border-b-2 pb-1
+                   ${activePage == 'home' ? 'text-orange-500 border-orange-500' : 'text-gray-900 border-transparent hover:text-orange-500'}">
+                    Trang chủ
                 </a>
 
-                <nav class="hidden md:flex space-x-6">
-                    <a href="${pageContext.request.contextPath}/about" class="text-sm text-gray-600 hover:text-orange-500 font-medium transition-colors">Về chúng tôi</a>
-                    <a href="${pageContext.request.contextPath}/menu" class="text-sm text-gray-600 hover:text-orange-500 font-medium transition-colors">Thực đơn</a>
-                    <a href="${pageContext.request.contextPath}/store" class="text-sm text-gray-600 hover:text-orange-500 font-medium transition-colors">Cửa hàng</a>
-                    <a href="${pageContext.request.contextPath}/aichat" class="text-sm text-orange-500 hover:text-orange-600 font-bold flex items-center gap-1 transition-colors">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i> AI Gợi ý
-                    </a>
-                </nav>
-            </div>
+                <a href="${ctx}/about"
+                   class="text-[15px] font-semibold transition border-b-2 pb-1
+                   ${activePage == 'about' ? 'text-orange-500 border-orange-500' : 'text-gray-900 border-transparent hover:text-orange-500'}">
+                    Về chúng tôi
+                </a>
 
-            <div class="flex items-center gap-4">
+                <a href="${ctx}/menu"
+                   class="text-[15px] font-semibold transition border-b-2 pb-1
+                   ${activePage == 'menu' ? 'text-orange-500 border-orange-500' : 'text-gray-900 border-transparent hover:text-orange-500'}">
+                    Thực đơn
+                </a>
 
-                <a href="${pageContext.request.contextPath}/cart" class="p-2 text-gray-600 hover:text-gray-900 transition-colors relative block cursor-pointer">
-                    <i class="fa-solid fa-cart-shopping text-xl"></i>
-                    <span class="absolute top-0 right-0 bg-orange-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center transform translate-x-1 -translate-y-1 shadow-sm">
-                        ${cartCount != null ? cartCount : 0}
+                <a href="${ctx}/promotion"
+                   class="text-[15px] font-semibold transition border-b-2 pb-1
+                   ${activePage == 'promotion' ? 'text-orange-500 border-orange-500' : 'text-gray-900 border-transparent hover:text-orange-500'}">
+                    Khuyến mãi
+                </a>
+
+                <a href="${ctx}/store"
+                   class="text-[15px] font-semibold transition border-b-2 pb-1
+                   ${activePage == 'store' ? 'text-orange-500 border-orange-500' : 'text-gray-900 border-transparent hover:text-orange-500'}">
+                    Cửa hàng
+                </a>
+
+                <a href="${ctx}/ai"
+                   class="text-[15px] font-extrabold transition border-b-2 pb-1 flex items-center gap-1
+                   ${activePage == 'ai' ? 'text-orange-500 border-orange-500' : 'text-gray-900 border-transparent hover:text-orange-500'}">
+                    AI gợi ý <span class="text-orange-500">✨</span>
+                </a>
+            </nav>
+
+            <!-- Right -->
+            <div class="flex items-center gap-3">
+                <button type="button" id="cartBtn"
+                        class="relative w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center transition"
+                        aria-label="Giỏ hàng">
+                    <i class="fa-solid fa-bag-shopping text-gray-800 text-lg"></i>
+                    <span class="absolute -top-1 -right-1 bg-orange-500 text-white text-[11px] font-extrabold rounded-full h-5 min-w-[20px] px-1 flex items-center justify-center shadow">
+                        <c:out value="${cartCount != null ? cartCount : 0}" />
                     </span>
-                </a>
+                </button>
 
                 <c:choose>
                     <c:when test="${not empty sessionScope.account}">
-                        <div class="relative" id="userMenuWrapper">
-                            <button onclick="toggleUserMenu()" class="flex items-center gap-2 p-1 rounded-full hover:bg-gray-100 transition-colors">
-                                <div class="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center overflow-hidden border border-orange-200">
-                                    <c:choose>
-                                        <c:when test="${not empty sessionScope.account.avatarUrl}">
-                                            <img src="${sessionScope.account.avatarUrl}" class="w-full h-full object-cover" alt="avatar">
-                                        </c:when>
-                                        <c:otherwise>
-                                            <i class="fa-solid fa-user text-orange-500 text-xs"></i>
-                                        </c:otherwise>
-                                    </c:choose>
-                                </div>
-                                <span class="text-sm font-semibold text-gray-700 hidden sm:block max-w-[100px] truncate">${sessionScope.account.fullName}</span>
-                                <i class="fa-solid fa-chevron-down text-[10px] text-gray-400"></i>
-                            </button>
-                            <div id="userMenu" class="hidden absolute right-0 top-11 bg-white rounded-2xl shadow-xl border border-gray-100 w-52 z-50 overflow-hidden animate-in">
-                                <div class="px-4 py-3 border-b border-gray-100">
-                                    <p class="text-xs text-gray-400 font-medium">Tài khoản của bạn</p>
-                                    <p class="text-sm font-bold text-gray-900 truncate">${sessionScope.account.email}</p>
-                                </div>
-                                <a href="${pageContext.request.contextPath}/my-account" class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-sm text-gray-700 font-medium transition-colors">
-                                    <i class="fa-solid fa-circle-user text-orange-400 w-4 text-center"></i> Hồ sơ của tôi
-                                </a>
-                                <a href="${pageContext.request.contextPath}/my-orders" class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-sm text-gray-700 font-medium transition-colors">
-                                    <i class="fa-solid fa-receipt text-blue-400 w-4 text-center"></i> Đơn hàng của tôi
-                                </a>
-                                <div class="border-t border-gray-100"></div>
-                                <a href="${pageContext.request.contextPath}/logout" class="flex items-center gap-3 px-4 py-3 hover:bg-red-50 text-sm text-red-500 font-semibold transition-colors">
-                                    <i class="fa-solid fa-right-from-bracket w-4 text-center"></i> Đăng xuất
-                                </a>
-                            </div>
+                        <div class="hidden sm:flex items-center gap-3">
+                            <span class="text-sm font-semibold text-gray-700">
+                                Chào, ${sessionScope.account.fullName}
+                            </span>
+                            <a href="${ctx}/logout"
+                               class="text-sm font-semibold text-gray-500 hover:text-red-500 transition">
+                                Đăng xuất
+                            </a>
                         </div>
-                        <script>
-                            function toggleUserMenu() {
-                                document.getElementById('userMenu').classList.toggle('hidden');
-                            }
-                            document.addEventListener('click', function(e) {
-                                var wrapper = document.getElementById('userMenuWrapper');
-                                if (wrapper && !wrapper.contains(e.target)) {
-                                    document.getElementById('userMenu').classList.add('hidden');
-                                }
-                            });
-                        </script>
                     </c:when>
                     <c:otherwise>
-                        <div class="flex items-center gap-2">
-                            <a href="${pageContext.request.contextPath}/login" class="bg-white text-gray-900 border border-gray-200 px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors shadow-sm">
-                                Đăng nhập
-                            </a>
-                            <a href="${pageContext.request.contextPath}/register" class="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-orange-600 transition-colors shadow-sm">
-                                Đăng ký
-                            </a>
-                        </div>
+                        <a href="${ctx}/login"
+                           class="h-10 px-5 rounded-full border border-gray-200 text-gray-900 font-extrabold text-sm hover:bg-gray-50 flex items-center justify-center whitespace-nowrap leading-none">
+                            Đăng nhập
+                        </a>
+                        <a href="${ctx}/register"
+                           class="h-10 px-5 rounded-full bg-orange-500 text-white font-extrabold text-sm hover:bg-orange-600 flex items-center justify-center whitespace-nowrap leading-none shadow">
+                            Đăng ký
+                        </a>
                     </c:otherwise>
                 </c:choose>
             </div>
 
         </div>
     </div>
+    <div class="h-px bg-gray-100"></div>
+</header>
+
     <c:if test="${not empty sessionScope.toastError}">
         <div id="toast-error" class="fixed bottom-5 right-5 bg-red-500 text-white px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 animate-bounce">
             <i class="fa-solid fa-triangle-exclamation text-xl"></i>
@@ -101,7 +105,6 @@
         <c:remove var="toastError" scope="session" />
 
         <script>
-            // Tự động ẩn sau 4 giây
             setTimeout(() => document.getElementById('toast-error').style.display = 'none', 4000);
         </script>
     </c:if>
@@ -117,4 +120,8 @@
             setTimeout(() => document.getElementById('toast-success').style.display = 'none', 3000);
         </script>
     </c:if>
-</header>
+
+<!-- Gọi popup cart từ file riêng -->
+<jsp:include page="cart.jsp">
+    <jsp:param name="cartMode" value="popup" />
+</jsp:include>

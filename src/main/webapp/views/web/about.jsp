@@ -6,18 +6,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Về chúng tôi - ClickEat</title>
         <script src="https://cdn.tailwindcss.com"></script>
-        <script>
-            tailwind.config = {
-                theme: {
-                    extend: {
-                        fontFamily: {sans: ['Inter', 'sans-serif']},
-                        colors: {primary: '#c86601', 'primary-dark': '#a05201'}
-                    }
-                }
-            };
-        </script>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
         <style>
             body {
                 font-family: 'Inter', sans-serif;
@@ -26,13 +16,15 @@
     </head>
     <body class="bg-[#fafbfc] text-gray-800">
 
-        <jsp:include page="header.jsp" />
+        <jsp:include page="header.jsp">
+            <jsp:param name="activePage" value="about" />
+        </jsp:include>
 
         <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 overflow-hidden">
 
             <div class="text-sm font-bold text-gray-400 mb-8 flex items-center gap-2">
-                <a href="${pageContext.request.contextPath}/home" class="hover:text-gray-700 transition">Trang chủ</a>
-                <span class="text-gray-300">/</span>
+                <a href="${pageContext.request.contextPath}/home" class="hover:text-gray-700 transition">Trang chủ</a> 
+                <span class="text-gray-300">/</span> 
                 <span class="text-orange-500">Về chúng tôi</span>
             </div>
 
