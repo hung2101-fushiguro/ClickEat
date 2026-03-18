@@ -136,4 +136,52 @@ public class UserDAO extends AbstractDAO<User> implements IUserDAO {
         String sql = "UPDATE Users SET status = 'INACTIVE', updated_at = GETDATE() WHERE id = ?";
         return update(sql, id) > 0;
     }
+
+    public User findByEmail(String email) {
+        String sql = "SELECT * FROM Users WHERE email = ? AND status = 'ACTIVE'";
+        return queryOne(sql, email);
+    }
+
+    public User findByGoogleSub(String sub) {
+        String sql = "SELECT u.* FROM Users u JOIN UserAuthProviders p ON p.user_id = u.id WHERE p.provider = 'GOOGLE' AND p.provider_user_id = ? AND u.status = 'ACTIVE'";
+        return queryOne(sql, sub);
+    }
+
+    public void linkGoogleProvider(int userId, String sub) {
+        String check = "SELECT COUNT(*) AS c FROM UserAuthProviders WHERE provider='GOOGLE' AND provider_user_id=?";
+        Integer existed = queryInt(check, sub);
+        if (existed != null && existed > 0) return;
+        String sql = "INSERT INTO UserAuthProviders(user_id, provider, provider_user_id) VALUES(?, 'GOOGLE', ?)";
+        update(sql, userId, sub);
+    }
+
+    public long createGoogleUserReturnId(String fullName, String email, String phone) {
+        String sql = "INSERT INTO Users(full_name, email, phone, password_hash, role, status, created_at, updated_at) OUTPUT INSERTED.id VALUES(?, ?, ?, NULL, 'CUSTOMER', 'ACTIVE', SYSUTCDATETIME(), SYSUTCDATETIME())";
+        try (java.sql.Connection conn = getConnection(); java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, fullName); ps.setString(2, email); ps.setString(3, phone);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getLong(1);
+            }
+        } catch (Exception e) { e.printStackTrace(); }
+        return -1;
+    }
+
+    public void createCustomerProfile(long userId, String food, String allergies, String goal, Integer dailyCal) {
+        String sql = "INSERT INTO CustomerProfiles(user_id, food_preferences, allergies, health_goal, daily_calorie_target) VALUES(?, ?, ?, ?, ?)";
+        update(sql, userId, food, allergies, goal, dailyCal);
+    }
+
+    private Integer queryInt(String sql, Object... params) {
+        try (java.sql.Connection conn = getConnection(); java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            if (params != null) {
+                for (int i = 0; i < params.length; i++) {
+                    ps.setObject(i + 1, params[i]);
+                }
+            }
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        } catch (Exception e) { e.printStackTrace(); }
+        return null;
+    }
 }

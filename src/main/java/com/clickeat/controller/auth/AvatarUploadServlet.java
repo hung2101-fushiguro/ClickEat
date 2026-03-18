@@ -8,6 +8,10 @@ import com.clickeat.dal.impl.UserDAO;
 import com.clickeat.model.User;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
@@ -53,8 +57,26 @@ public class AvatarUploadServlet extends HttpServlet {
                 String fileExtension = fileName.substring(fileName.lastIndexOf("."));
                 String newFileName = "user_" + account.getId() + "_" + UUID.randomUUID().toString() + fileExtension;
 
-                // 3. Lưu file vào server
-                filePart.write(uploadFilePath + File.separator + newFileName);
+                // 3. Lưu file vào server thao tác file tạm
+                String tempFilePath = uploadFilePath + File.separator + newFileName;
+                filePart.write(tempFilePath);
+
+                // 3.1. Copy file lưu vĩnh viễn vào source code
+                try {
+                    String projectSourcePath = "e:" + File.separator + "Tải xuống" + File.separator + "ClickEat-main" 
+                            + File.separator + "src" + File.separator + "main" + File.separator + "webapp" 
+                            + File.separator + UPLOAD_DIR;
+                    File sourceUploadFolder = new File(projectSourcePath);
+                    if (!sourceUploadFolder.exists()) {
+                        sourceUploadFolder.mkdirs();
+                    }
+                    
+                    Path sourceFile = Paths.get(projectSourcePath, newFileName);
+                    Path tempFile = Paths.get(tempFilePath);
+                    Files.copy(tempFile, sourceFile, StandardCopyOption.REPLACE_EXISTING);
+                } catch(Exception ex) {
+                    System.out.println("Could not copy file to source directory: " + ex.getMessage());
+                }
 
                 // 4. Lưu đường dẫn vào Database
                 String avatarUrl = request.getContextPath() + "/" + UPLOAD_DIR + "/" + newFileName;

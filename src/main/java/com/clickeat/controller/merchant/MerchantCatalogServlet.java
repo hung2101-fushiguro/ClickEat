@@ -70,7 +70,7 @@ public class MerchantCatalogServlet extends HttpServlet {
 
                 // Chỉ cho phép update nếu món ăn thuộc về đúng chủ quán đó
                 if (item != null && item.getMerchantUserId() == merchantId) {
-                    boolean newStatus = !item.isIsAvailable();
+                    boolean newStatus = !item.isAvailable();
                     foodItemDAO.toggleStatus(itemId, merchantId, newStatus);
                 }
                 return; 
@@ -91,15 +91,15 @@ public class MerchantCatalogServlet extends HttpServlet {
                 item.setImageUrl(imageUrl);
 
                 if ("add".equals(action)) {
-                    item.setIsAvailable(true); // Mặc định vừa thêm là có bán
+                    item.setAvailable(true); // Mặc định vừa thêm là có bán
                     foodItemDAO.insert(item);
                 } else {
                     int id = Integer.parseInt(request.getParameter("id"));
                     FoodItem existing = foodItemDAO.findById(id);
                     if (existing != null && existing.getMerchantUserId() == merchantId) {
                         item.setId(id);
-                        item.setIsAvailable(existing.isIsAvailable());
-                        item.setIsFried(existing.isIsFried());
+                        item.setAvailable(existing.isAvailable());
+                        item.setFried(existing.isFried());
                         item.setCalories(existing.getCalories());
                         item.setProteinG(existing.getProteinG());
                         item.setCarbsG(existing.getCarbsG());

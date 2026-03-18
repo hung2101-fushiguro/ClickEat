@@ -10,7 +10,10 @@ import com.clickeat.model.Order;
 import com.clickeat.model.User;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
@@ -57,7 +60,25 @@ public class ShipperProofServlet extends HttpServlet {
                 File uploadDir = new File(uploadPath);
                 if (!uploadDir.exists()) uploadDir.mkdir();
                 
-                filePart.write(uploadPath + File.separator + savedFileName);
+                String tempFilePath = uploadPath + File.separator + savedFileName;
+                filePart.write(tempFilePath);
+                
+                // Copy file lưu vĩnh viễn vào source code
+                try {
+                    String projectSourcePath = "e:" + File.separator + "Tải xuống" + File.separator + "ClickEat-main" 
+                            + File.separator + "src" + File.separator + "main" + File.separator + "webapp" 
+                            + File.separator + "uploads";
+                    File sourceUploadFolder = new File(projectSourcePath);
+                    if (!sourceUploadFolder.exists()) {
+                        sourceUploadFolder.mkdirs();
+                    }
+                    
+                    Path sourceFile = Paths.get(projectSourcePath, savedFileName);
+                    Path tempFile = Paths.get(tempFilePath);
+                    Files.copy(tempFile, sourceFile, StandardCopyOption.REPLACE_EXISTING);
+                } catch(Exception ex) {
+                    System.out.println("Could not copy file to source directory: " + ex.getMessage());
+                }
             }
 
             OrderDAO orderDAO = new OrderDAO();

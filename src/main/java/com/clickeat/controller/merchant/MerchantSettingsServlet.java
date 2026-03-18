@@ -25,7 +25,7 @@ public class MerchantSettingsServlet extends HttpServlet {
 
         long userId = account.getId();
         MerchantProfileDAO dao = new MerchantProfileDAO();
-        MerchantProfile profile = dao.getByUserId(userId);
+        MerchantProfile profile = dao.findById((int) userId);
 
         if (profile != null) {
             request.setAttribute("dbShopName", profile.getShopName());
@@ -68,10 +68,16 @@ public class MerchantSettingsServlet extends HttpServlet {
             String shopAddress = request.getParameter("shopAddress");
             String avatarData = request.getParameter("avatarData");
 
-            MerchantProfile current = dao.getByUserId(userId);
+            MerchantProfile current = dao.findById((int) userId);
             String finalAvatar = (avatarData != null && !avatarData.trim().isEmpty()) ? avatarData : (current != null ? current.getShopAvatar() : null);
 
-            dao.updateStoreInfo(userId, shopName, shopPhone, shopAddress, finalAvatar);
+            if (current != null) {
+                current.setShopName(shopName);
+                current.setShopPhone(shopPhone);
+                current.setShopAddressLine(shopAddress);
+                current.setShopAvatar(finalAvatar);
+                dao.update(current);
+            }
 
             // Cập nhật lại tên hiển thị trên Sidebar (nếu có lưu trên Session)
             request.getSession().setAttribute("merchantName", shopName);
@@ -79,7 +85,11 @@ public class MerchantSettingsServlet extends HttpServlet {
 
         } else if ("hours".equals(tab)) {
             String businessHours = request.getParameter("businessHours");
-            dao.updateBusinessHours(userId, businessHours);
+            MerchantProfile current = dao.findById((int) userId);
+            if (current != null) {
+                current.setBusinessHours(businessHours);
+                dao.update(current);
+            }
             request.getSession().setAttribute("successMsg", "Đã lưu thiết lập Giờ mở cửa!");
         } else if ("security".equals(tab)) {
             // === XỬ LÝ ĐỔI MẬT KHẨU ===
@@ -101,7 +111,11 @@ public class MerchantSettingsServlet extends HttpServlet {
             }
         } else if ("notify".equals(tab)) {
             String notifyData = request.getParameter("notifyData");
-            dao.updateNotificationSettings(userId, notifyData);
+            MerchantProfile current = dao.findById((int) userId);
+            if (current != null) {
+                current.setNotificationSettings(notifyData);
+                dao.update(current);
+            }
             request.getSession().setAttribute("successMsg", "Đã lưu cài đặt thông báo!");
         }
 
