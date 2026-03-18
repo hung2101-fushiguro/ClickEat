@@ -4,15 +4,17 @@
  */
 package com.clickeat.controller.merchant;
 
+import java.io.IOException;
+
 import com.clickeat.dal.impl.VoucherDAO;
 import com.clickeat.model.User;
 import com.clickeat.model.Voucher;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
 
 /**
  *
@@ -96,6 +98,94 @@ public class MerchantPromotionServlet extends HttpServlet {
             return;
         }
 
+        if ("edit".equals(action)) {
+            String voucherIdRaw = trimToEmpty(request.getParameter("voucherId"));
+            if (voucherIdRaw.isEmpty()) {
+                request.getSession().setAttribute("promotionError", "Thiếu thông tin voucher cần cập nhật.");
+                response.sendRedirect(request.getContextPath() + "/merchant/promotions");
+                return;
+            }
+
+            int voucherId;
+            try {
+                voucherId = Integer.parseInt(voucherIdRaw);
+            } catch (NumberFormatException ex) {
+                request.getSession().setAttribute("promotionError", "Mã voucher không hợp lệ.");
+                response.sendRedirect(request.getContextPath() + "/merchant/promotions");
+                return;
+            }
+
+            Voucher ownVoucher = voucherDAO.findById(voucherId);
+            if (ownVoucher == null || ownVoucher.getMerchantUserId() != account.getId()) {
+                request.getSession().setAttribute("promotionError", "Không tìm thấy voucher hợp lệ để chỉnh sửa.");
+                response.sendRedirect(request.getContextPath() + "/merchant/promotions");
+                return;
+            }
+
+            String title = trimToEmpty(request.getParameter("title"));
+            String code = trimToEmpty(request.getParameter("code")).toUpperCase();
+            String type = trimToEmpty(request.getParameter("type")).toUpperCase();
+            String startDate = trimToEmpty(request.getParameter("startDate"));
+            String endDate = trimToEmpty(request.getParameter("endDate"));
+
+            if (title.isEmpty() || code.isEmpty() || (!"PERCENT".equals(type) && !"FIXED".equals(type))) {
+                request.getSession().setAttribute("promotionError", "Thông tin voucher không hợp lệ.");
+                response.sendRedirect(request.getContextPath() + "/merchant/promotions");
+                return;
+            }
+
+            try {
+                double discountValue = Double.parseDouble(trimToEmpty(request.getParameter("value")));
+                double minOrderAmount = parseNonNegativeDouble(request.getParameter("minOrder"), 0);
+                int maxUsesTotal = parsePositiveInt(request.getParameter("maxUses"), 1);
+
+                java.time.LocalDate start = java.time.LocalDate.parse(startDate);
+                java.time.LocalDate end = java.time.LocalDate.parse(endDate);
+                if (start.isAfter(end)) {
+                    request.getSession().setAttribute("promotionError", "Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày kết thúc.");
+                    response.sendRedirect(request.getContextPath() + "/merchant/promotions");
+                    return;
+                }
+                if (discountValue <= 0) {
+                    request.getSession().setAttribute("promotionError", "Giá trị giảm phải lớn hơn 0.");
+                    response.sendRedirect(request.getContextPath() + "/merchant/promotions");
+                    return;
+                }
+                if ("PERCENT".equals(type) && discountValue > 100) {
+                    request.getSession().setAttribute("promotionError", "Voucher phần trăm không thể vượt quá 100%.");
+                    response.sendRedirect(request.getContextPath() + "/merchant/promotions");
+                    return;
+                }
+
+                Voucher duplicate = voucherDAO.findByMerchantAndCode((int) account.getId(), code);
+                if (duplicate != null && duplicate.getId() != voucherId) {
+                    request.getSession().setAttribute("promotionError", "Mã voucher đã tồn tại, vui lòng chọn mã khác.");
+                    response.sendRedirect(request.getContextPath() + "/merchant/promotions");
+                    return;
+                }
+
+                ownVoucher.setTitle(title);
+                ownVoucher.setCode(code);
+                ownVoucher.setDiscountType(type);
+                ownVoucher.setDiscountValue(discountValue);
+                ownVoucher.setMinOrderAmount(minOrderAmount);
+                ownVoucher.setMaxUsesTotal(maxUsesTotal);
+                ownVoucher.setStartAt(java.sql.Timestamp.valueOf(start + " 00:00:00"));
+                ownVoucher.setEndAt(java.sql.Timestamp.valueOf(end + " 23:59:59"));
+
+                boolean updated = voucherDAO.updateByMerchant(ownVoucher, (int) account.getId());
+                request.getSession().setAttribute(updated ? "promotionSuccess" : "promotionError",
+                        updated ? "Cập nhật voucher thành công." : "Không thể cập nhật voucher.");
+                response.sendRedirect(request.getContextPath() + "/merchant/promotions");
+                return;
+            } catch (Exception e) {
+                e.printStackTrace();
+                request.getSession().setAttribute("promotionError", "Dữ liệu voucher không hợp lệ.");
+                response.sendRedirect(request.getContextPath() + "/merchant/promotions");
+                return;
+            }
+        }
+
         String title = trimToEmpty(request.getParameter("title"));
         String code = trimToEmpty(request.getParameter("code")).toUpperCase();
         String type = trimToEmpty(request.getParameter("type")).toUpperCase();
@@ -127,6 +217,13 @@ public class MerchantPromotionServlet extends HttpServlet {
             }
             if ("PERCENT".equals(type) && discountValue > 100) {
                 request.getSession().setAttribute("promotionError", "Voucher phần trăm không thể vượt quá 100%.");
+                response.sendRedirect(request.getContextPath() + "/merchant/promotions");
+                return;
+            }
+
+            Voucher duplicate = voucherDAO.findByMerchantAndCode((int) account.getId(), code);
+            if (duplicate != null) {
+                request.getSession().setAttribute("promotionError", "Mã voucher đã tồn tại, vui lòng chọn mã khác.");
                 response.sendRedirect(request.getContextPath() + "/merchant/promotions");
                 return;
             }

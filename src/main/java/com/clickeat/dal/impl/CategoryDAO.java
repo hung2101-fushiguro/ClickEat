@@ -4,10 +4,11 @@
  */
 package com.clickeat.dal.impl;
 
-import com.clickeat.model.Category;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+
+import com.clickeat.model.Category;
 
 public class CategoryDAO extends AbstractDAO<Category> {
 
@@ -61,6 +62,20 @@ public class CategoryDAO extends AbstractDAO<Category> {
     public List<Category> getActiveByMerchant(int merchantId) {
         String sql = "SELECT * FROM Categories WHERE merchant_user_id = ? AND is_active = 1 ORDER BY sort_order ASC";
         return query(sql, merchantId);
+    }
+
+    public Category findByMerchantAndName(int merchantId, String name) {
+        String sql = "SELECT TOP 1 * FROM Categories WHERE merchant_user_id = ? AND UPPER(name) = UPPER(?)";
+        return queryOne(sql, merchantId, name);
+    }
+
+    public int getNextSortOrderByMerchant(int merchantId) {
+        String sql = "SELECT ISNULL(MAX(sort_order), 0) + 1 AS next_sort_order FROM Categories WHERE merchant_user_id = ?";
+        List<Object[]> rows = queryRaw(sql, merchantId);
+        if (rows.isEmpty() || rows.get(0).length == 0 || rows.get(0)[0] == null) {
+            return 1;
+        }
+        return ((Number) rows.get(0)[0]).intValue();
     }
 
     public List<Category> findAllWithMerchantName() {

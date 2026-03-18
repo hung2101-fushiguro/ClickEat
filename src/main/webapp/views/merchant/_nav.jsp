@@ -16,7 +16,7 @@
     };
 %>
 <!-- Sidebar -->
-<aside class="hidden md:flex flex-col w-64 bg-white border-r border-gray-100 h-screen sticky top-0 shrink-0">
+<aside class="hidden md:flex flex-col w-64 bg-white border-r border-gray-100 h-screen sticky top-0 shrink-0 z-[60]">
     <!-- Logo + Notification Bell -->
     <div class="p-5 border-b border-gray-100">
         <div class="flex items-center gap-3">
@@ -38,8 +38,8 @@
                           class="absolute -top-0.5 -right-0.5 hidden min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none"></span>
                 </button>
                 <!-- Dropdown -->
-                <div id="notifDropdown"
-                     class="hidden absolute left-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+                 <div id="notifDropdown"
+                     class="hidden absolute left-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-[120] overflow-hidden">
                     <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
                         <span class="text-sm font-bold text-gray-900">Thông báo</span>
                         <button onclick="markAllRead()" class="text-xs text-primary font-medium hover:underline">Đánh dấu đã đọc</button>

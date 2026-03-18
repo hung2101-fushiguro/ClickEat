@@ -1,10 +1,11 @@
 package com.clickeat.dal.impl;
 
-import com.clickeat.model.Voucher;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
+
+import com.clickeat.model.Voucher;
 
 public class VoucherDAO extends AbstractDAO<Voucher> {
 
@@ -271,6 +272,34 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
     public boolean togglePublishByMerchant(int voucherId, int merchantId, boolean publish) {
         String sql = "UPDATE Vouchers SET is_published = ?, updated_at = SYSUTCDATETIME() WHERE id = ? AND merchant_user_id = ?";
         return update(sql, publish, voucherId, merchantId) > 0;
+    }
+
+    public boolean updateByMerchant(Voucher voucher, int merchantId) {
+        String sql = """
+            UPDATE Vouchers
+            SET code = ?,
+                title = ?,
+                discount_type = ?,
+                discount_value = ?,
+                min_order_amount = ?,
+                max_uses_total = ?,
+                start_at = ?,
+                end_at = ?,
+                updated_at = SYSUTCDATETIME()
+            WHERE id = ? AND merchant_user_id = ?
+        """;
+        return update(sql,
+                voucher.getCode(),
+                voucher.getTitle(),
+                voucher.getDiscountType(),
+                voucher.getDiscountValue(),
+                voucher.getMinOrderAmount(),
+                voucher.getMaxUsesTotal(),
+                voucher.getStartAt(),
+                voucher.getEndAt(),
+                voucher.getId(),
+                merchantId
+        ) > 0;
     }
 
     public Voucher findByMerchantAndCode(int merchantUserId, String code) {

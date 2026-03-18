@@ -105,6 +105,18 @@
                                                         </form>
                                                     </td>
                                                     <td class="py-4 px-5 text-right">
+                                                        <button type="button"
+                                                        onclick="openEdit(this)"
+                                                        data-id="${v.id}"
+                                                        data-title="${v.title}"
+                                                        data-code="${v.code}"
+                                                        data-type="${v.discountType}"
+                                                        data-value="${v.discountValue}"
+                                                        data-min-order="${v.minOrderAmount}"
+                                                        data-max-uses="${v.maxUsesTotal}"
+                                                        data-start-date="<fmt:formatDate value='${v.startAt}' pattern='yyyy-MM-dd'/>"
+                                                        data-end-date="<fmt:formatDate value='${v.endAt}' pattern='yyyy-MM-dd'/>"
+                                                        class="px-3 py-1.5 mr-2 rounded-lg text-xs font-bold bg-gray-100 text-gray-700 hover:bg-gray-200">Sửa</button>
                                                         <form method="POST" action="${pageContext.request.contextPath}/merchant/promotions" class="inline" onsubmit="return confirm('Ẩn voucher này khỏi hoạt động?')">
                                                             <input type="hidden" name="action" value="delete"/>
                                                             <input type="hidden" name="voucherId" value="${v.id}"/>
@@ -199,6 +211,73 @@
                             </div>
                         </div>
 
+                        <div id="editModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                            <div class="bg-white w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden relative">
+                                <div class="flex items-center justify-between px-8 py-6 border-b border-gray-50">
+                                    <h2 class="text-xl font-black text-gray-900 tracking-tight">Sửa Voucher</h2>
+                                    <button onclick="closeEdit()" class="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full transition-colors">
+                                        <span class="material-symbols-outlined">close</span>
+                                    </button>
+                                </div>
+
+                                <form method="POST" action="${pageContext.request.contextPath}/merchant/promotions" class="p-8 space-y-5">
+                                    <input type="hidden" name="action" value="edit"/>
+                                    <input type="hidden" name="voucherId" id="editVoucherId"/>
+
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">Tên chương trình *</label>
+                                        <input type="text" name="title" id="editTitle" required class="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 outline-none focus:bg-white focus:border-primary font-medium transition-all shadow-sm"/>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-bold text-gray-700 mb-2">Loại giảm giá</label>
+                                            <select name="type" id="editType" class="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 outline-none focus:bg-white focus:border-primary font-bold appearance-none transition-all shadow-sm">
+                                                <option value="percent">Giảm theo %</option>
+                                                <option value="fixed">Số tiền cố định (đ)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-bold text-gray-700 mb-2">Giá trị *</label>
+                                            <input type="number" name="value" id="editValue" required class="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 outline-none focus:bg-white focus:border-primary font-black transition-all shadow-sm"/>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700 mb-2">Mã Voucher *</label>
+                                        <input type="text" name="code" id="editCode" required oninput="this.value=this.value.toUpperCase()" class="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 outline-none focus:bg-white focus:border-primary font-mono font-bold transition-all shadow-sm"/>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-bold text-gray-700 mb-2">Đơn tối thiểu (đ)</label>
+                                            <input type="number" name="minOrder" id="editMinOrder" value="0" class="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 outline-none focus:bg-white focus:border-primary font-bold transition-all shadow-sm"/>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-bold text-gray-700 mb-2">Tổng lượt dùng</label>
+                                            <input type="number" name="maxUses" id="editMaxUses" value="100" class="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 outline-none focus:bg-white focus:border-primary font-bold transition-all shadow-sm"/>
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-bold text-gray-700 mb-2">Ngày bắt đầu</label>
+                                            <input type="date" name="startDate" id="editStartDate" required class="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 outline-none focus:bg-white focus:border-primary font-bold shadow-sm transition-all"/>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-bold text-gray-700 mb-2">Ngày kết thúc</label>
+                                            <input type="date" name="endDate" id="editEndDate" required class="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 outline-none focus:bg-white focus:border-primary font-bold shadow-sm transition-all"/>
+                                        </div>
+                                    </div>
+
+                                    <div class="pt-4 flex gap-3">
+                                        <button type="button" onclick="closeEdit()" class="flex-1 px-6 py-3.5 rounded-xl border-2 border-gray-100 font-bold text-gray-400 hover:bg-gray-50 transition-all">Hủy</button>
+                                        <button type="submit" class="flex-[2] bg-gray-900 hover:bg-black text-white font-black py-3.5 rounded-xl shadow-lg transition-all">Lưu thay đổi</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
                         <script>
                             function openCreate() {
                                 document.getElementById('createModal').classList.remove('hidden');
@@ -206,9 +285,32 @@
                             function closeCreate() {
                                 document.getElementById('createModal').classList.add('hidden');
                             }
+                            
+                            function openEdit(btn) {
+                                document.getElementById('editVoucherId').value = btn.dataset.id || '';
+                                document.getElementById('editTitle').value = btn.dataset.title || '';
+                                document.getElementById('editCode').value = btn.dataset.code || '';
+                                document.getElementById('editType').value = (btn.dataset.type || 'PERCENT').toLowerCase();
+                                document.getElementById('editValue').value = btn.dataset.value || '';
+                                document.getElementById('editMinOrder').value = btn.dataset.minOrder || '0';
+                                document.getElementById('editMaxUses').value = btn.dataset.maxUses || '100';
+                                document.getElementById('editStartDate').value = btn.dataset.startDate || '';
+                                document.getElementById('editEndDate').value = btn.dataset.endDate || '';
+                                document.getElementById('editModal').classList.remove('hidden');
+                            }
+                            
+                            function closeEdit() {
+                                document.getElementById('editModal').classList.add('hidden');
+                            }
+                            
                             document.getElementById('createModal').addEventListener('click', function (e) {
                                 if (e.target === this)
                                 closeCreate();
+                            });
+                            
+                            document.getElementById('editModal').addEventListener('click', function (e) {
+                                if (e.target === this)
+                                closeEdit();
                             });
                         </script>
                     </body>

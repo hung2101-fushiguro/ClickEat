@@ -4,21 +4,21 @@
  */
 package com.clickeat.controller.merchant;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
 import com.clickeat.dal.impl.CategoryDAO;
 import com.clickeat.dal.impl.FoodItemDAO;
 import com.clickeat.model.Category;
+import com.clickeat.model.FoodItem;
 import com.clickeat.model.User;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-
-import java.util.List;
-
-import com.clickeat.model.FoodItem;
 
 @WebServlet(name = "MerchantCatalogServlet", urlPatterns = {"/merchant/catalog"})
 public class MerchantCatalogServlet extends HttpServlet {
@@ -66,6 +66,7 @@ public class MerchantCatalogServlet extends HttpServlet {
         int merchantId = account.getId();
         String action = request.getParameter("action");
         FoodItemDAO foodItemDAO = new FoodItemDAO();
+        CategoryDAO categoryDAO = new CategoryDAO();
 
         try {
             // 1. Xử lý Toggle (Bật/Tắt) bằng AJAX
@@ -124,6 +125,34 @@ public class MerchantCatalogServlet extends HttpServlet {
                         request.getSession().setAttribute("catalogError", "Không có món nào được cập nhật. Vui lòng kiểm tra lại danh sách đã chọn.");
                     }
                 }
+                response.sendRedirect(request.getContextPath() + "/merchant/catalog");
+                return;
+            } else if ("add-category".equals(action)) {
+                String categoryName = request.getParameter("categoryName");
+                String normalizedName = categoryName == null ? "" : categoryName.trim();
+
+                if (normalizedName.isEmpty()) {
+                    request.getSession().setAttribute("catalogError", "Tên danh mục không được để trống.");
+                    response.sendRedirect(request.getContextPath() + "/merchant/catalog");
+                    return;
+                }
+
+                Category existing = categoryDAO.findByMerchantAndName(merchantId, normalizedName);
+                if (existing != null) {
+                    request.getSession().setAttribute("catalogError", "Danh mục đã tồn tại.");
+                    response.sendRedirect(request.getContextPath() + "/merchant/catalog");
+                    return;
+                }
+
+                Category category = new Category();
+                category.setMerchantUserId(merchantId);
+                category.setName(normalizedName);
+                category.setActive(true);
+                category.setSortOrder(categoryDAO.getNextSortOrderByMerchant(merchantId));
+
+                int created = categoryDAO.insert(category);
+                request.getSession().setAttribute(created > 0 ? "catalogSuccess" : "catalogError",
+                        created > 0 ? "Thêm danh mục mới thành công." : "Không thể thêm danh mục mới.");
                 response.sendRedirect(request.getContextPath() + "/merchant/catalog");
                 return;
             } // 2. Xử lý Thêm mới hoặc Cập nhật món

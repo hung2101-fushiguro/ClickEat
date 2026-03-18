@@ -54,9 +54,14 @@
                     <h1 class="text-2xl font-black text-gray-900 tracking-tight">Thực đơn</h1>
                     <p class="text-sm text-gray-500 font-medium mt-1">Quản lý món ăn và danh mục của nhà hàng</p>
                 </div>
-                <button onclick="document.getElementById('addModal').classList.remove('hidden')" class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-md hover:shadow-lg flex items-center gap-2">
-                    <span class="material-symbols-outlined text-[20px]">add</span>Thêm món mới
-                </button>
+                <div class="flex items-center gap-2">
+                    <button onclick="document.getElementById('addCategoryModal').classList.remove('hidden')" class="bg-white hover:bg-gray-50 text-gray-800 border border-gray-200 px-5 py-2.5 rounded-xl font-bold transition-all shadow-sm flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[20px]">category</span>Thêm danh mục
+                    </button>
+                    <button onclick="document.getElementById('addModal').classList.remove('hidden')" class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-md hover:shadow-lg flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[20px]">add</span>Thêm món mới
+                    </button>
+                </div>
             </header>
 
             <div class="p-8 max-w-7xl mx-auto w-full">
@@ -193,6 +198,26 @@
                 </div>
                 <div class="pt-2">
                     <button type="submit" class="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3.5 rounded-xl transition-all shadow-md">Thêm món ăn</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="addCategoryModal" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-[2rem] p-8 w-full max-w-md shadow-2xl relative">
+            <button onclick="document.getElementById('addCategoryModal').classList.add('hidden')" class="absolute top-6 right-6 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors">
+                <span class="material-symbols-outlined text-[20px]">close</span>
+            </button>
+            <h2 class="text-2xl font-black text-gray-900 mb-6 tracking-tight">Thêm danh mục mới</h2>
+
+            <form action="${pageContext.request.contextPath}/merchant/catalog" method="POST" class="space-y-5">
+                <input type="hidden" name="action" value="add-category">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Tên danh mục <span class="text-red-500">*</span></label>
+                    <input type="text" name="categoryName" required maxlength="100" placeholder="VD: Món nước, Món chính, Tráng miệng..." class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors font-medium">
+                </div>
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-gray-900 hover:bg-black text-white font-bold py-3.5 rounded-xl transition-all shadow-md">Tạo danh mục</button>
                 </div>
             </form>
         </div>
