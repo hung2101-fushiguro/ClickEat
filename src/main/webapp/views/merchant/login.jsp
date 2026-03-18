@@ -57,7 +57,7 @@
                 </div>
 
                 <!-- Form -->
-                <form method="POST" action="${pageContext.request.contextPath}/merchant/login" class="space-y-5">
+                <form method="POST" action="${pageContext.request.contextPath}/login" class="space-y-5">
 
                     <!-- Email -->
                     <div>

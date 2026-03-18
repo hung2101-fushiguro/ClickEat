@@ -8,6 +8,13 @@
         <meta charset="UTF-8"/>
         <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
         <title>Thực đơn – ClickEat Merchant</title>
+        <script>
+            const originalWarn = console.warn;
+            console.warn = function() {
+                if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes('cdn.tailwindcss.com should not be used in production')) return;
+                originalWarn.apply(console, arguments);
+            };
+        </script>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
@@ -31,8 +38,8 @@
             .toggle-cb:checked + .toggle-track {
                 background-color: #22c55e;
             }
-            .toggle-cb:checked + .toggle-track .toggle-dot {
-                transform: translateX(100%);
+            .toggle-cb:checked ~ .toggle-dot {
+                transform: translateX(20px);
                 border-color: #fff;
             }
         </style>
@@ -105,8 +112,8 @@
                                             <div>
                                                 <p class="font-bold text-gray-900">${f.name}</p>
                                                 <p class="text-xs text-gray-500 mt-0.5 max-w-[200px] truncate">${f.description}</p>
-                                                <c:if test="${not f.isAvailable and not empty f.outOfStockReason}">
-                                                    <p class="text-[11px] text-red-500 font-semibold mt-1">Lý do tạm ngưng: ${f.outOfStockReason}</p>
+                                                <c:if test="${not f.available and not empty f.outOfStockReason}">
+                                                    <p class="text-[11px] text-red-500 font-semibold mt-1">Hết món hôm nay: ${f.outOfStockReason}</p>
                                                 </c:if>
                                             </div>
                                         </div>
@@ -117,14 +124,14 @@
                                     <td class="py-4 px-6">
                                         <label class="flex items-center cursor-pointer">
                                             <div class="relative">
-                                                <input type="checkbox" class="sr-only toggle-cb" onchange="toggleItem(${f.id}, this)" ${f.isAvailable ? 'checked' : ''}>
+                                                <input type="checkbox" class="sr-only toggle-cb" onchange="toggleItem(${f.id}, this)" ${f.available ? 'checked' : ''}>
                                                 <div class="toggle-track w-11 h-6 bg-gray-200 rounded-full transition-colors duration-300"></div>
                                                 <div class="toggle-dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 border border-gray-300 shadow-sm"></div>
                                             </div>
                                             <div class="ml-3">
-                                                <div id="dot-${f.id}" class="w-2 h-2 rounded-full mb-1 ${f.isAvailable ? 'bg-green-500' : 'bg-gray-300'}"></div>
-                                                <span id="text-${f.id}" class="text-[10px] font-bold uppercase tracking-wider ${f.isAvailable ? 'text-green-600' : 'text-gray-400'}">
-                                                    ${f.isAvailable ? 'Đang bán' : 'Tạm ngưng'}
+                                                <div id="dot-${f.id}" class="w-2 h-2 rounded-full mb-1 ${f.available ? 'bg-green-500' : 'bg-gray-300'}"></div>
+                                                <span id="text-${f.id}" class="text-[10px] font-bold uppercase tracking-wider ${f.available ? 'text-green-600' : 'text-gray-400'}">
+                                                    ${f.available ? 'Đang bán' : 'Hết món hôm nay'}
                                                 </span>
                                             </div>
                                         </label>
@@ -248,6 +255,7 @@
         // Gọi AJAX để Bật/Tắt trạng thái "Đang bán" cực mượt mà
         function toggleItem(itemId, checkbox) {
             const isAvailable = checkbox.checked;
+            const previousState = !isAvailable;
             let reason = '';
             if (!isAvailable) {
                 reason = prompt('Nhập lý do hết món hôm nay (không bắt buộc):', 'Hết món hôm nay') || '';
@@ -263,7 +271,7 @@
                 } else {
                     dot.className = 'w-2 h-2 rounded-full mb-1 bg-gray-300';
                     text.className = 'text-[10px] font-bold uppercase tracking-wider text-gray-400';
-                    text.innerText = 'Tạm ngưng';
+                    text.innerText = 'Hết món hôm nay';
                 }
                 
                 // Gửi dữ liệu ngầm lên Servlet
@@ -271,39 +279,69 @@
                     method: 'POST',
                     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                     body: 'action=toggle&itemId=' + itemId + '&isAvailable=' + isAvailable + '&reason=' + encodeURIComponent(reason)
-                }).catch(error => console.error("Lỗi cập nhật trạng thái", error));
-            }
-            
-            function toggleAllRows(master) {
-                document.querySelectorAll('.row-check').forEach(cb => cb.checked = master.checked);
-            }
-            
-            function submitBulkToggle(isAvailable) {
-                const selected = Array.from(document.querySelectorAll('.row-check:checked'));
-                if (!selected.length) {
-                    alert('Vui lòng chọn ít nhất 1 món.');
-                    return;
-                }
-                
-                let reason = '';
-                if (!isAvailable) {
-                    reason = prompt('Nhập lý do hết món cho các món đã chọn (không bắt buộc):', 'Hết món hôm nay') || '';
-                }
-                
-                const form = document.getElementById('bulkForm');
-                document.getElementById('bulkIsAvailable').value = isAvailable;
-                document.getElementById('bulkReason').value = reason;
-                
-                form.querySelectorAll('input[name="itemIds"]').forEach(el => el.remove());
-                selected.forEach(cb => {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'itemIds';
-                    input.value = cb.value;
-                    form.appendChild(input);
-                });
-                form.submit();
-            }
-        </script>
-    </body>
-</html>
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.success) {
+                        checkbox.checked = previousState;
+                        if (previousState) {
+                            dot.className = 'w-2 h-2 rounded-full mb-1 bg-green-500';
+                            text.className = 'text-[10px] font-bold uppercase tracking-wider text-green-600';
+                            text.innerText = 'Đang bán';
+                            } else {
+                                dot.className = 'w-2 h-2 rounded-full mb-1 bg-gray-300';
+                                text.className = 'text-[10px] font-bold uppercase tracking-wider text-gray-400';
+                                text.innerText = 'Hết món hôm nay';
+                            }
+                            alert(data.message || 'Không thể cập nhật trạng thái món.');
+                        }
+                    })
+                    .catch(error => {
+                        checkbox.checked = previousState;
+                        if (previousState) {
+                            dot.className = 'w-2 h-2 rounded-full mb-1 bg-green-500';
+                            text.className = 'text-[10px] font-bold uppercase tracking-wider text-green-600';
+                            text.innerText = 'Đang bán';
+                            } else {
+                                dot.className = 'w-2 h-2 rounded-full mb-1 bg-gray-300';
+                                text.className = 'text-[10px] font-bold uppercase tracking-wider text-gray-400';
+                                text.innerText = 'Hết món hôm nay';
+                            }
+                            console.error('Lỗi cập nhật trạng thái', error);
+                            alert('Mất kết nối khi cập nhật trạng thái món. Vui lòng thử lại.');
+                        });
+                    }
+                    
+                    function toggleAllRows(master) {
+                        document.querySelectorAll('.row-check').forEach(cb => cb.checked = master.checked);
+                    }
+                    
+                    function submitBulkToggle(isAvailable) {
+                        const selected = Array.from(document.querySelectorAll('.row-check:checked'));
+                        if (!selected.length) {
+                            alert('Vui lòng chọn ít nhất 1 món.');
+                            return;
+                        }
+                        
+                        let reason = '';
+                        if (!isAvailable) {
+                            reason = prompt('Nhập lý do hết món cho các món đã chọn (không bắt buộc):', 'Hết món hôm nay') || '';
+                        }
+                        
+                        const form = document.getElementById('bulkForm');
+                        document.getElementById('bulkIsAvailable').value = isAvailable;
+                        document.getElementById('bulkReason').value = reason;
+                        
+                        form.querySelectorAll('input[name="itemIds"]').forEach(el => el.remove());
+                        selected.forEach(cb => {
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = 'itemIds';
+                            input.value = cb.value;
+                            form.appendChild(input);
+                        });
+                        form.submit();
+                    }
+                </script>
+            </body>
+        </html>

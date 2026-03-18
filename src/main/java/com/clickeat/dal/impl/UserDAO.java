@@ -26,9 +26,30 @@ public class UserDAO extends AbstractDAO<User> implements IUserDAO {
 
     @Override
     public User checkLogin(String username, String password) {
-        // Đã xóa điều kiện "AND status = 'ACTIVE'"
-        String sql = "SELECT * FROM Users WHERE (phone = ? OR email = ?) AND password_hash = ?";
-        return queryOne(sql, username, username, password);
+        String normalizedUsername = username == null ? "" : username.trim();
+        String normalizedPhone = normalizedUsername.replace(" ", "").replace("-", "").replace(".", "");
+        String normalizedEmail = normalizedUsername.toLowerCase();
+
+        String sql = "SELECT TOP 1 * FROM Users "
+                + "WHERE (REPLACE(REPLACE(REPLACE(ISNULL(phone,''), ' ', ''), '-', ''), '.', '') = ? "
+                + "OR LOWER(LTRIM(RTRIM(ISNULL(email,'')))) = ?) "
+                + "AND LTRIM(RTRIM(ISNULL(password_hash,''))) = ? "
+                + "AND status = 'ACTIVE' "
+                + "ORDER BY id DESC";
+        return queryOne(sql, normalizedPhone, normalizedEmail, password);
+    }
+
+    public User findByCredentialsAnyStatus(String username, String password) {
+        String normalizedUsername = username == null ? "" : username.trim();
+        String normalizedPhone = normalizedUsername.replace(" ", "").replace("-", "").replace(".", "");
+        String normalizedEmail = normalizedUsername.toLowerCase();
+
+        String sql = "SELECT TOP 1 * FROM Users "
+                + "WHERE (REPLACE(REPLACE(REPLACE(ISNULL(phone,''), ' ', ''), '-', ''), '.', '') = ? "
+                + "OR LOWER(LTRIM(RTRIM(ISNULL(email,'')))) = ?) "
+                + "AND LTRIM(RTRIM(ISNULL(password_hash,''))) = ? "
+                + "ORDER BY id DESC";
+        return queryOne(sql, normalizedPhone, normalizedEmail, password);
     }
 
     @Override
@@ -150,7 +171,9 @@ public class UserDAO extends AbstractDAO<User> implements IUserDAO {
     public void linkGoogleProvider(int userId, String sub) {
         String check = "SELECT COUNT(*) AS c FROM UserAuthProviders WHERE provider='GOOGLE' AND provider_user_id=?";
         Integer existed = queryInt(check, sub);
-        if (existed != null && existed > 0) return;
+        if (existed != null && existed > 0) {
+            return;
+        }
         String sql = "INSERT INTO UserAuthProviders(user_id, provider, provider_user_id) VALUES(?, 'GOOGLE', ?)";
         update(sql, userId, sub);
     }
@@ -158,11 +181,17 @@ public class UserDAO extends AbstractDAO<User> implements IUserDAO {
     public long createGoogleUserReturnId(String fullName, String email, String phone) {
         String sql = "INSERT INTO Users(full_name, email, phone, password_hash, role, status, created_at, updated_at) OUTPUT INSERTED.id VALUES(?, ?, ?, NULL, 'CUSTOMER', 'ACTIVE', SYSUTCDATETIME(), SYSUTCDATETIME())";
         try (java.sql.Connection conn = getConnection(); java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, fullName); ps.setString(2, email); ps.setString(3, phone);
+            ps.setString(1, fullName);
+            ps.setString(2, email);
+            ps.setString(3, phone);
             try (java.sql.ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return rs.getLong(1);
+                if (rs.next()) {
+                    return rs.getLong(1);
+                }
             }
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return -1;
     }
 
@@ -179,9 +208,13 @@ public class UserDAO extends AbstractDAO<User> implements IUserDAO {
                 }
             }
             try (java.sql.ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return rs.getInt(1);
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
             }
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return null;
     }
 }

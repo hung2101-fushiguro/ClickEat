@@ -49,8 +49,10 @@
                     </button>
                     <button onclick="switchTab('finance')" id="nav-finance" class="w-full flex items-center justify-between px-4 py-3 text-slate-400 hover:bg-slate-800 hover:text-white rounded-xl font-medium transition-colors">
                         <div class="flex items-center gap-3"><i class="fa-solid fa-money-bill-transfer w-5"></i> Quản lý Rút tiền</div>
-                        <c:if test="${not empty pendingWithdrawals}">
-                            <span class="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">${pendingWithdrawals.size()}</span>
+                        <c:set var="shipperPendingCount" value="${empty pendingWithdrawals ? 0 : pendingWithdrawals.size()}"/>
+                        <c:set var="merchantPendingCount" value="${empty pendingMerchantWithdrawals ? 0 : pendingMerchantWithdrawals.size()}"/>
+                        <c:if test="${shipperPendingCount + merchantPendingCount > 0}">
+                            <span class="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">${shipperPendingCount + merchantPendingCount}</span>
                         </c:if>
                     </button>
                     <button onclick="switchTab('dispute')" id="nav-dispute" class="w-full flex items-center justify-between px-4 py-3 text-slate-400 hover:bg-slate-800 hover:text-white rounded-xl font-medium transition-colors">
@@ -210,16 +212,20 @@
                             <h3 class="text-xl font-bold text-gray-900 flex items-center gap-2">
                                 <i class="fa-solid fa-money-bill-transfer text-orange-500"></i> Lệnh Rút Tiền Chờ Xử Lý
                             </h3>
-                            <p class="text-sm text-gray-500 mt-1">Admin vui lòng chuyển khoản thực tế trước khi bấm Duyệt trên hệ thống.</p>
+                            <p class="text-sm text-gray-500 mt-1">Admin vui lòng chuyển khoản thực tế trước khi bấm Duyệt trên hệ thống (Shipper + Merchant).</p>
                         </div>
                     </div>
 
-                    <c:if test="${empty pendingWithdrawals}">
+                    <c:if test="${empty pendingWithdrawals and empty pendingMerchantWithdrawals}">
                         <div class="bg-white rounded-2xl border border-dashed border-gray-300 p-12 text-center">
                             <i class="fa-solid fa-money-bill-wave text-5xl text-green-300 mb-4"></i>
                             <h3 class="text-lg font-bold text-gray-900">Không có lệnh rút tiền nào</h3>
                             <p class="text-gray-500">Hệ thống đang ổn định.</p>
                         </div>
+                    </c:if>
+
+                    <c:if test="${not empty pendingWithdrawals}">
+                        <h4 class="text-sm font-black text-gray-500 uppercase tracking-wider mb-3">Yêu cầu từ Shipper</h4>
                     </c:if>
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -264,6 +270,61 @@
                                         <input type="hidden" name="action" value="REJECT_WITHDRAW">
                                         <input type="hidden" name="requestId" value="${req.id}">
                                         <button type="submit" onclick="confirmAction(event, 'Từ chối lệnh rút tiền này?', this);" class="w-full bg-red-100 hover:bg-red-200 text-red-600 font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-2">
+                                            <i class="fa-solid fa-xmark"></i> Hủy
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </c:forEach>
+                    </div>
+
+                    <c:if test="${not empty pendingMerchantWithdrawals}">
+                        <h4 class="text-sm font-black text-gray-500 uppercase tracking-wider mt-8 mb-3">Yêu cầu từ Merchant</h4>
+                    </c:if>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <c:forEach var="req" items="${pendingMerchantWithdrawals}">
+                            <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 relative overflow-hidden">
+                                <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500"></div>
+
+                                <div class="flex justify-between items-start mb-4 border-b border-gray-100 pb-4 pl-3">
+                                    <div>
+                                        <h4 class="font-bold text-lg text-gray-900"><i class="fa-solid fa-store text-blue-500 mr-1"></i> ${not empty req.shopName ? req.shopName : req.merchantName}</h4>
+                                        <p class="text-sm text-gray-500 mt-1"><i class="fa-solid fa-user mr-1"></i> ${req.merchantName}</p>
+                                        <p class="text-sm text-gray-500 mt-1"><i class="fa-solid fa-phone mr-1"></i> ${req.merchantPhone}</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-xs font-bold text-gray-400 mb-1">Số tiền rút:</p>
+                                        <p class="text-2xl font-black text-blue-500"><fmt:formatNumber value="${req.amount}" type="currency" currencySymbol="đ" maxFractionDigits="0"/></p>
+                                    </div>
+                                </div>
+
+                                <div class="bg-blue-50/50 rounded-xl p-4 border border-blue-100 mb-4 ml-3">
+                                    <p class="text-xs font-bold text-blue-500 uppercase tracking-wider mb-2">Thông tin chuyển khoản</p>
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="text-sm text-gray-500">Ngân hàng:</span>
+                                        <span class="font-bold text-gray-900">${req.bankName}</span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-500">Số tài khoản:</span>
+                                        <span class="font-bold text-gray-900 text-lg tracking-wider">${req.bankAccountNumber}</span>
+                                    </div>
+                                </div>
+
+                                <div class="flex gap-3 ml-3">
+                                    <form action="${pageContext.request.contextPath}/admin/dashboard" method="POST" class="flex-1">
+                                        <input type="hidden" name="action" value="APPROVE_MERCHANT_WITHDRAW">
+                                        <input type="hidden" name="requestId" value="${req.id}">
+                                        <input type="hidden" name="merchantUserId" value="${req.merchantUserId}">
+                                        <input type="hidden" name="amount" value="${req.amount}">
+                                        <button type="submit" onclick="confirmAction(event, 'Bạn XÁC NHẬN đã chuyển khoản và muốn trừ tiền ví Merchant?', this);" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-2">
+                                            <i class="fa-solid fa-check"></i> Đã Chuyển Tiền
+                                        </button>
+                                    </form>
+                                    <form action="${pageContext.request.contextPath}/admin/dashboard" method="POST" class="w-1/3">
+                                        <input type="hidden" name="action" value="REJECT_MERCHANT_WITHDRAW">
+                                        <input type="hidden" name="requestId" value="${req.id}">
+                                        <button type="submit" onclick="confirmAction(event, 'Từ chối lệnh rút tiền Merchant này?', this);" class="w-full bg-red-100 hover:bg-red-200 text-red-600 font-bold py-2.5 rounded-xl transition flex items-center justify-center gap-2">
                                             <i class="fa-solid fa-xmark"></i> Hủy
                                         </button>
                                     </form>
@@ -575,12 +636,12 @@
                                     <div class="flex-1 min-w-48">
                                         <label class="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wide">Tên danh mục</label>
                                         <input type="text" name="name" required maxlength="100" placeholder="Ví dụ: Món chính, Đồ uống..."
-                                               class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400">
+                                        class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400">
                                     </div>
                                     <div class="w-28">
                                         <label class="block text-xs font-bold text-gray-500 mb-1.5 uppercase tracking-wide">Thứ tự</label>
                                         <input type="number" name="sortOrder" value="0" min="0"
-                                               class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400">
+                                        class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400">
                                     </div>
                                     <button type="submit" class="bg-orange-500 hover:bg-orange-600 text-white font-bold px-6 py-2.5 rounded-xl transition shadow-sm flex items-center gap-2 text-sm">
                                         <i class="fa-solid fa-plus"></i> Thêm
@@ -623,338 +684,338 @@
                                                                 <input type="hidden" name="action" value="TOGGLE_CATEGORY">
                                                                 <input type="hidden" name="categoryId" value="${cat.id}">
                                                                 <button type="submit" title="${cat.active ? 'Ẩn danh mục' : 'Hiện danh mục'}"
-                                                                        class="w-8 h-8 rounded-lg text-xs font-bold text-white transition shadow-sm ${cat.active ? 'bg-amber-400 hover:bg-amber-500' : 'bg-blue-500 hover:bg-blue-600'}">
-                                                                    <i class="fa-solid ${cat.active ? 'fa-eye-slash' : 'fa-eye'}"></i>
-                                                                </button>
-                                                            </form>
-                                                            <form method="post" action="${pageContext.request.contextPath}/admin/dashboard">
-                                                                <input type="hidden" name="action" value="DELETE_CATEGORY">
-                                                                <input type="hidden" name="categoryId" value="${cat.id}">
-                                                                <button type="submit" onclick="confirmAction(event, 'Xóa danh mục này? Hành động không thể hoàn tác.', this);"
-                                                                        class="w-8 h-8 rounded-lg text-xs font-bold text-white bg-red-500 hover:bg-red-600 transition shadow-sm">
-                                                                    <i class="fa-solid fa-trash"></i>
-                                                                </button>
-                                                            </form>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            </c:forEach>
-                                            <c:if test="${empty listCategories}">
-                                                <tr>
-                                                    <td colspan="5" class="px-6 py-10 text-center text-gray-400">
-                                                        <i class="fa-solid fa-tags text-3xl mb-2 block opacity-30"></i>
-                                                        Chưa có danh mục nào.
-                                                    </td>
-                                                </tr>
-                                            </c:if>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-                </main>
-
-                <div id="reject-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center backdrop-blur-sm">
-                    <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
-                        <h3 class="text-xl font-bold text-gray-900 mb-4">Lý do từ chối hồ sơ</h3>
-                        <form action="${pageContext.request.contextPath}/admin/dashboard" method="POST">
-                            <input type="hidden" name="action" value="REJECT_KYC">
-                            <input type="hidden" name="kycId" id="reject-kyc-id">
-                            <input type="hidden" name="merchantId" id="reject-merchant-id">
-                            <textarea name="rejectReason" rows="3" required placeholder="Ví dụ: GPKD bị mờ, Sai mã số thuế..." class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 mb-6"></textarea>
-                            <div class="flex gap-3">
-                                <button type="button" onclick="closeRejectModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition">Hủy</button>
-                                <button type="submit" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl transition shadow-md">Xác nhận Từ Chối</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <div id="custom-confirm-modal" class="fixed inset-0 bg-black/60 z-[100] hidden flex items-center justify-center backdrop-blur-sm transition-opacity">
-                    <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl relative text-center transform transition-all scale-95 opacity-0 duration-200" id="confirm-modal-content">
-                        <div class="w-16 h-16 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
-                            <i class="fa-solid fa-circle-exclamation animate-pulse"></i>
-                        </div>
-                        <h3 class="text-xl font-black text-gray-900 mb-2">Xác nhận hành động</h3>
-                        <p id="confirm-message" class="text-gray-500 mb-6 font-medium">Bạn có chắc chắn không?</p>
-
-                        <div class="flex gap-3">
-                            <button onclick="closeConfirmModal()" type="button" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition">Hủy bỏ</button>
-                            <button onclick="executeConfirm()" type="button" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition shadow-md">Xác nhận</button>
+                                                                class="w-8 h-8 rounded-lg text-xs font-bold text-white transition shadow-sm ${cat.active ? 'bg-amber-400 hover:bg-amber-500' : 'bg-blue-500 hover:bg-blue-600'}">
+                                                                <i class="fa-solid ${cat.active ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                                                            </button>
+                                                        </form>
+                                                        <form method="post" action="${pageContext.request.contextPath}/admin/dashboard">
+                                                            <input type="hidden" name="action" value="DELETE_CATEGORY">
+                                                            <input type="hidden" name="categoryId" value="${cat.id}">
+                                                            <button type="submit" onclick="confirmAction(event, 'Xóa danh mục này? Hành động không thể hoàn tác.', this);"
+                                                            class="w-8 h-8 rounded-lg text-xs font-bold text-white bg-red-500 hover:bg-red-600 transition shadow-sm">
+                                                            <i class="fa-solid fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </c:forEach>
+                                    <c:if test="${empty listCategories}">
+                                        <tr>
+                                            <td colspan="5" class="px-6 py-10 text-center text-gray-400">
+                                                <i class="fa-solid fa-tags text-3xl mb-2 block opacity-30"></i>
+                                                Chưa có danh mục nào.
+                                            </td>
+                                        </tr>
+                                    </c:if>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
 
-                <c:if test="${not empty sessionScope.toastMsg}">
-                    <div id="toast-success" class="fixed top-5 right-5 bg-green-500 text-white px-6 py-4 rounded-xl shadow-2xl z-[100] animate-bounce flex items-center gap-2">
-                        <i class="fa-solid fa-circle-check text-xl"></i>
-                        <span class="font-medium">${sessionScope.toastMsg}</span>
+            </div>
+        </main>
+
+        <div id="reject-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+            <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Lý do từ chối hồ sơ</h3>
+                <form action="${pageContext.request.contextPath}/admin/dashboard" method="POST">
+                    <input type="hidden" name="action" value="REJECT_KYC">
+                    <input type="hidden" name="kycId" id="reject-kyc-id">
+                    <input type="hidden" name="merchantId" id="reject-merchant-id">
+                    <textarea name="rejectReason" rows="3" required placeholder="Ví dụ: GPKD bị mờ, Sai mã số thuế..." class="w-full border border-gray-300 rounded-xl p-3 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 mb-6"></textarea>
+                    <div class="flex gap-3">
+                        <button type="button" onclick="closeRejectModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition">Hủy</button>
+                        <button type="submit" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl transition shadow-md">Xác nhận Từ Chối</button>
                     </div>
-                    <c:remove var="toastMsg" scope="session" />
-                    <script>setTimeout(() => document.getElementById('toast-success').style.display = 'none', 3000);</script>
-                </c:if>
+                </form>
+            </div>
+        </div>
 
-                <c:if test="${not empty sessionScope.toastError}">
-                    <div id="toast-error" class="fixed top-5 right-5 bg-red-500 text-white px-6 py-4 rounded-xl shadow-2xl z-[100] animate-bounce flex items-center gap-2">
-                        <i class="fa-solid fa-triangle-exclamation text-xl"></i>
-                        <span class="font-medium">${sessionScope.toastError}</span>
-                    </div>
-                    <c:remove var="toastError" scope="session" />
-                    <script>setTimeout(() => document.getElementById('toast-error').style.display = 'none', 4000);</script>
-                </c:if>
+        <div id="custom-confirm-modal" class="fixed inset-0 bg-black/60 z-[100] hidden flex items-center justify-center backdrop-blur-sm transition-opacity">
+            <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl relative text-center transform transition-all scale-95 opacity-0 duration-200" id="confirm-modal-content">
+                <div class="w-16 h-16 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+                    <i class="fa-solid fa-circle-exclamation animate-pulse"></i>
+                </div>
+                <h3 class="text-xl font-black text-gray-900 mb-2">Xác nhận hành động</h3>
+                <p id="confirm-message" class="text-gray-500 mb-6 font-medium">Bạn có chắc chắn không?</p>
 
-                <script>
-                    function switchTab(tabName) {
-                        document.getElementById('tab-overview').classList.add('hidden');
-                        document.getElementById('tab-kyc').classList.add('hidden');
-                        document.getElementById('tab-finance').classList.add('hidden');
-                        document.getElementById('tab-dispute').classList.add('hidden');
-                        document.getElementById('tab-users').classList.add('hidden');
-                        document.getElementById('tab-categories').classList.add('hidden');
-                        
-                        const normalClass = "w-full flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-gray-100 hover:text-gray-900 rounded-xl font-medium transition-colors";
-                        const activeClass = "w-full flex items-center gap-3 px-4 py-3 bg-orange-100 text-orange-600 rounded-xl font-bold transition-colors";
-                        
-                        const normalClassBetween = "w-full flex items-center justify-between px-4 py-3 text-gray-500 hover:bg-gray-100 hover:text-gray-900 rounded-xl font-medium transition-colors";
-                        const activeClassBetween = "w-full flex items-center justify-between px-4 py-3 bg-orange-500/20 text-orange-400 rounded-xl font-bold transition-colors";
-                        
-                        document.getElementById('nav-overview').className = normalClass;
-                        document.getElementById('nav-kyc').className = normalClassBetween;
-                        document.getElementById('nav-finance').className = normalClassBetween;
-                        document.getElementById('nav-dispute').className = normalClassBetween;
-                        document.getElementById('nav-users').className = normalClass;
-                        document.getElementById('nav-categories').className = normalClass;
-                        
-                        if (tabName === 'overview') {
-                            document.getElementById('tab-overview').classList.remove('hidden');
-                            document.getElementById('nav-overview').className = activeClass;
-                            document.getElementById('header-title').innerText = "Báo cáo tổng quan";
-                            } else if (tabName === 'kyc') {
-                                document.getElementById('tab-kyc').classList.remove('hidden');
-                                document.getElementById('nav-kyc').className = activeClassBetween;
-                                document.getElementById('header-title').innerText = "Kiểm duyệt Quán ăn";
-                                } else if (tabName === 'finance') {
-                                    document.getElementById('tab-finance').classList.remove('hidden');
-                                    document.getElementById('nav-finance').className = activeClassBetween;
-                                    document.getElementById('header-title').innerText = "Quản lý Rút tiền";
-                                    } else if (tabName === 'dispute') {
-                                        document.getElementById('tab-dispute').classList.remove('hidden');
-                                        document.getElementById('nav-dispute').className = activeClassBetween;
-                                        document.getElementById('header-title').innerText = "Giải quyết Sự cố";
-                                        } else if (tabName === 'users') {
-                                            document.getElementById('tab-users').classList.remove('hidden');
-                                            document.getElementById('nav-users').className = activeClass;
-                                            document.getElementById('header-title').innerText = "Quản lý Người dùng";
-                                        } else if (tabName === 'categories') {
-                                            document.getElementById('tab-categories').classList.remove('hidden');
-                                            document.getElementById('nav-categories').className = activeClass;
-                                            document.getElementById('header-title').innerText = "Danh mục món ăn";
-                                        }
-                                    }
-                                    
-                                    function switchSubTab(role) {
-                                        document.getElementById('subtab-customers').classList.add('hidden');
-                                        document.getElementById('subtab-merchants').classList.add('hidden');
-                                        document.getElementById('subtab-shippers').classList.add('hidden');
-                                        document.getElementById('subtab-appeals').classList.add('hidden');
-                                        
-                                        const normalClass = "px-6 py-2 rounded-full font-bold text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 transition";
-                                        const activeClass = "px-6 py-2 rounded-full font-bold text-sm bg-orange-500 text-white shadow-md transition";
-                                        
-                                        document.getElementById('subnav-customers').className = normalClass;
-                                        document.getElementById('subnav-merchants').className = normalClass;
-                                        document.getElementById('subnav-shippers').className = normalClass;
-                                        document.getElementById('subnav-appeals').className = normalClass;
-                                        
-                                        document.getElementById('subtab-' + role).classList.remove('hidden');
-                                        document.getElementById('subnav-' + role).className = activeClass;
-                                    }
-                                    
-                                    document.addEventListener('DOMContentLoaded', function () {
-                                        const activeTab = '${activeTab}';
-                                        if (activeTab)
-                                        switchTab(activeTab);
-                                    });
-                                    
-                                    function openRejectModal(kycId, merchantId) {
-                                        document.getElementById('reject-kyc-id').value = kycId;
-                                        document.getElementById('reject-merchant-id').value = merchantId;
-                                        document.getElementById('reject-modal').classList.remove('hidden');
-                                    }
-                                    function closeRejectModal() {
-                                        document.getElementById('reject-modal').classList.add('hidden');
-                                    }
-                                </script>
+                <div class="flex gap-3">
+                    <button onclick="closeConfirmModal()" type="button" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition">Hủy bỏ</button>
+                    <button onclick="executeConfirm()" type="button" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition shadow-md">Xác nhận</button>
+                </div>
+            </div>
+        </div>
 
-                                <script>
-                                    document.addEventListener('DOMContentLoaded', function () {
-                                        const revCtx = document.getElementById('adminRevenueChart');
-                                        if (revCtx) {
-                                            new Chart(revCtx.getContext('2d'), {
-                                                type: 'line',
-                                                data: {
-                                                    labels: [${revLabels}],
-                                                    datasets: [{
-                                                        label: 'Tổng Giao Dịch (GMV)',
-                                                        data: [${revValues}],
-                                                        borderColor: 'rgb(59, 130, 246)',
-                                                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                                                        borderWidth: 3,
-                                                        pointBackgroundColor: 'rgb(59, 130, 246)',
-                                                        fill: true,
-                                                        tension: 0.4
-                                                    }]
-                                                },
-                                                options: {
-                                                    responsive: true, maintainAspectRatio: false,
-                                                    plugins: {legend: {display: false}},
-                                                    scales: {
-                                                        y: {beginAtZero: true, ticks: {callback: function (value) {
-                                                            return (value / 1000) + 'k';
-                                                        }}}
-                                                    }
+        <c:if test="${not empty sessionScope.toastMsg}">
+            <div id="toast-success" class="fixed top-5 right-5 bg-green-500 text-white px-6 py-4 rounded-xl shadow-2xl z-[100] animate-bounce flex items-center gap-2">
+                <i class="fa-solid fa-circle-check text-xl"></i>
+                <span class="font-medium">${sessionScope.toastMsg}</span>
+            </div>
+            <c:remove var="toastMsg" scope="session" />
+            <script>setTimeout(() => document.getElementById('toast-success').style.display = 'none', 3000);</script>
+        </c:if>
+
+        <c:if test="${not empty sessionScope.toastError}">
+            <div id="toast-error" class="fixed top-5 right-5 bg-red-500 text-white px-6 py-4 rounded-xl shadow-2xl z-[100] animate-bounce flex items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+                <span class="font-medium">${sessionScope.toastError}</span>
+            </div>
+            <c:remove var="toastError" scope="session" />
+            <script>setTimeout(() => document.getElementById('toast-error').style.display = 'none', 4000);</script>
+        </c:if>
+
+        <script>
+            function switchTab(tabName) {
+                document.getElementById('tab-overview').classList.add('hidden');
+                document.getElementById('tab-kyc').classList.add('hidden');
+                document.getElementById('tab-finance').classList.add('hidden');
+                document.getElementById('tab-dispute').classList.add('hidden');
+                document.getElementById('tab-users').classList.add('hidden');
+                document.getElementById('tab-categories').classList.add('hidden');
+                
+                const normalClass = "w-full flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-gray-100 hover:text-gray-900 rounded-xl font-medium transition-colors";
+                const activeClass = "w-full flex items-center gap-3 px-4 py-3 bg-orange-100 text-orange-600 rounded-xl font-bold transition-colors";
+                
+                const normalClassBetween = "w-full flex items-center justify-between px-4 py-3 text-gray-500 hover:bg-gray-100 hover:text-gray-900 rounded-xl font-medium transition-colors";
+                const activeClassBetween = "w-full flex items-center justify-between px-4 py-3 bg-orange-500/20 text-orange-400 rounded-xl font-bold transition-colors";
+                
+                document.getElementById('nav-overview').className = normalClass;
+                document.getElementById('nav-kyc').className = normalClassBetween;
+                document.getElementById('nav-finance').className = normalClassBetween;
+                document.getElementById('nav-dispute').className = normalClassBetween;
+                document.getElementById('nav-users').className = normalClass;
+                document.getElementById('nav-categories').className = normalClass;
+                
+                if (tabName === 'overview') {
+                    document.getElementById('tab-overview').classList.remove('hidden');
+                    document.getElementById('nav-overview').className = activeClass;
+                    document.getElementById('header-title').innerText = "Báo cáo tổng quan";
+                    } else if (tabName === 'kyc') {
+                        document.getElementById('tab-kyc').classList.remove('hidden');
+                        document.getElementById('nav-kyc').className = activeClassBetween;
+                        document.getElementById('header-title').innerText = "Kiểm duyệt Quán ăn";
+                        } else if (tabName === 'finance') {
+                            document.getElementById('tab-finance').classList.remove('hidden');
+                            document.getElementById('nav-finance').className = activeClassBetween;
+                            document.getElementById('header-title').innerText = "Quản lý Rút tiền";
+                            } else if (tabName === 'dispute') {
+                                document.getElementById('tab-dispute').classList.remove('hidden');
+                                document.getElementById('nav-dispute').className = activeClassBetween;
+                                document.getElementById('header-title').innerText = "Giải quyết Sự cố";
+                                } else if (tabName === 'users') {
+                                    document.getElementById('tab-users').classList.remove('hidden');
+                                    document.getElementById('nav-users').className = activeClass;
+                                    document.getElementById('header-title').innerText = "Quản lý Người dùng";
+                                    } else if (tabName === 'categories') {
+                                        document.getElementById('tab-categories').classList.remove('hidden');
+                                        document.getElementById('nav-categories').className = activeClass;
+                                        document.getElementById('header-title').innerText = "Danh mục món ăn";
+                                    }
+                                }
+                                
+                                function switchSubTab(role) {
+                                    document.getElementById('subtab-customers').classList.add('hidden');
+                                    document.getElementById('subtab-merchants').classList.add('hidden');
+                                    document.getElementById('subtab-shippers').classList.add('hidden');
+                                    document.getElementById('subtab-appeals').classList.add('hidden');
+                                    
+                                    const normalClass = "px-6 py-2 rounded-full font-bold text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 transition";
+                                    const activeClass = "px-6 py-2 rounded-full font-bold text-sm bg-orange-500 text-white shadow-md transition";
+                                    
+                                    document.getElementById('subnav-customers').className = normalClass;
+                                    document.getElementById('subnav-merchants').className = normalClass;
+                                    document.getElementById('subnav-shippers').className = normalClass;
+                                    document.getElementById('subnav-appeals').className = normalClass;
+                                    
+                                    document.getElementById('subtab-' + role).classList.remove('hidden');
+                                    document.getElementById('subnav-' + role).className = activeClass;
+                                }
+                                
+                                document.addEventListener('DOMContentLoaded', function () {
+                                    const activeTab = '${activeTab}';
+                                    if (activeTab)
+                                    switchTab(activeTab);
+                                });
+                                
+                                function openRejectModal(kycId, merchantId) {
+                                    document.getElementById('reject-kyc-id').value = kycId;
+                                    document.getElementById('reject-merchant-id').value = merchantId;
+                                    document.getElementById('reject-modal').classList.remove('hidden');
+                                }
+                                function closeRejectModal() {
+                                    document.getElementById('reject-modal').classList.add('hidden');
+                                }
+                            </script>
+
+                            <script>
+                                document.addEventListener('DOMContentLoaded', function () {
+                                    const revCtx = document.getElementById('adminRevenueChart');
+                                    if (revCtx) {
+                                        new Chart(revCtx.getContext('2d'), {
+                                            type: 'line',
+                                            data: {
+                                                labels: [${revLabels}],
+                                                datasets: [{
+                                                    label: 'Tổng Giao Dịch (GMV)',
+                                                    data: [${revValues}],
+                                                    borderColor: 'rgb(59, 130, 246)',
+                                                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                                    borderWidth: 3,
+                                                    pointBackgroundColor: 'rgb(59, 130, 246)',
+                                                    fill: true,
+                                                    tension: 0.4
+                                                }]
+                                            },
+                                            options: {
+                                                responsive: true, maintainAspectRatio: false,
+                                                plugins: {legend: {display: false}},
+                                                scales: {
+                                                    y: {beginAtZero: true, ticks: {callback: function (value) {
+                                                        return (value / 1000) + 'k';
+                                                    }}}
                                                 }
-                                            });
-                                        }
-                                        
-                                        const statusCtx = document.getElementById('adminStatusChart');
-                                        if (statusCtx) {
-                                            new Chart(statusCtx.getContext('2d'), {
-                                                type: 'doughnut',
-                                                data: {
-                                                    labels: [${statusLabels}],
-                                                    datasets: [{
-                                                        data: [${statusValues}],
-                                                        backgroundColor: ['#22c55e', '#ef4444', '#f97316', '#3b82f6', '#eab308', '#94a3b8'],
-                                                        borderWidth: 0
-                                                    }]
-                                                },
-                                                options: {
-                                                    responsive: true, maintainAspectRatio: false,
-                                                    plugins: {legend: {position: 'bottom', labels: {boxWidth: 12, font: {size: 11}}}},
-                                                    cutout: '65%'
-                                                }
-                                            });
-                                        }
-                                    });
-                                </script>
-
-                                <script>
-                                    let targetAction = null;
-                                    
-                                    function confirmAction(event, message, element) {
-                                        event.preventDefault();
-                                        if (element.tagName === 'A') {
-                                            targetAction = {type: 'link', data: element.href};
-                                            } else if (element.form) {
-                                                targetAction = {type: 'form', data: element.form};
-                                                } else if (element.tagName === 'FORM') {
-                                                    targetAction = {type: 'form', data: element};
-                                                }
-                                                document.getElementById('confirm-message').innerText = message;
-                                                const modal = document.getElementById('custom-confirm-modal');
-                                                const content = document.getElementById('confirm-modal-content');
-                                                modal.classList.remove('hidden');
-                                                setTimeout(() => {
-                                                    content.classList.remove('scale-95', 'opacity-0');
-                                                    content.classList.add('scale-100', 'opacity-100');
-                                                }, 10);
                                             }
-                                            
-                                            function closeConfirmModal() {
-                                                const modal = document.getElementById('custom-confirm-modal');
-                                                const content = document.getElementById('confirm-modal-content');
-                                                content.classList.remove('scale-100', 'opacity-100');
-                                                content.classList.add('scale-95', 'opacity-0');
-                                                setTimeout(() => {
-                                                    modal.classList.add('hidden');
-                                                    targetAction = null;
-                                                }, 200);
+                                        });
+                                    }
+                                    
+                                    const statusCtx = document.getElementById('adminStatusChart');
+                                    if (statusCtx) {
+                                        new Chart(statusCtx.getContext('2d'), {
+                                            type: 'doughnut',
+                                            data: {
+                                                labels: [${statusLabels}],
+                                                datasets: [{
+                                                    data: [${statusValues}],
+                                                    backgroundColor: ['#22c55e', '#ef4444', '#f97316', '#3b82f6', '#eab308', '#94a3b8'],
+                                                    borderWidth: 0
+                                                }]
+                                            },
+                                            options: {
+                                                responsive: true, maintainAspectRatio: false,
+                                                plugins: {legend: {position: 'bottom', labels: {boxWidth: 12, font: {size: 11}}}},
+                                                cutout: '65%'
                                             }
-                                            
-                                            function executeConfirm() {
-                                                if (!targetAction)
-                                                return;
-                                                if (targetAction.type === 'form') {
-                                                    targetAction.data.submit();
-                                                    } else if (targetAction.type === 'link') {
-                                                        window.location.href = targetAction.data;
-                                                    }
-                                                }
-                                            </script>
+                                        });
+                                    }
+                                });
+                            </script>
 
-                                            <script>
-                                                function handleUserSearch() {
-                                                    const input = document.getElementById('user-search-input').value.toLowerCase().trim();
+                            <script>
+                                let targetAction = null;
+                                
+                                function confirmAction(event, message, element) {
+                                    event.preventDefault();
+                                    if (element.tagName === 'A') {
+                                        targetAction = {type: 'link', data: element.href};
+                                        } else if (element.form) {
+                                            targetAction = {type: 'form', data: element.form};
+                                            } else if (element.tagName === 'FORM') {
+                                                targetAction = {type: 'form', data: element};
+                                            }
+                                            document.getElementById('confirm-message').innerText = message;
+                                            const modal = document.getElementById('custom-confirm-modal');
+                                            const content = document.getElementById('confirm-modal-content');
+                                            modal.classList.remove('hidden');
+                                            setTimeout(() => {
+                                                content.classList.remove('scale-95', 'opacity-0');
+                                                content.classList.add('scale-100', 'opacity-100');
+                                            }, 10);
+                                        }
+                                        
+                                        function closeConfirmModal() {
+                                            const modal = document.getElementById('custom-confirm-modal');
+                                            const content = document.getElementById('confirm-modal-content');
+                                            content.classList.remove('scale-100', 'opacity-100');
+                                            content.classList.add('scale-95', 'opacity-0');
+                                            setTimeout(() => {
+                                                modal.classList.add('hidden');
+                                                targetAction = null;
+                                            }, 200);
+                                        }
+                                        
+                                        function executeConfirm() {
+                                            if (!targetAction)
+                                            return;
+                                            if (targetAction.type === 'form') {
+                                                targetAction.data.submit();
+                                                } else if (targetAction.type === 'link') {
+                                                    window.location.href = targetAction.data;
+                                                }
+                                            }
+                                        </script>
+
+                                        <script>
+                                            function handleUserSearch() {
+                                                const input = document.getElementById('user-search-input').value.toLowerCase().trim();
+                                                
+                                                // Lấy cả 3 bảng để kiểm tra độc lập
+                                                const tbodys = document.querySelectorAll('#subtab-customers tbody, #subtab-merchants tbody, #subtab-shippers tbody');
+                                                
+                                                tbodys.forEach(tbody => {
+                                                    let hasVisibleRow = false; // Biến theo dõi xem có hàng nào khớp không
+                                                    const rows = tbody.querySelectorAll('.user-row');
                                                     
-                                                    // Lấy cả 3 bảng để kiểm tra độc lập
-                                                    const tbodys = document.querySelectorAll('#subtab-customers tbody, #subtab-merchants tbody, #subtab-shippers tbody');
+                                                    rows.forEach(row => {
+                                                        const name = row.getAttribute('data-name');
+                                                        const phone = row.getAttribute('data-phone');
+                                                        if (name.includes(input) || phone.includes(input)) {
+                                                            row.style.display = '';
+                                                            hasVisibleRow = true;
+                                                            } else {
+                                                                row.style.display = 'none';
+                                                            }
+                                                        });
+                                                        let noResultRow = tbody.querySelector('.no-result-row');
+                                                        
+                                                        if (!hasVisibleRow && rows.length > 0) {
+                                                            
+                                                            if (!noResultRow) {
+                                                                
+                                                                noResultRow = document.createElement('tr');
+                                                                noResultRow.className = 'no-result-row';
+                                                                noResultRow.innerHTML = '<td colspan="4" class="px-6 py-8 text-center text-gray-500 font-medium italic"><i class="fa-solid fa-magnifying-glass-minus text-2xl mb-2 block text-gray-300"></i>Không có thông tin phù hợp với từ khóa</td>';
+                                                                tbody.appendChild(noResultRow);
+                                                            }
+                                                            noResultRow.style.display = '';
+                                                            } else if (noResultRow) {
+                                                                
+                                                                noResultRow.style.display = 'none';
+                                                            }
+                                                        });
+                                                    }
                                                     
-                                                    tbodys.forEach(tbody => {
-                                                        let hasVisibleRow = false; // Biến theo dõi xem có hàng nào khớp không
-                                                        const rows = tbody.querySelectorAll('.user-row');
+                                                    function handleUserSort() {
+                                                        const sortType = document.getElementById('user-sort-select').value;
+                                                        const tbodys = document.querySelectorAll('#subtab-customers tbody, #subtab-merchants tbody, #subtab-shippers tbody');
                                                         
-                                                        rows.forEach(row => {
-                                                            const name = row.getAttribute('data-name');
-                                                            const phone = row.getAttribute('data-phone');
-                                                            if (name.includes(input) || phone.includes(input)) {
-                                                                row.style.display = '';
-                                                                hasVisibleRow = true;
-                                                                } else {
-                                                                    row.style.display = 'none';
-                                                                }
-                                                            });
-                                                            let noResultRow = tbody.querySelector('.no-result-row');
+                                                        tbodys.forEach(tbody => {
+                                                            let rowsArray = Array.from(tbody.querySelectorAll('.user-row'));
                                                             
-                                                            if (!hasVisibleRow && rows.length > 0) {
+                                                            rowsArray.sort((a, b) => {
+                                                                const nameA = a.getAttribute('data-name');
+                                                                const nameB = b.getAttribute('data-name');
+                                                                const statusA = a.getAttribute('data-status');
+                                                                const statusB = b.getAttribute('data-status');
                                                                 
-                                                                if (!noResultRow) {
-                                                                    
-                                                                    noResultRow = document.createElement('tr');
-                                                                    noResultRow.className = 'no-result-row';
-                                                                    noResultRow.innerHTML = '<td colspan="4" class="px-6 py-8 text-center text-gray-500 font-medium italic"><i class="fa-solid fa-magnifying-glass-minus text-2xl mb-2 block text-gray-300"></i>Không có thông tin phù hợp với từ khóa</td>';
-                                                                    tbody.appendChild(noResultRow);
-                                                                }
-                                                                noResultRow.style.display = '';
-                                                                } else if (noResultRow) {
-                                                                    
-                                                                    noResultRow.style.display = 'none';
-                                                                }
+                                                                if (sortType === 'name_asc')
+                                                                return nameA.localeCompare(nameB);
+                                                                if (sortType === 'name_desc')
+                                                                return nameB.localeCompare(nameA);
+                                                                
+                                                                if (sortType === 'status_active')
+                                                                return statusA === 'ACTIVE' ? -1 : 1;
+                                                                if (sortType === 'status_banned')
+                                                                return statusA === 'INACTIVE' ? -1 : 1;
+                                                                
+                                                                return 0; // default
                                                             });
-                                                        }
-                                                        
-                                                        function handleUserSort() {
-                                                            const sortType = document.getElementById('user-sort-select').value;
-                                                            const tbodys = document.querySelectorAll('#subtab-customers tbody, #subtab-merchants tbody, #subtab-shippers tbody');
                                                             
-                                                            tbodys.forEach(tbody => {
-                                                                let rowsArray = Array.from(tbody.querySelectorAll('.user-row'));
-                                                                
-                                                                rowsArray.sort((a, b) => {
-                                                                    const nameA = a.getAttribute('data-name');
-                                                                    const nameB = b.getAttribute('data-name');
-                                                                    const statusA = a.getAttribute('data-status');
-                                                                    const statusB = b.getAttribute('data-status');
-                                                                    
-                                                                    if (sortType === 'name_asc')
-                                                                    return nameA.localeCompare(nameB);
-                                                                    if (sortType === 'name_desc')
-                                                                    return nameB.localeCompare(nameA);
-                                                                    
-                                                                    if (sortType === 'status_active')
-                                                                    return statusA === 'ACTIVE' ? -1 : 1;
-                                                                    if (sortType === 'status_banned')
-                                                                    return statusA === 'INACTIVE' ? -1 : 1;
-                                                                    
-                                                                    return 0; // default
-                                                                });
-                                                                
-                                                                tbody.innerHTML = '';
-                                                                rowsArray.forEach(row => tbody.appendChild(row));
-                                                            });
-                                                        }
-                                                    </script>
-                                                </body>
-                                            </html>
+                                                            tbody.innerHTML = '';
+                                                            rowsArray.forEach(row => tbody.appendChild(row));
+                                                        });
+                                                    }
+                                                </script>
+                                            </body>
+                                        </html>

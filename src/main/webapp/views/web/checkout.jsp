@@ -137,6 +137,10 @@
                         </div>
 
                         <div class="bg-gray-50 rounded-3xl p-6 space-y-4">
+                            <div class="space-y-2">
+                                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider">Mã voucher</label>
+                                <input type="text" name="voucherCode" value="${voucherCode}" placeholder="Nhập mã voucher (nếu có)" class="w-full bg-white border border-gray-200 rounded-2xl px-4 py-3 input-focus outline-none transition-all font-semibold uppercase"/>
+                            </div>
                             <div class="flex justify-between text-gray-500 font-bold text-sm">
                                 <span>Tạm tính</span>
                                 <span><fmt:formatNumber value="${subTotal}" pattern="#,###"/>đ</span>

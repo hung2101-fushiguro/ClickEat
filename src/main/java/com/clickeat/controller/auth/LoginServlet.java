@@ -1,10 +1,12 @@
 package com.clickeat.controller.auth;
 
-import com.clickeat.dal.impl.UserDAO;
+import java.io.IOException;
+
 import com.clickeat.dal.impl.MerchantProfileDAO;
+import com.clickeat.dal.impl.UserDAO;
 import com.clickeat.model.MerchantProfile;
 import com.clickeat.model.User;
-import java.io.IOException;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -31,9 +33,6 @@ public class LoginServlet extends HttpServlet {
         if (userRaw != null) {
             userRaw = userRaw.trim();
         }
-        if (passRaw != null) {
-            passRaw = passRaw.trim();
-        }
 
         if (userRaw == null || userRaw.isEmpty() || passRaw == null || passRaw.isEmpty()) {
             request.setAttribute("error", "Vui lòng nhập đầy đủ tài khoản và mật khẩu!");
@@ -42,15 +41,23 @@ public class LoginServlet extends HttpServlet {
         }
 
         UserDAO userDAO = new UserDAO();
-        User user = userDAO.checkLogin(userRaw, passRaw);
+        User user = userDAO.findByCredentialsAnyStatus(userRaw, passRaw);
 
         if (user != null) {
             HttpSession session = request.getSession();
 
-            if ("INACTIVE".equals(user.getStatus())) {
+            String status = user.getStatus();
+
+            if ("INACTIVE".equalsIgnoreCase(status)) {
                 session.setAttribute("bannedUserId", user.getId());
 
                 response.sendRedirect(request.getContextPath() + "/banned");
+                return;
+            }
+
+            if (!"ACTIVE".equalsIgnoreCase(status)) {
+                request.setAttribute("error", "Tài khoản chưa sẵn sàng đăng nhập. Vui lòng liên hệ hỗ trợ.");
+                request.getRequestDispatcher("views/web/login.jsp").forward(request, response);
                 return;
             }
 
@@ -66,7 +73,8 @@ public class LoginServlet extends HttpServlet {
                     if (profile != null) {
                         session.setAttribute("merchantShopName", profile.getShopName());
                         session.setAttribute("merchantName", profile.getShopName());
-                        session.setAttribute("merchantIsOpen", profile.getIsOpen() == null ? true : profile.getIsOpen());
+                        Boolean merchantIsOpen = profile.getIsOpen();
+                        session.setAttribute("merchantIsOpen", merchantIsOpen != null ? merchantIsOpen : Boolean.TRUE);
                     }
                     response.sendRedirect(request.getContextPath() + "/merchant/dashboard");
                 }

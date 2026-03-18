@@ -409,7 +409,7 @@
                             <li>• Sau khi duyệt, bạn có thể đăng nhập và thiết lập cửa hàng</li>
                         </ul>
                     </div>
-                    <a href="${pageContext.request.contextPath}/merchant/login"
+                    <a href="${pageContext.request.contextPath}/login"
                        class="block w-full h-14 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl shadow-lg shadow-orange-200 transition-all flex items-center justify-center gap-2">
                         Quay lại Đăng nhập
                     </a>

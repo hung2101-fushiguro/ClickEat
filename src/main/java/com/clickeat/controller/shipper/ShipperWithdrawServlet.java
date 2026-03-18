@@ -20,7 +20,7 @@ public class ShipperWithdrawServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
+
         User account = (User) request.getSession().getAttribute("account");
         if (account == null || !"SHIPPER".equals(account.getRole())) {
             response.sendRedirect(request.getContextPath() + "/login");
@@ -32,21 +32,28 @@ public class ShipperWithdrawServlet extends HttpServlet {
             String bankName = request.getParameter("bankName");
             String bankAccountNumber = request.getParameter("bankAccountNumber");
 
-            // Lưu ý: Ở một hệ thống thực tế, bạn nên gọi ShipperWalletDAO ở đây 
-            // để check xem `amount` có thực sự <= `balance` trong DB hay không. 
-            // Tuy nhiên HTML bên dưới đã chặn tạm thời bằng thuộc tính max="".
+            if (amount < 50000) {
+                request.getSession().setAttribute("toastError", "Số tiền rút tối thiểu là 50.000đ.");
+                response.sendRedirect(request.getContextPath() + "/shipper/dashboard?tab=overview");
+                return;
+            }
+            if (bankName == null || bankName.trim().isEmpty() || bankAccountNumber == null || bankAccountNumber.trim().isEmpty()) {
+                request.getSession().setAttribute("toastError", "Vui lòng nhập đầy đủ thông tin tài khoản ngân hàng.");
+                response.sendRedirect(request.getContextPath() + "/shipper/dashboard?tab=overview");
+                return;
+            }
 
             WithdrawalRequest req = new WithdrawalRequest();
             req.setShipperUserId(account.getId());
             req.setAmount(amount);
-            req.setBankName(bankName);
-            req.setBankAccountNumber(bankAccountNumber);
+            req.setBankName(bankName.trim());
+            req.setBankAccountNumber(bankAccountNumber.trim());
 
             WithdrawalRequestDAO dao = new WithdrawalRequestDAO();
             if (dao.createRequest(req)) {
                 request.getSession().setAttribute("toastMsg", "Đã gửi yêu cầu rút tiền thành công! Vui lòng chờ Admin duyệt.");
             } else {
-                request.getSession().setAttribute("toastError", "Có lỗi xảy ra khi gửi yêu cầu.");
+                request.getSession().setAttribute("toastError", "Không thể tạo yêu cầu rút tiền (số dư không đủ hoặc dữ liệu không hợp lệ).");
             }
         } catch (Exception e) {
             request.getSession().setAttribute("toastError", "Dữ liệu nhập không hợp lệ.");

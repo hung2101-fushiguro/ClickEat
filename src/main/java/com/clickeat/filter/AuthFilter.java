@@ -34,8 +34,8 @@ public class AuthFilter implements Filter {
         HttpSession session = request.getSession(false);
         User account = (session != null) ? (User) session.getAttribute("account") : null;
 
-        // Merchant portal (except own login/register)
-        if (path.startsWith("/merchant/") && !path.equals("/merchant/login") && !path.equals("/merchant/register")) {
+        // Merchant portal (except public register page)
+        if (path.startsWith("/merchant/") && !path.equals("/merchant/register")) {
             if (account == null || !"MERCHANT".equals(account.getRole())) {
                 response.sendRedirect(request.getContextPath() + "/login");
                 return;

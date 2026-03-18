@@ -51,19 +51,31 @@ public class WithdrawalRequestDAO extends AbstractDAO<WithdrawalRequest> impleme
             conn = getConnection();
             conn.setAutoCommit(false); // Bắt đầu Transaction
 
-            // 1. Cập nhật lệnh rút thành APPROVED
-            String sqlReq = "UPDATE WithdrawalRequests SET status = 'APPROVED', processed_at = GETDATE() WHERE id = ?";
+            // 1. Cập nhật lệnh rút thành APPROVED (chỉ khi còn PENDING)
+            String sqlReq = "UPDATE WithdrawalRequests "
+                    + "SET status = 'APPROVED', processed_at = SYSUTCDATETIME() "
+                    + "WHERE id = ? AND shipper_user_id = ? AND status = 'PENDING'";
             try (PreparedStatement ps1 = conn.prepareStatement(sqlReq)) {
                 ps1.setLong(1, requestId);
-                ps1.executeUpdate();
+                ps1.setLong(2, shipperId);
+                if (ps1.executeUpdate() <= 0) {
+                    conn.rollback();
+                    return false;
+                }
             }
 
-            // 2. Trừ tiền thực tế trong ví Shipper
-            String sqlWallet = "UPDATE ShipperWallets SET balance = balance - ?, updated_at = GETDATE() WHERE shipper_user_id = ?";
+            // 2. Trừ tiền thực tế trong ví Shipper với điều kiện đủ số dư
+            String sqlWallet = "UPDATE ShipperWallets "
+                    + "SET balance = balance - ?, updated_at = SYSUTCDATETIME() "
+                    + "WHERE shipper_user_id = ? AND balance >= ?";
             try (PreparedStatement ps2 = conn.prepareStatement(sqlWallet)) {
                 ps2.setDouble(1, amount);
                 ps2.setLong(2, shipperId);
-                ps2.executeUpdate();
+                ps2.setDouble(3, amount);
+                if (ps2.executeUpdate() <= 0) {
+                    conn.rollback();
+                    return false;
+                }
             }
 
             conn.commit();
@@ -89,14 +101,70 @@ public class WithdrawalRequestDAO extends AbstractDAO<WithdrawalRequest> impleme
 
     @Override
     public boolean rejectRequest(long requestId) {
-        String sql = "UPDATE WithdrawalRequests SET status = 'REJECTED', processed_at = GETDATE() WHERE id = ?";
+        String sql = "UPDATE WithdrawalRequests "
+                + "SET status = 'REJECTED', processed_at = SYSUTCDATETIME() "
+                + "WHERE id = ? AND status = 'PENDING'";
         return update(sql, requestId) > 0;
     }
 
     @Override
     public boolean createRequest(WithdrawalRequest req) {
-        String sql = "INSERT INTO WithdrawalRequests (shipper_user_id, amount, bank_name, bank_account_number, status) VALUES (?, ?, ?, ?, 'PENDING')";
-        return update(sql, req.getShipperUserId(), req.getAmount(), req.getBankName(), req.getBankAccountNumber()) > 0;
+        if (req == null || req.getAmount() <= 0) {
+            return false;
+        }
+
+        Connection conn = null;
+        try {
+            conn = getConnection();
+            conn.setAutoCommit(false);
+
+            String checkWalletSql = "SELECT balance FROM ShipperWallets WITH (UPDLOCK, ROWLOCK) WHERE shipper_user_id = ?";
+            try (PreparedStatement checkWallet = conn.prepareStatement(checkWalletSql)) {
+                checkWallet.setLong(1, req.getShipperUserId());
+                try (ResultSet rs = checkWallet.executeQuery()) {
+                    if (!rs.next()) {
+                        conn.rollback();
+                        return false;
+                    }
+                    if (rs.getDouble("balance") < req.getAmount()) {
+                        conn.rollback();
+                        return false;
+                    }
+                }
+            }
+
+            String sql = "INSERT INTO WithdrawalRequests (shipper_user_id, amount, bank_name, bank_account_number, status) "
+                    + "VALUES (?, ?, ?, ?, 'PENDING')";
+            try (PreparedStatement insertReq = conn.prepareStatement(sql)) {
+                insertReq.setLong(1, req.getShipperUserId());
+                insertReq.setDouble(2, req.getAmount());
+                insertReq.setString(3, req.getBankName());
+                insertReq.setString(4, req.getBankAccountNumber());
+                if (insertReq.executeUpdate() <= 0) {
+                    conn.rollback();
+                    return false;
+                }
+            }
+
+            conn.commit();
+            return true;
+        } catch (SQLException e) {
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException ex) {
+                }
+            }
+            e.printStackTrace();
+            return false;
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                } catch (SQLException ex) {
+                }
+            }
+        }
     }
 
     @Override

@@ -9,8 +9,15 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>ClickEat - Trang chủ</title>
 
+        <script>
+            const originalWarn = console.warn;
+            console.warn = function() {
+                if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes('cdn.tailwindcss.com should not be used in production')) return;
+                originalWarn.apply(console, arguments);
+            };
+        </script>
         <script src="https://cdn.tailwindcss.com"></script>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
 
         <style>
             :root{
@@ -1068,26 +1075,24 @@
                         <c:forEach var="m" items="${merchants}">
                             <article class="restaurant-card bg-white overflow-hidden border border-gray-100 shadow-soft card-hover">
                                 <div class="relative h-[240px] overflow-hidden">
-                                    <img src="${m.imageUrl}" alt="${m.shopName}" class="w-full h-full object-cover">
+                                    <img src="${m.shopAvatar}" alt="${m.shopName}" class="w-full h-full object-cover">
                                     <span class="absolute top-4 right-4 pill bg-orange-50 text-orange-500">NỔI BẬT</span>
                                 </div>
                                 <div class="p-7">
                                     <h3 class="text-[22px] font-black text-gray-900 leading-tight line-clamp-1">${m.shopName}</h3>
 
                                     <div class="flex items-center gap-5 text-[15px] text-gray-500 mt-4 font-semibold flex-wrap">
-                                        <span><i class="fa-regular fa-clock text-orange-500 mr-1"></i> ${m.deliveryTime}</span>
-                                        <span><i class="fa-solid fa-location-dot text-orange-500 mr-1"></i> ${m.distance}</span>
-                                        <span><i class="fa-solid fa-map text-orange-500 mr-1"></i> ${m.districtName}</span>
+                                        <span><i class="fa-solid fa-location-dot text-orange-500 mr-1"></i> ${m.districtName}</span>
+                                        <span><i class="fa-solid fa-map text-orange-500 mr-1"></i> ${m.provinceName}</span>
                                     </div>
 
                                     <div class="flex items-center justify-between gap-4 mt-6 flex-wrap">
                                         <div class="flex flex-wrap gap-2">
-                                            <span class="pill pill-orange">${m.categoryName}</span>
-                                            <span class="pill pill-green line-clamp-1">${m.voucherTitle}</span>
+                                            <span class="pill pill-orange">Cửa hàng</span>
                                         </div>
                                         <span class="pill bg-orange-50 text-orange-500">
                                             <i class="fa-solid fa-star mr-1"></i>
-                                            <fmt:formatNumber value="${m.rating}" type="number" minFractionDigits="1" maxFractionDigits="1" />
+                                            <fmt:formatNumber value="${m.avgRating}" type="number" minFractionDigits="1" maxFractionDigits="1" />
                                         </span>
                                     </div>
                                 </div>

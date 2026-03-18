@@ -3,6 +3,7 @@ package com.clickeat.dal.impl;
 import com.clickeat.model.Voucher;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.List;
 
 public class VoucherDAO extends AbstractDAO<Voucher> {
@@ -270,6 +271,57 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
     public boolean togglePublishByMerchant(int voucherId, int merchantId, boolean publish) {
         String sql = "UPDATE Vouchers SET is_published = ?, updated_at = SYSUTCDATETIME() WHERE id = ? AND merchant_user_id = ?";
         return update(sql, publish, voucherId, merchantId) > 0;
+    }
+
+    public Voucher findByMerchantAndCode(int merchantUserId, String code) {
+        String sql = """
+            SELECT v.*,
+                   mp.shop_name AS merchant_name,
+                   ISNULL(vu.used_order_count, 0) AS used_order_count
+            FROM Vouchers v
+            INNER JOIN MerchantProfiles mp ON mp.user_id = v.merchant_user_id
+            LEFT JOIN (
+                SELECT voucher_id, COUNT(*) AS used_order_count
+                FROM VoucherUsages
+                GROUP BY voucher_id
+            ) vu ON vu.voucher_id = v.id
+            WHERE v.merchant_user_id = ? AND UPPER(v.code) = UPPER(?)
+        """;
+        return queryOne(sql, merchantUserId, code);
+    }
+
+    public int countUsageByCustomer(int voucherId, int customerUserId) {
+        String sql = "SELECT COUNT(*) FROM VoucherUsages WHERE voucher_id = ? AND customer_user_id = ?";
+        List<Object[]> rows = queryRaw(sql, voucherId, customerUserId);
+        if (rows.isEmpty() || rows.get(0).length == 0 || rows.get(0)[0] == null) {
+            return 0;
+        }
+        return ((Number) rows.get(0)[0]).intValue();
+    }
+
+    public boolean createVoucherUsage(int voucherId, int orderId, int customerUserId) {
+        String sql = "INSERT INTO VoucherUsages(voucher_id, order_id, customer_user_id, used_at) VALUES (?, ?, ?, SYSUTCDATETIME())";
+        return update(sql, voucherId, orderId, customerUserId) > 0;
+    }
+
+    public boolean isVoucherCurrentlyActive(Voucher voucher) {
+        if (voucher == null) {
+            return false;
+        }
+        if (!"ACTIVE".equalsIgnoreCase(voucher.getStatus()) || !voucher.isPublished()) {
+            return false;
+        }
+
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        Timestamp startAt = voucher.getStartAt();
+        Timestamp endAt = voucher.getEndAt();
+        if (startAt != null && now.before(startAt)) {
+            return false;
+        }
+        if (endAt != null && now.after(endAt)) {
+            return false;
+        }
+        return true;
     }
 
     private String buildDiscountLabel(String discountType, double discountValue) {

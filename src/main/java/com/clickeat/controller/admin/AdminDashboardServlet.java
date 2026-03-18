@@ -3,6 +3,7 @@ package com.clickeat.controller.admin;
 import com.clickeat.dal.impl.AdminStatsDAO;
 import com.clickeat.dal.impl.CategoryDAO;
 import com.clickeat.dal.impl.MerchantKYCDAO;
+import com.clickeat.dal.impl.MerchantWithdrawalDAO;
 import com.clickeat.dal.impl.OrderIssueDAO;
 import com.clickeat.dal.impl.UserDAO;
 import com.clickeat.dal.impl.WithdrawalRequestDAO;
@@ -39,6 +40,8 @@ public class AdminDashboardServlet extends HttpServlet {
         // 2. Lấy danh sách Yêu cầu rút tiền chờ duyệt
         WithdrawalRequestDAO withdrawDAO = new WithdrawalRequestDAO();
         request.setAttribute("pendingWithdrawals", withdrawDAO.getPendingRequests());
+        MerchantWithdrawalDAO merchantWithdrawDAO = new MerchantWithdrawalDAO();
+        request.setAttribute("pendingMerchantWithdrawals", merchantWithdrawDAO.getPendingRequests());
 
         // 3. Lấy danh sách Sự cố (Dispute) chờ giải quyết
         OrderIssueDAO issueDAO = new OrderIssueDAO();
@@ -127,6 +130,25 @@ public class AdminDashboardServlet extends HttpServlet {
             } else {
                 if (wDAO.rejectRequest(reqId)) {
                     request.getSession().setAttribute("toastMsg", "Đã TỪ CHỐI lệnh rút tiền.");
+                }
+            }
+        } else if ("APPROVE_MERCHANT_WITHDRAW".equals(action) || "REJECT_MERCHANT_WITHDRAW".equals(action)) {
+            currentTab = "finance";
+            long reqId = Long.parseLong(request.getParameter("requestId"));
+            MerchantWithdrawalDAO merchantWithdrawDAO = new MerchantWithdrawalDAO();
+
+            if ("APPROVE_MERCHANT_WITHDRAW".equals(action)) {
+                int merchantUserId = Integer.parseInt(request.getParameter("merchantUserId"));
+                double amount = Double.parseDouble(request.getParameter("amount"));
+
+                if (merchantWithdrawDAO.approveRequest(reqId, merchantUserId, amount)) {
+                    request.getSession().setAttribute("toastMsg", "Đã duyệt rút tiền Merchant thành công!");
+                } else {
+                    request.getSession().setAttribute("toastError", "Lỗi: Không thể duyệt lệnh rút tiền Merchant (kiểm tra số dư/trạng thái).");
+                }
+            } else {
+                if (merchantWithdrawDAO.rejectRequest(reqId)) {
+                    request.getSession().setAttribute("toastMsg", "Đã từ chối lệnh rút tiền Merchant.");
                 }
             }
         } // XỬ LÝ SỰ CỐ (DISPUTE)

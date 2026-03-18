@@ -1,12 +1,20 @@
 package com.clickeat.dal.impl;
 
-import com.clickeat.config.DBContext;
-import com.clickeat.dal.interfaces.IGenericDAO;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.clickeat.config.DBContext;
+import com.clickeat.dal.interfaces.IGenericDAO;
+
 public abstract class AbstractDAO<T> extends DBContext implements IGenericDAO<T> {
+
+    private static final int DEFAULT_QUERY_TIMEOUT_SECONDS = 8;
 
     // Class con bắt buộc phải viết hàm này để map dữ liệu
     protected abstract T mapRow(ResultSet rs) throws SQLException;
@@ -15,6 +23,7 @@ public abstract class AbstractDAO<T> extends DBContext implements IGenericDAO<T>
     public List<T> query(String sql, Object... params) {
         List<T> list = new ArrayList<>();
         try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setQueryTimeout(DEFAULT_QUERY_TIMEOUT_SECONDS);
             setParameter(ps, params);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -36,6 +45,7 @@ public abstract class AbstractDAO<T> extends DBContext implements IGenericDAO<T>
     protected List<Object[]> queryRaw(String sql, Object... params) {
         List<Object[]> rows = new ArrayList<>();
         try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setQueryTimeout(DEFAULT_QUERY_TIMEOUT_SECONDS);
             setParameter(ps, params);
             try (ResultSet rs = ps.executeQuery()) {
                 ResultSetMetaData metaData = rs.getMetaData();
@@ -57,6 +67,7 @@ public abstract class AbstractDAO<T> extends DBContext implements IGenericDAO<T>
     // Hàm INSERT/UPDATE/DELETE chung
     public int update(String sql, Object... params) {
         try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setQueryTimeout(DEFAULT_QUERY_TIMEOUT_SECONDS);
             setParameter(ps, params);
             int rows = ps.executeUpdate();
             if (rows > 0 && sql.trim().toUpperCase().startsWith("INSERT")) {

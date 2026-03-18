@@ -27,6 +27,10 @@ GO
 
 IF OBJECT_ID('dbo.WithdrawalRequests','U') IS NOT NULL DROP TABLE dbo.WithdrawalRequests;
 IF OBJECT_ID('dbo.ShipperWallets','U') IS NOT NULL DROP TABLE dbo.ShipperWallets;
+IF OBJECT_ID('dbo.MerchantWithdrawals','U') IS NOT NULL DROP TABLE dbo.MerchantWithdrawals;
+IF OBJECT_ID('dbo.MerchantWallets','U') IS NOT NULL DROP TABLE dbo.MerchantWallets;
+IF OBJECT_ID('dbo.RefundRequests','U') IS NOT NULL DROP TABLE dbo.RefundRequests;
+IF OBJECT_ID('dbo.Messages','U') IS NOT NULL DROP TABLE dbo.Messages;
 IF OBJECT_ID('dbo.UserAppeals','U') IS NOT NULL DROP TABLE dbo.UserAppeals;
 IF OBJECT_ID('dbo.OrderIssues','U') IS NOT NULL DROP TABLE dbo.OrderIssues;
 IF OBJECT_ID('dbo.ShipperReviews','U') IS NOT NULL DROP TABLE dbo.ShipperReviews;
@@ -59,60 +63,7 @@ IF OBJECT_ID('dbo.Addresses','U') IS NOT NULL DROP TABLE dbo.Addresses;
 IF OBJECT_ID('dbo.GuestSessions','U') IS NOT NULL DROP TABLE dbo.GuestSessions;
 IF OBJECT_ID('dbo.UserAuthProviders','U') IS NOT NULL DROP TABLE dbo.UserAuthProviders;
 IF OBJECT_ID('dbo.Users','U') IS NOT NULL DROP TABLE dbo.Users;
-/*Chinh lai*/
 GO
-CREATE TABLE dbo.MerchantWallets (
-    merchant_user_id BIGINT NOT NULL PRIMARY KEY,
-    balance DECIMAL(18,2) NOT NULL CONSTRAINT DF_MerchantWallets_Balance DEFAULT 0,
-    updated_at DATETIME2 NOT NULL CONSTRAINT DF_MerchantWallets_Updated DEFAULT SYSUTCDATETIME(),
-    CONSTRAINT FK_MerchantWallets_Merchant FOREIGN KEY (merchant_user_id) REFERENCES dbo.MerchantProfiles(user_id) ON DELETE CASCADE
-);
-GO
-CREATE TABLE dbo.MerchantWithdrawals (
-    id BIGINT IDENTITY(1,1) PRIMARY KEY,
-    merchant_user_id BIGINT NOT NULL,
-    amount DECIMAL(18,2) NOT NULL,
-    bank_name NVARCHAR(100) NULL, 
-    bank_account_number NVARCHAR(50)  NULL, 
-    status NVARCHAR(20) NOT NULL CONSTRAINT DF_MerchantWithdrawals_Status DEFAULT 'PENDING',
-    created_at DATETIME2 NOT NULL CONSTRAINT DF_MerchantWithdrawals_Created DEFAULT SYSUTCDATETIME(),
-    processed_at DATETIME2 NULL,
-    CONSTRAINT FK_MerchantWithdrawals_Merchant FOREIGN KEY (merchant_user_id) REFERENCES dbo.MerchantProfiles(user_id) ON DELETE CASCADE
-);
-GO
-UPDATE MerchantWallets SET balance = 5000000 WHERE merchant_user_id = 2;
-ALTER TABLE dbo.Ratings ADD reply_comment NVARCHAR(MAX) NULL;
-GO
-
-
-IF NOT EXISTS (
-    SELECT * FROM sys.columns 
-    WHERE object_id = OBJECT_ID(N'[dbo].[MerchantProfiles]') AND name = 'business_hours'
-)
-BEGIN
-    ALTER TABLE dbo.MerchantProfiles ADD business_hours NVARCHAR(MAX) NULL;
-    PRINT N'✅ Đã thêm cột business_hours thành công!';
-END
-ELSE
-BEGIN
-    PRINT N'✅ Cột business_hours đã tồn tại!';
-END
-ALTER TABLE dbo.MerchantProfiles ADD shop_avatar NVARCHAR(MAX) NULL;
-ALTER TABLE dbo.MerchantProfiles ADD shop_description NVARCHAR(MAX) NULL;
-ALTER TABLE dbo.MerchantProfiles ADD notification_settings NVARCHAR(MAX) NULL;
-GO
-CREATE TABLE dbo.RefundRequests (
-    id BIGINT IDENTITY(1,1) PRIMARY KEY,
-    order_id BIGINT NOT NULL,
-    merchant_user_id BIGINT NOT NULL,
-    refund_amount DECIMAL(18,2) NOT NULL,
-    reason NVARCHAR(255) NOT NULL,
-    status NVARCHAR(20) DEFAULT 'COMPLETED', -- Xử lý ngay lập tức theo logic của bạn
-    created_at DATETIME2 DEFAULT SYSUTCDATETIME(),
-    CONSTRAINT FK_Refund_Order FOREIGN KEY (order_id) REFERENCES dbo.Orders(id)
-);
-GO
-
 
 /* =========================
    2) USERS, AUTH & APPEALS
@@ -135,7 +86,7 @@ CREATE UNIQUE INDEX UX_Users_Email ON dbo.Users(email) WHERE email IS NOT NULL;
 ALTER TABLE dbo.Users ADD CONSTRAINT CK_Users_Role CHECK (role IN (N'GUEST',N'CUSTOMER',N'MERCHANT',N'SHIPPER',N'ADMIN'));
 ALTER TABLE dbo.Users ADD CONSTRAINT CK_Users_Status CHECK (status IN (N'ACTIVE',N'INACTIVE'));
 GO
-UPDATE MerchantWallets SET balance = 5000000 WHERE merchant_user_id = <ID_Của_Nhà_Hàng_Bạn>;
+
 CREATE TABLE dbo.UserAuthProviders (
     id               BIGINT IDENTITY(1,1) PRIMARY KEY,
     user_id          BIGINT         NOT NULL,
@@ -231,6 +182,7 @@ CREATE TABLE dbo.MerchantProfiles (
     ward_name         NVARCHAR(100) NOT NULL,
     latitude          DECIMAL(10,7) NULL,
     longitude         DECIMAL(10,7) NULL,
+    commission_rate   DECIMAL(5,2)  NULL CONSTRAINT DF_MerchantProfiles_CommissionRate DEFAULT 0.15,
     status            NVARCHAR(20)  NOT NULL CONSTRAINT DF_MerchantProfiles_Status DEFAULT 'PENDING',
     created_at        DATETIME2     NOT NULL CONSTRAINT DF_MerchantProfiles_Created DEFAULT SYSUTCDATETIME(),
     updated_at        DATETIME2     NOT NULL CONSTRAINT DF_MerchantProfiles_Updated DEFAULT SYSUTCDATETIME(),
@@ -253,6 +205,19 @@ CREATE TABLE dbo.MerchantKYC (
     CONSTRAINT FK_MerchantKYC_Admin FOREIGN KEY (reviewed_by_admin_id) REFERENCES dbo.Users(id)
 );
 ALTER TABLE dbo.MerchantKYC ADD CONSTRAINT CK_MerchantKYC_Status CHECK (review_status IN (N'SUBMITTED',N'UNDER_REVIEW',N'APPROVED',N'REJECTED'));
+GO
+
+/* =========================
+    5.1) MERCHANT WALLET
+    (Cần tạo trước khi seed dùng MerchantWallets)
+    ========================= */
+CREATE TABLE dbo.MerchantWallets (
+     merchant_user_id BIGINT        NOT NULL PRIMARY KEY,
+     balance          DECIMAL(18,2) NOT NULL CONSTRAINT DF_MerchantWallets_Balance DEFAULT 0,
+     updated_at       DATETIME2     NOT NULL CONSTRAINT DF_MerchantWallets_Updated DEFAULT SYSUTCDATETIME(),
+     CONSTRAINT FK_MerchantWallets_Merchant FOREIGN KEY (merchant_user_id)
+          REFERENCES dbo.MerchantProfiles(user_id) ON DELETE CASCADE
+);
 GO
 
 /* =========================
@@ -371,6 +336,7 @@ CREATE TABLE dbo.Orders (
     subtotal_amount     DECIMAL(18,2)    NOT NULL CONSTRAINT DF_Orders_Subtotal DEFAULT 0,
     delivery_fee        DECIMAL(18,2)    NOT NULL CONSTRAINT DF_Orders_DeliveryFee DEFAULT 0,
     discount_amount     DECIMAL(18,2)    NOT NULL CONSTRAINT DF_Orders_Discount DEFAULT 0,
+    app_fee             DECIMAL(18,2)    NULL CONSTRAINT DF_Orders_AppFee DEFAULT 0,
     total_amount        DECIMAL(18,2)    NOT NULL CONSTRAINT DF_Orders_Total DEFAULT 0,
     proof_image_url     NVARCHAR(500)    NULL, -- Đã tích hợp ảnh bằng chứng giao hàng
     created_at          DATETIME2        NOT NULL CONSTRAINT DF_Orders_Created DEFAULT SYSUTCDATETIME(),
@@ -1007,6 +973,100 @@ BEGIN TRY
     (@o4,N'COD',  65000,N'FAILED',NULL,NULL,NULL,NULL,NULL,NULL),
     (@o5,N'VNPAY',104000,N'FAILED',N'VNPAY-TXN-0005',N'ORD0005',NULL,N'99',NULL,N'{"vnp_ResponseCode":"99"}');
 
+    /* ---- Settle delivered seed orders to keep wallets aligned with app logic ---- */
+    DECLARE @SettleOrderCode NVARCHAR(30);
+    DECLARE @SettleProof NVARCHAR(255);
+    DECLARE @SettleOrderId BIGINT;
+    DECLARE @SettleMerchantId BIGINT;
+    DECLARE @SettleShipperId BIGINT;
+    DECLARE @SettleSubtotal DECIMAL(18,2);
+    DECLARE @SettleDiscount DECIMAL(18,2);
+    DECLARE @SettleDelivery DECIMAL(18,2);
+    DECLARE @SettleTotal DECIMAL(18,2);
+    DECLARE @SettleAppFee DECIMAL(18,2);
+    DECLARE @SettleCommission DECIMAL(18,4);
+    DECLARE @SettleCommissionPresent BIT;
+    DECLARE @SettleGross DECIMAL(18,2);
+    DECLARE @SettleEffectiveAppFee DECIMAL(18,2);
+    DECLARE @SettleMerchantIncome DECIMAL(18,2);
+
+    /* helper to settle one order idempotently (only when proof is missing) */
+    DECLARE @SeedOrders TABLE(order_code NVARCHAR(30), proof NVARCHAR(255));
+    INSERT INTO @SeedOrders(order_code, proof)
+    VALUES (N'ORD0001', N'seed/proof_ord0001.jpg'),
+           (N'DEMO1W_VIP_001', N'seed/proof_demo1w_vip_001.jpg');
+
+    DECLARE cur CURSOR LOCAL FAST_FORWARD FOR SELECT order_code, proof FROM @SeedOrders;
+    OPEN cur;
+    FETCH NEXT FROM cur INTO @SettleOrderCode, @SettleProof;
+    WHILE @@FETCH_STATUS = 0
+    BEGIN
+        SET @SettleOrderId = NULL;
+        SELECT @SettleOrderId = id,
+               @SettleMerchantId = merchant_user_id,
+               @SettleShipperId = shipper_user_id,
+               @SettleSubtotal = ISNULL(subtotal_amount, 0),
+               @SettleDiscount = ISNULL(discount_amount, 0),
+               @SettleDelivery = ISNULL(delivery_fee, 0),
+               @SettleTotal = ISNULL(total_amount, 0),
+               @SettleAppFee = ISNULL(app_fee, 0),
+               @SettleCommission = mp.commission_rate,
+               @SettleCommissionPresent = CASE WHEN mp.commission_rate IS NULL THEN 0 ELSE 1 END,
+               @SettleGross = NULL,
+               @SettleEffectiveAppFee = NULL,
+               @SettleMerchantIncome = NULL
+        FROM dbo.Orders o WITH (UPDLOCK, ROWLOCK)
+        LEFT JOIN dbo.MerchantProfiles mp ON mp.user_id = o.merchant_user_id
+        WHERE o.order_code = @SettleOrderCode AND o.order_status = N'DELIVERED';
+
+        IF @SettleOrderId IS NOT NULL
+        BEGIN
+            DECLARE @CurrentProof NVARCHAR(255) = (SELECT proof_image_url FROM dbo.Orders WHERE id = @SettleOrderId);
+            IF @CurrentProof IS NULL OR LTRIM(RTRIM(@CurrentProof)) = N''
+            BEGIN
+                SET @SettleGross = @SettleTotal - @SettleDelivery;
+                IF @SettleGross < 0 SET @SettleGross = @SettleSubtotal - @SettleDiscount;
+                IF @SettleGross < 0 SET @SettleGross = 0;
+
+                SET @SettleEffectiveAppFee = @SettleAppFee;
+                IF @SettleEffectiveAppFee <= 0 AND @SettleCommissionPresent = 1
+                BEGIN
+                    DECLARE @Rate DECIMAL(18,4) = @SettleCommission;
+                    IF @Rate > 1 SET @Rate = @Rate / 100.0;
+                    IF @Rate > 0 SET @SettleEffectiveAppFee = @SettleGross * @Rate;
+                END
+                IF @SettleEffectiveAppFee < 0 SET @SettleEffectiveAppFee = 0;
+                IF @SettleEffectiveAppFee > @SettleGross SET @SettleEffectiveAppFee = @SettleGross;
+
+                SET @SettleMerchantIncome = @SettleGross - @SettleEffectiveAppFee;
+                IF @SettleMerchantIncome < 0 SET @SettleMerchantIncome = 0;
+
+                BEGIN TRY
+                    BEGIN TRAN;
+                        UPDATE dbo.Orders
+                        SET proof_image_url = @SettleProof
+                        WHERE id = @SettleOrderId;
+
+                        UPDATE dbo.ShipperWallets
+                        SET balance = balance + @SettleDelivery, updated_at = SYSUTCDATETIME()
+                        WHERE shipper_user_id = @SettleShipperId;
+
+                        UPDATE dbo.MerchantWallets
+                        SET balance = balance + @SettleMerchantIncome, updated_at = SYSUTCDATETIME()
+                        WHERE merchant_user_id = @SettleMerchantId;
+                    COMMIT TRAN;
+                END TRY
+                BEGIN CATCH
+                    IF @@TRANCOUNT > 0 ROLLBACK TRAN;
+                END CATCH
+            END
+        END
+
+        FETCH NEXT FROM cur INTO @SettleOrderCode, @SettleProof;
+    END
+    CLOSE cur;
+    DEALLOCATE cur;
+
     /* ---- Vouchers ---- */
     INSERT INTO dbo.Vouchers
     (merchant_user_id,code,title,description,discount_type,discount_value,max_discount_amount,min_order_amount,start_at,end_at,max_uses_total,max_uses_per_user,is_published,status)
@@ -1107,4 +1167,1037 @@ BEGIN CATCH
     PRINT N'❌ ERROR: ' + ERROR_MESSAGE();
     THROW;
 END CATCH;
+GO
+
+/* =========================================================
+   MERGED FROM: danang_merchants_seed.sql
+   Seed thực tế hơn cho Đà Nẵng (~100 quán) - idempotent
+   ========================================================= */
+
+USE ClickEat;
+GO
+SET NOCOUNT ON;
+GO
+
+DECLARE @MerchantCount INT = 100;
+
+DECLARE @District TABLE (
+    district_seq INT PRIMARY KEY,
+    district_code NVARCHAR(20),
+    district_name NVARCHAR(100),
+    ward_name NVARCHAR(100),
+    base_lat DECIMAL(10,7),
+    base_lng DECIMAL(10,7)
+);
+
+INSERT INTO @District VALUES
+(1, N'DN-HC',  N'Hải Châu',     N'Phường Hải Châu',     16.0595000, 108.2215000),
+(2, N'DN-ST',  N'Sơn Trà',      N'Phường An Hải',       16.0672000, 108.2408000),
+(3, N'DN-NHS', N'Ngũ Hành Sơn', N'Phường Mỹ An',        16.0468000, 108.2462000),
+(4, N'DN-TK',  N'Thanh Khê',    N'Phường Thanh Khê',    16.0726000, 108.2097000),
+(5, N'DN-CL',  N'Cẩm Lệ',       N'Phường Hòa Cường',    16.0348000, 108.2199000);
+
+DECLARE @Street TABLE (
+    district_seq INT,
+    street_seq INT,
+    street_name NVARCHAR(120),
+    PRIMARY KEY (district_seq, street_seq)
+);
+
+INSERT INTO @Street VALUES
+(1,1,N'Đường Bạch Đằng'), (1,2,N'Đường Nguyễn Văn Linh'), (1,3,N'Đường Hoàng Diệu'), (1,4,N'Đường Trần Phú'),
+(2,1,N'Đường Võ Văn Kiệt'), (2,2,N'Đường Phạm Văn Đồng'), (2,3,N'Đường Hồ Nghinh'), (2,4,N'Đường Dương Đình Nghệ'),
+(3,1,N'Đường Võ Nguyên Giáp'), (3,2,N'Đường Châu Thị Vĩnh Tế'), (3,3,N'Đường An Thượng 2'), (3,4,N'Đường An Thượng 29'),
+(4,1,N'Đường Điện Biên Phủ'), (4,2,N'Đường Hà Huy Tập'), (4,3,N'Đường Nguyễn Tất Thành'), (4,4,N'Đường Lê Duẩn'),
+(5,1,N'Đường 2 Tháng 9'), (5,2,N'Đường Cách Mạng Tháng 8'), (5,3,N'Đường Lê Thanh Nghị'), (5,4,N'Đường Tiểu La');
+
+DECLARE @Cuisine TABLE (
+    cuisine_seq INT PRIMARY KEY,
+    shop_prefix NVARCHAR(120),
+    cuisine_name NVARCHAR(100)
+);
+
+INSERT INTO @Cuisine VALUES
+(1, N'Quán Hải Sản Biển Xanh', N'Hải sản'),
+(2, N'Bếp Cơm Nhà Đà Nẵng',    N'Cơm Việt'),
+(3, N'Bún Phở Gánh Chiều',     N'Bún/Phở'),
+(4, N'Pizza & Pasta Riverside',N'Âu - Pizza'),
+(5, N'Trà Sữa Mây',            N'Trà sữa/Đồ uống'),
+(6, N'Nhà Hàng Chay An Lạc',   N'Chay');
+
+DECLARE @MerchantSeed TABLE (
+    n INT PRIMARY KEY,
+    shop_name NVARCHAR(120),
+    shop_phone NVARCHAR(20),
+    shop_address_line NVARCHAR(255),
+    district_code NVARCHAR(20),
+    district_name NVARCHAR(100),
+    ward_code NVARCHAR(20),
+    ward_name NVARCHAR(100),
+    latitude DECIMAL(10,7),
+    longitude DECIMAL(10,7),
+    cuisine_seq INT
+);
+
+;WITH N AS (
+    SELECT TOP (@MerchantCount) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n
+    FROM sys.all_objects
+), S AS (
+    SELECT
+        n.n,
+        ((n.n - 1) % 5) + 1 AS district_seq,
+        ((n.n - 1) % 6) + 1 AS cuisine_seq,
+        ((n.n * 3) % 4) + 1 AS street_seq
+    FROM N n
+)
+INSERT INTO @MerchantSeed (
+    n, shop_name, shop_phone, shop_address_line,
+    district_code, district_name, ward_code, ward_name,
+    latitude, longitude, cuisine_seq
+)
+SELECT
+    s.n,
+    c.shop_prefix + N' - CN ' + RIGHT('000' + CAST(s.n AS NVARCHAR(3)), 3),
+    N'0938' + RIGHT('000000' + CAST(s.n AS NVARCHAR(6)), 6),
+    N'Số ' + CAST(10 + ((s.n * 7) % 180) AS NVARCHAR(10)) + N' ' + st.street_name + N', ' + d.district_name + N', Đà Nẵng',
+    d.district_code,
+    d.district_name,
+    N'W-' + d.district_code + N'-' + RIGHT('000' + CAST(s.n AS NVARCHAR(3)), 3),
+    d.ward_name,
+    CAST(d.base_lat + (((s.n * 13) % 90) / 10000.0) AS DECIMAL(10,7)),
+    CAST(d.base_lng + (((s.n * 17) % 90) / 10000.0) AS DECIMAL(10,7)),
+    s.cuisine_seq
+FROM S s
+JOIN @District d ON d.district_seq = s.district_seq
+JOIN @Cuisine c ON c.cuisine_seq = s.cuisine_seq
+JOIN @Street st ON st.district_seq = s.district_seq AND st.street_seq = s.street_seq;
+
+/* 1) Users */
+INSERT INTO dbo.Users (full_name, email, phone, password_hash, role, status)
+SELECT
+    ms.shop_name,
+    NULL,
+    ms.shop_phone,
+    N'$2a$10$placeholder.hash.seed.only',
+    N'MERCHANT',
+    N'ACTIVE'
+FROM @MerchantSeed ms
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM dbo.Users u
+    WHERE u.phone = ms.shop_phone
+);
+
+/* 2) MerchantProfiles */
+INSERT INTO dbo.MerchantProfiles (
+    user_id, shop_name, shop_phone, shop_address_line,
+    province_code, province_name,
+    district_code, district_name,
+    ward_code, ward_name,
+    latitude, longitude, status
+)
+SELECT
+    u.id,
+    ms.shop_name,
+    ms.shop_phone,
+    ms.shop_address_line,
+    N'48', N'Đà Nẵng',
+    ms.district_code, ms.district_name,
+    ms.ward_code, ms.ward_name,
+    ms.latitude, ms.longitude,
+    N'APPROVED'
+FROM @MerchantSeed ms
+JOIN dbo.Users u ON u.phone = ms.shop_phone
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM dbo.MerchantProfiles mp
+    WHERE mp.user_id = u.id
+);
+
+DECLARE @CategorySeed TABLE (category_name NVARCHAR(100), sort_order INT);
+INSERT INTO @CategorySeed VALUES
+(N'Món chính',1),
+(N'Đồ uống',2),
+(N'Ăn kèm',3),
+(N'Tráng miệng',4),
+(N'Combo',5);
+
+/* 3) Categories */
+INSERT INTO dbo.Categories (merchant_user_id, name, is_active, sort_order)
+SELECT
+    mp.user_id,
+    cs.category_name,
+    1,
+    cs.sort_order
+FROM dbo.MerchantProfiles mp
+JOIN dbo.Users u ON u.id = mp.user_id
+CROSS JOIN @CategorySeed cs
+WHERE u.phone BETWEEN N'0938000001' AND N'0938000100'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM dbo.Categories c
+      WHERE c.merchant_user_id = mp.user_id
+        AND c.name = cs.category_name
+  );
+
+DECLARE @MerchantCuisine TABLE (
+    merchant_user_id BIGINT PRIMARY KEY,
+    cuisine_seq INT
+);
+
+INSERT INTO @MerchantCuisine (merchant_user_id, cuisine_seq)
+SELECT u.id, ms.cuisine_seq
+FROM @MerchantSeed ms
+JOIN dbo.Users u ON u.phone = ms.shop_phone;
+
+DECLARE @FoodTemplate TABLE (
+    cuisine_seq INT,
+    category_name NVARCHAR(100),
+    item_name NVARCHAR(150),
+    item_description NVARCHAR(500),
+    base_price DECIMAL(18,2),
+    is_fried BIT,
+    calories INT,
+    protein_g DECIMAL(10,2),
+    carbs_g DECIMAL(10,2),
+    fat_g DECIMAL(10,2)
+);
+
+INSERT INTO @FoodTemplate VALUES
+(1,N'Món chính',N'Lẩu hải sản chua cay',N'Tôm, mực, nghêu, rau nấm tươi',169000,0,860,52,78,28),
+(1,N'Món chính',N'Cơm chiên hải sản',N'Cơm rang cùng tôm mực và rau củ',79000,0,720,26,94,20),
+(1,N'Món chính',N'Mì xào hải sản',N'Mì xào đậm vị sốt đặc trưng',85000,0,690,28,88,18),
+(1,N'Ăn kèm',N'Hàu nướng mỡ hành',N'Hàu tươi nướng thơm',99000,0,430,24,14,26),
+(1,N'Ăn kèm',N'Tôm sú nướng muối ớt',N'Tôm sú nướng vị cay nhẹ',129000,0,510,36,8,28),
+(1,N'Combo',N'Combo hải sản 2 người',N'Gồm lẩu + món nướng + nước',329000,0,1450,74,130,56),
+(1,N'Đồ uống',N'Nước sâm mát lạnh',N'Thức uống giải nhiệt',25000,0,120,1,29,0),
+(1,N'Tráng miệng',N'Rau câu dừa',N'Rau câu dừa thanh mát',28000,0,190,2,36,2),
+(2,N'Món chính',N'Cơm tấm sườn bì chả',N'Món cơm tấm truyền thống',65000,0,760,35,84,22),
+(2,N'Món chính',N'Cơm gà xối mỡ',N'Cơm gà giòn da, sốt đặc biệt',69000,1,820,34,82,30),
+(2,N'Món chính',N'Cơm bò lúc lắc',N'Bò mềm xào tiêu đen',79000,0,790,32,86,26),
+(2,N'Ăn kèm',N'Canh rong biển thịt bằm',N'Canh nóng ăn kèm cơm',29000,0,180,10,14,7),
+(2,N'Ăn kèm',N'Trứng ốp la',N'Một phần trứng ốp la',15000,0,110,7,1,8),
+(2,N'Combo',N'Combo cơm văn phòng',N'Cơm + canh + nước',89000,0,980,42,112,24),
+(2,N'Đồ uống',N'Trà đá',N'Trà đá phục vụ tại bàn',5000,0,0,0,0,0),
+(2,N'Tráng miệng',N'Sữa chua nha đam',N'Sữa chua thanh mát',22000,0,140,4,22,4),
+(3,N'Món chính',N'Bún bò đặc biệt',N'Nước dùng ninh xương đậm đà',59000,0,640,30,82,16),
+(3,N'Món chính',N'Phở tái nạm',N'Phở bò truyền thống',62000,0,610,31,78,14),
+(3,N'Món chính',N'Mì Quảng gà',N'Mì Quảng chuẩn vị miền Trung',55000,0,590,24,80,14),
+(3,N'Ăn kèm',N'Quẩy giòn',N'Phần quẩy ăn kèm',12000,1,180,3,20,9),
+(3,N'Ăn kèm',N'Gân bò hầm',N'Phần topping thêm',25000,0,160,12,2,10),
+(3,N'Combo',N'Combo bún bò + nước',N'Một tô + nước giải khát',79000,0,760,33,98,18),
+(3,N'Đồ uống',N'Nước mơ đá',N'Nước mơ chua ngọt',22000,0,120,0,30,0),
+(3,N'Tráng miệng',N'Chè đậu xanh',N'Chè ngọt thanh',20000,0,190,5,34,2),
+(4,N'Món chính',N'Pizza hải sản size M',N'Đế mỏng, phô mai kéo sợi',149000,0,980,42,102,44),
+(4,N'Món chính',N'Pizza pepperoni size M',N'Vị mặn thơm đặc trưng',139000,0,940,40,96,42),
+(4,N'Món chính',N'Mỳ Ý bò bằm',N'Sốt cà chua bò bằm',79000,0,760,28,92,24),
+(4,N'Ăn kèm',N'Khoai tây múi cau',N'Khoai nướng giòn',39000,1,360,5,44,18),
+(4,N'Ăn kèm',N'Gà viên chiên',N'Chicken bites giòn',49000,1,420,20,24,24),
+(4,N'Combo',N'Combo pizza 2 người',N'Pizza + mỳ ý + 2 nước',299000,0,1600,66,176,64),
+(4,N'Đồ uống',N'Nước ngọt có ga',N'Lon 330ml',20000,0,140,0,35,0),
+(4,N'Tráng miệng',N'Bánh tiramisu',N'Tiramisu mềm mịn',45000,0,320,6,36,16),
+(5,N'Đồ uống',N'Trà sữa trân châu đường đen',N'Trà sữa béo thơm',42000,0,340,5,58,10),
+(5,N'Đồ uống',N'Trà đào cam sả',N'Trà trái cây thanh mát',36000,0,160,1,38,0),
+(5,N'Đồ uống',N'Trà vải hoa hồng',N'Hương thơm dịu nhẹ',38000,0,170,1,40,0),
+(5,N'Đồ uống',N'Sữa tươi trân châu',N'Sữa tươi kết hợp topping',39000,0,300,6,45,9),
+(5,N'Đồ uống',N'Cafe muối',N'Đặc sản miền Trung',35000,0,180,3,22,8),
+(5,N'Ăn kèm',N'Bánh su kem',N'Bánh ngọt ăn kèm trà',28000,0,250,4,30,10),
+(5,N'Combo',N'Combo 2 trà sữa',N'2 ly size M tùy chọn',79000,0,650,10,110,18),
+(5,N'Tráng miệng',N'Pudding trứng',N'Pudding mềm mịn',22000,0,180,4,24,7),
+(6,N'Món chính',N'Cơm chay thập cẩm',N'Rau củ kho, đậu hũ, cơm nóng',59000,0,620,20,92,14),
+(6,N'Món chính',N'Bún riêu chay',N'Nước dùng thanh ngọt từ rau củ',55000,0,540,16,84,10),
+(6,N'Món chính',N'Mì xào nấm chay',N'Nấm tươi xào rau củ',57000,0,560,18,86,12),
+(6,N'Ăn kèm',N'Chả giò chay',N'Chả giò nhân rau củ',39000,1,340,8,40,16),
+(6,N'Ăn kèm',N'Đậu hũ sốt nấm',N'Đậu hũ non sốt nấm',42000,0,290,14,18,14),
+(6,N'Combo',N'Combo chay 2 người',N'2 món chính + 2 nước',169000,0,1180,36,170,28),
+(6,N'Đồ uống',N'Trà atiso',N'Trà thảo mộc thanh lọc',26000,0,90,0,22,0),
+(6,N'Tráng miệng',N'Chè hạt sen',N'Chè ngọt thanh nhẹ',25000,0,170,5,30,1),
+(0,N'Đồ uống',N'Nước suối',N'Nước uống đóng chai',12000,0,0,0,0,0),
+(0,N'Đồ uống',N'Coca Cola',N'Lon 330ml',18000,0,140,0,35,0),
+(0,N'Đồ uống',N'Nước cam ép',N'Cam tươi nguyên chất',32000,0,130,2,30,0),
+(0,N'Ăn kèm',N'Khoai tây chiên',N'Khoai tây giòn nóng',35000,1,420,6,48,22),
+(0,N'Ăn kèm',N'Nem rán',N'Nem rán giòn',36000,1,390,10,36,22),
+(0,N'Tráng miệng',N'Bánh flan',N'Flan caramel mềm mịn',22000,0,190,5,26,7),
+(0,N'Tráng miệng',N'Sữa chua dẻo',N'Sữa chua mát lạnh',25000,0,160,4,22,6),
+(0,N'Combo',N'Combo tiết kiệm',N'Món chính + nước + tráng miệng',99000,0,900,28,110,24);
+
+/* 4) FoodItems */
+INSERT INTO dbo.FoodItems (
+    merchant_user_id,
+    category_id,
+    name,
+    description,
+    price,
+    image_url,
+    is_available,
+    is_fried,
+    calories,
+    protein_g,
+    carbs_g,
+    fat_g
+)
+SELECT
+    mc.merchant_user_id,
+    c.id,
+    ft.item_name,
+    ft.item_description,
+    CAST(ft.base_price + ((mc.merchant_user_id % 6) * 1000) AS DECIMAL(18,2)),
+    NULL,
+    1,
+    ft.is_fried,
+    ft.calories,
+    ft.protein_g,
+    ft.carbs_g,
+    ft.fat_g
+FROM @MerchantCuisine mc
+JOIN dbo.Categories c ON c.merchant_user_id = mc.merchant_user_id
+JOIN @FoodTemplate ft
+    ON ft.category_name = c.name
+   AND (ft.cuisine_seq = 0 OR ft.cuisine_seq = mc.cuisine_seq)
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM dbo.FoodItems fi
+    WHERE fi.merchant_user_id = mc.merchant_user_id
+      AND fi.name = ft.item_name
+);
+
+DECLARE @MerchantInserted INT = (
+    SELECT COUNT(*)
+    FROM dbo.MerchantProfiles mp
+    JOIN dbo.Users u ON u.id = mp.user_id
+    WHERE u.phone BETWEEN N'0938000001' AND N'0938000100'
+);
+
+DECLARE @FoodInserted INT = (
+    SELECT COUNT(*)
+    FROM dbo.FoodItems fi
+    JOIN dbo.Users u ON u.id = fi.merchant_user_id
+    WHERE u.phone BETWEEN N'0938000001' AND N'0938000100'
+);
+
+PRINT N'✅ Seed thực tế hơn hoàn tất.';
+PRINT N'   - Số quán trong dải seed: ' + CAST(@MerchantInserted AS NVARCHAR(20));
+PRINT N'   - Tổng số món trong dải seed: ' + CAST(@FoodInserted AS NVARCHAR(20));
+GO
+
+/* =========================================================
+   MERGED SECTION (giữ nguyên logic khi chạy)
+   Gộp trực tiếp từ:
+   1) patch_missing_tables.sql
+   2) merchant_checklist_patch.sql
+   3) full_demo_seed_1week.sql
+   ========================================================= */
+
+/* =========================================================
+   CLICKEAT - PATCH: MISSING & INCOMPLETE TABLES
+   Chạy file này SAU khi đã chạy ClickEat2.sql để bổ sung
+   các bảng còn thiếu và sửa lỗi thứ tự tạo bảng.
+   ========================================================= */
+
+USE ClickEat;
+GO
+
+/* =========================
+   1) Messages (Merchant–Customer Chat)
+   Bảng này bị thiếu hoàn toàn trong ClickEat2.sql nhưng
+   MessageDAO.java đang truy vấn trực tiếp vào nó.
+   ========================= */
+IF OBJECT_ID('dbo.Messages', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Messages (
+        id          BIGINT IDENTITY(1,1) PRIMARY KEY,
+        sender_id   BIGINT        NOT NULL,
+        receiver_id BIGINT        NOT NULL,
+        content     NVARCHAR(MAX) NOT NULL,
+        is_read     BIT           NOT NULL CONSTRAINT DF_Messages_IsRead DEFAULT 0,
+        created_at  DATETIME2     NOT NULL CONSTRAINT DF_Messages_Created DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT FK_Messages_Sender   FOREIGN KEY (sender_id)   REFERENCES dbo.Users(id),
+        CONSTRAINT FK_Messages_Receiver FOREIGN KEY (receiver_id) REFERENCES dbo.Users(id)
+    );
+    CREATE INDEX IX_Messages_Pair ON dbo.Messages(sender_id, receiver_id, created_at);
+    PRINT N'✅ Tạo bảng Messages thành công.';
+END
+ELSE
+    PRINT N'ℹ️  Bảng Messages đã tồn tại.';
+GO
+
+/* =========================
+   2) MerchantWallets (Fix thứ tự trong ClickEat2.sql)
+   Trong ClickEat2.sql, bảng này được tạo TRƯỚC MerchantProfiles
+   nên sẽ lỗi FK nếu chạy lại từ đầu trên DB trống.
+   ========================= */
+IF OBJECT_ID('dbo.MerchantWallets', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.MerchantWallets (
+        merchant_user_id BIGINT        NOT NULL PRIMARY KEY,
+        balance          DECIMAL(18,2) NOT NULL CONSTRAINT DF_MerchantWallets_Balance DEFAULT 0,
+        updated_at       DATETIME2     NOT NULL CONSTRAINT DF_MerchantWallets_Updated DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT FK_MerchantWallets_Merchant FOREIGN KEY (merchant_user_id)
+            REFERENCES dbo.MerchantProfiles(user_id) ON DELETE CASCADE
+    );
+    PRINT N'✅ Tạo bảng MerchantWallets thành công.';
+END
+ELSE
+    PRINT N'ℹ️  Bảng MerchantWallets đã tồn tại.';
+GO
+
+/* =========================
+   3) MerchantWithdrawals (tương tự)
+   ========================= */
+IF OBJECT_ID('dbo.MerchantWithdrawals', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.MerchantWithdrawals (
+        id                  BIGINT IDENTITY(1,1) PRIMARY KEY,
+        merchant_user_id    BIGINT        NOT NULL,
+        amount              DECIMAL(18,2) NOT NULL,
+        bank_name           NVARCHAR(100) NULL,
+        bank_account_number NVARCHAR(50)  NULL,
+        status              NVARCHAR(20)  NOT NULL CONSTRAINT DF_MerchantWithdrawals_Status DEFAULT 'PENDING',
+        created_at          DATETIME2     NOT NULL CONSTRAINT DF_MerchantWithdrawals_Created DEFAULT SYSUTCDATETIME(),
+        processed_at        DATETIME2     NULL,
+        CONSTRAINT FK_MerchantWithdrawals_Merchant FOREIGN KEY (merchant_user_id)
+            REFERENCES dbo.MerchantProfiles(user_id) ON DELETE CASCADE
+    );
+    PRINT N'✅ Tạo bảng MerchantWithdrawals thành công.';
+END
+ELSE
+    PRINT N'ℹ️  Bảng MerchantWithdrawals đã tồn tại.';
+GO
+
+/* =========================
+   4) RefundRequests (có thể thiếu nếu ClickEat2.sql chạy lỗi bước đầu)
+   ========================= */
+IF OBJECT_ID('dbo.RefundRequests', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.RefundRequests (
+        id               BIGINT IDENTITY(1,1) PRIMARY KEY,
+        order_id         BIGINT        NOT NULL,
+        merchant_user_id BIGINT        NOT NULL,
+        refund_amount    DECIMAL(18,2) NOT NULL,
+        reason           NVARCHAR(255) NOT NULL,
+        status           NVARCHAR(20)  NOT NULL CONSTRAINT DF_RefundRequests_Status DEFAULT 'COMPLETED',
+        created_at       DATETIME2     NOT NULL CONSTRAINT DF_RefundRequests_Created DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT FK_RefundRequests_Order    FOREIGN KEY (order_id)         REFERENCES dbo.Orders(id),
+        CONSTRAINT FK_RefundRequests_Merchant FOREIGN KEY (merchant_user_id) REFERENCES dbo.MerchantProfiles(user_id)
+    );
+    PRINT N'✅ Tạo bảng RefundRequests thành công.';
+END
+ELSE
+    PRINT N'ℹ️  Bảng RefundRequests đã tồn tại.';
+GO
+
+/* =========================
+   5) Seed dữ liệu MerchantWallets cho các merchant đã tồn tại
+   (Chạy lại an toàn - chỉ insert nếu chưa có)
+   ========================= */
+INSERT INTO dbo.MerchantWallets (merchant_user_id, balance)
+SELECT user_id, 0
+FROM dbo.MerchantProfiles
+WHERE user_id NOT IN (SELECT merchant_user_id FROM dbo.MerchantWallets);
+PRINT N'✅ Đã bổ sung MerchantWallets cho merchant chưa có ví.';
+GO
+
+/* =========================
+   6) reply_comment column trong Ratings (nếu chưa có)
+   ========================= */
+IF NOT EXISTS (
+    SELECT 1 FROM sys.columns
+    WHERE object_id = OBJECT_ID(N'dbo.Ratings') AND name = 'reply_comment'
+)
+BEGIN
+    ALTER TABLE dbo.Ratings ADD reply_comment NVARCHAR(MAX) NULL;
+    PRINT N'✅ Đã thêm cột reply_comment vào Ratings.';
+END
+ELSE
+    PRINT N'ℹ️  Cột reply_comment đã tồn tại.';
+GO
+
+/* =========================
+   7) Các cột bổ sung cho MerchantProfiles (nếu chưa có)
+   ========================= */
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.MerchantProfiles') AND name = 'business_hours')
+    ALTER TABLE dbo.MerchantProfiles ADD business_hours NVARCHAR(MAX) NULL;
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.MerchantProfiles') AND name = 'shop_avatar')
+    ALTER TABLE dbo.MerchantProfiles ADD shop_avatar NVARCHAR(MAX) NULL;
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.MerchantProfiles') AND name = 'shop_description')
+    ALTER TABLE dbo.MerchantProfiles ADD shop_description NVARCHAR(MAX) NULL;
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.MerchantProfiles') AND name = 'notification_settings')
+    ALTER TABLE dbo.MerchantProfiles ADD notification_settings NVARCHAR(MAX) NULL;
+PRINT N'✅ Kiểm tra và bổ sung cột MerchantProfiles hoàn tất.';
+GO
+
+PRINT N'';
+PRINT N'✅ Patch hoàn tất. Tất cả các bảng thiếu đã được tạo/kiểm tra.';
+GO
+
+/* Merchant checklist patch
+   - Add missing merchant/catalog columns used by UI
+   - Add/ensure performance indexes for merchant dashboard filters
+*/
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.MerchantProfiles') AND name = 'min_order_amount')
+BEGIN
+    ALTER TABLE dbo.MerchantProfiles ADD min_order_amount DECIMAL(18,2) NULL;
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.MerchantProfiles') AND name = 'is_open')
+BEGIN
+    ALTER TABLE dbo.MerchantProfiles ADD is_open BIT NOT NULL CONSTRAINT DF_MerchantProfiles_IsOpen DEFAULT 1;
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.MerchantProfiles') AND name = 'rejection_reason')
+BEGIN
+    ALTER TABLE dbo.MerchantProfiles ADD rejection_reason NVARCHAR(255) NULL;
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.FoodItems') AND name = 'out_of_stock_reason')
+BEGIN
+    ALTER TABLE dbo.FoodItems ADD out_of_stock_reason NVARCHAR(255) NULL;
+END
+GO
+
+/* App fee / commission sync (merged from ClickEat_AppFee_Update.sql) */
+IF NOT EXISTS (
+    SELECT 1 FROM sys.columns
+    WHERE object_id = OBJECT_ID(N'dbo.MerchantProfiles') AND name = 'commission_rate'
+)
+BEGIN
+    ALTER TABLE dbo.MerchantProfiles ADD commission_rate DECIMAL(5,2) NULL CONSTRAINT DF_MerchantProfiles_CommissionRate DEFAULT 0.15;
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.columns
+    WHERE object_id = OBJECT_ID(N'dbo.Orders') AND name = 'app_fee'
+)
+BEGIN
+    ALTER TABLE dbo.Orders ADD app_fee DECIMAL(18,2) NULL CONSTRAINT DF_Orders_AppFee DEFAULT 0;
+END
+GO
+
+UPDATE dbo.MerchantProfiles
+SET commission_rate = 0.15
+WHERE commission_rate IS NULL;
+GO
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = 'IX_Ratings_Target_Created' AND object_id = OBJECT_ID(N'dbo.Ratings')
+)
+BEGIN
+    CREATE INDEX IX_Ratings_Target_Created ON dbo.Ratings(target_user_id, created_at);
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = 'IX_Orders_Merchant_Created' AND object_id = OBJECT_ID(N'dbo.Orders')
+)
+BEGIN
+    CREATE INDEX IX_Orders_Merchant_Created
+        ON dbo.Orders(merchant_user_id, created_at)
+        INCLUDE(order_status, total_amount, discount_amount, delivered_at);
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = 'IX_Ratings_Merchant_TargetCreated' AND object_id = OBJECT_ID(N'dbo.Ratings')
+)
+BEGIN
+    CREATE INDEX IX_Ratings_Merchant_TargetCreated
+        ON dbo.Ratings(target_type, target_user_id, created_at);
+END
+GO
+
+/* Verify demo voucher DEMO15K */
+SELECT TOP 1 id, merchant_user_id, code, title, status, is_published, start_at, end_at
+FROM dbo.Vouchers
+WHERE code = N'DEMO15K';
+GO
+
+/* =========================================================
+   ClickEat - FULL DEMO SEED (1 WEEK) - IDEMPOTENT
+   - Chạy SAU ClickEat2.sql và patch_missing_tables.sql
+   - Mục tiêu: có dữ liệu thật để demo toàn hệ thống (Customer/Merchant/Shipper/Admin)
+   - Script chạy lại nhiều lần KHÔNG lỗi (tự kiểm tra tồn tại trước khi insert)
+   ========================================================= */
+
+USE ClickEat;
+GO
+SET NOCOUNT ON;
+GO
+
+BEGIN TRY
+    BEGIN TRAN;
+
+    /* -------------------------
+       Helpers (T-SQL inline)
+       ------------------------- */
+    DECLARE @now DATETIME2 = SYSUTCDATETIME();
+    DECLARE @today DATE = CAST(@now AS DATE);
+
+    /* Generate a unique-ish phone number (09xxxxxxxx). */
+    DECLARE @phone NVARCHAR(20);
+
+    /* =========================================================
+       1) Core demo identities (by email as natural key)
+       ========================================================= */
+
+    DECLARE @AdminId BIGINT = (SELECT TOP 1 id FROM dbo.Users WHERE role = N'ADMIN');
+
+    /* Customers */
+    DECLARE @EmailCusVip NVARCHAR(200) = N'demo.vip@clickeat.vn';
+    DECLARE @EmailCusComplaint NVARCHAR(200) = N'demo.complaint@clickeat.vn';
+    DECLARE @EmailCusStudent NVARCHAR(200) = N'demo.student@clickeat.vn';
+
+    DECLARE @CusVipId BIGINT = (SELECT id FROM dbo.Users WHERE email = @EmailCusVip);
+    IF @CusVipId IS NULL
+    BEGIN
+        SET @phone = N'09' + RIGHT(N'00000000' + CAST(ABS(CHECKSUM(NEWID())) % 100000000 AS NVARCHAR(8)), 8);
+        WHILE EXISTS (SELECT 1 FROM dbo.Users WHERE phone = @phone)
+            SET @phone = N'09' + RIGHT(N'00000000' + CAST(ABS(CHECKSUM(NEWID())) % 100000000 AS NVARCHAR(8)), 8);
+
+        INSERT INTO dbo.Users(full_name,email,phone,password_hash,role,status)
+        VALUES (N'Demo VIP Customer', @EmailCusVip, @phone, N'hash_demo', N'CUSTOMER', N'ACTIVE');
+        SET @CusVipId = SCOPE_IDENTITY();
+    END
+
+    DECLARE @CusComplaintId BIGINT = (SELECT id FROM dbo.Users WHERE email = @EmailCusComplaint);
+    IF @CusComplaintId IS NULL
+    BEGIN
+        SET @phone = N'09' + RIGHT(N'00000000' + CAST(ABS(CHECKSUM(NEWID())) % 100000000 AS NVARCHAR(8)), 8);
+        WHILE EXISTS (SELECT 1 FROM dbo.Users WHERE phone = @phone)
+            SET @phone = N'09' + RIGHT(N'00000000' + CAST(ABS(CHECKSUM(NEWID())) % 100000000 AS NVARCHAR(8)), 8);
+
+        INSERT INTO dbo.Users(full_name,email,phone,password_hash,role,status)
+        VALUES (N'Demo Complaint Customer', @EmailCusComplaint, @phone, N'hash_demo', N'CUSTOMER', N'ACTIVE');
+        SET @CusComplaintId = SCOPE_IDENTITY();
+    END
+
+    DECLARE @CusStudentId BIGINT = (SELECT id FROM dbo.Users WHERE email = @EmailCusStudent);
+    IF @CusStudentId IS NULL
+    BEGIN
+        SET @phone = N'09' + RIGHT(N'00000000' + CAST(ABS(CHECKSUM(NEWID())) % 100000000 AS NVARCHAR(8)), 8);
+        WHILE EXISTS (SELECT 1 FROM dbo.Users WHERE phone = @phone)
+            SET @phone = N'09' + RIGHT(N'00000000' + CAST(ABS(CHECKSUM(NEWID())) % 100000000 AS NVARCHAR(8)), 8);
+
+        INSERT INTO dbo.Users(full_name,email,phone,password_hash,role,status)
+        VALUES (N'Demo Student Customer', @EmailCusStudent, @phone, N'hash_demo', N'CUSTOMER', N'ACTIVE');
+        SET @CusStudentId = SCOPE_IDENTITY();
+    END
+
+    /* Customer profiles */
+    IF NOT EXISTS (SELECT 1 FROM dbo.CustomerProfiles WHERE user_id = @CusVipId)
+        INSERT INTO dbo.CustomerProfiles(user_id, food_preferences, allergies, health_goal, daily_calorie_target)
+        VALUES (@CusVipId, N'Thích món nhiều đạm, ít ngọt', NULL, N'Tăng cơ', 2400);
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.CustomerProfiles WHERE user_id = @CusComplaintId)
+        INSERT INTO dbo.CustomerProfiles(user_id, food_preferences, allergies, health_goal, daily_calorie_target)
+        VALUES (@CusComplaintId, N'Ưu tiên sạch sẽ, nóng hổi', N'Hải sản', N'Giảm mỡ', 1600);
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.CustomerProfiles WHERE user_id = @CusStudentId)
+        INSERT INTO dbo.CustomerProfiles(user_id, food_preferences, allergies, health_goal, daily_calorie_target)
+        VALUES (@CusStudentId, N'Thích khuyến mãi, giá rẻ', NULL, N'Duy trì', 2000);
+
+
+    /* Merchants */
+    DECLARE @EmailMerBunBo NVARCHAR(200) = N'demo.merchant.bunbo@clickeat.vn';
+    DECLARE @EmailMerTraSua NVARCHAR(200) = N'demo.merchant.trasua@clickeat.vn';
+
+    DECLARE @MerBunBoUserId BIGINT = (SELECT id FROM dbo.Users WHERE email = @EmailMerBunBo);
+    IF @MerBunBoUserId IS NULL
+    BEGIN
+        SET @phone = N'09' + RIGHT(N'00000000' + CAST(ABS(CHECKSUM(NEWID())) % 100000000 AS NVARCHAR(8)), 8);
+        WHILE EXISTS (SELECT 1 FROM dbo.Users WHERE phone = @phone)
+            SET @phone = N'09' + RIGHT(N'00000000' + CAST(ABS(CHECKSUM(NEWID())) % 100000000 AS NVARCHAR(8)), 8);
+
+        INSERT INTO dbo.Users(full_name,email,phone,password_hash,role,status)
+        VALUES (N'Demo Bun Bo Merchant', @EmailMerBunBo, @phone, N'hash_demo', N'MERCHANT', N'ACTIVE');
+        SET @MerBunBoUserId = SCOPE_IDENTITY();
+    END
+
+    DECLARE @MerTraSuaUserId BIGINT = (SELECT id FROM dbo.Users WHERE email = @EmailMerTraSua);
+    IF @MerTraSuaUserId IS NULL
+    BEGIN
+        SET @phone = N'09' + RIGHT(N'00000000' + CAST(ABS(CHECKSUM(NEWID())) % 100000000 AS NVARCHAR(8)), 8);
+        WHILE EXISTS (SELECT 1 FROM dbo.Users WHERE phone = @phone)
+            SET @phone = N'09' + RIGHT(N'00000000' + CAST(ABS(CHECKSUM(NEWID())) % 100000000 AS NVARCHAR(8)), 8);
+
+        INSERT INTO dbo.Users(full_name,email,phone,password_hash,role,status)
+        VALUES (N'Demo Tra Sua Merchant', @EmailMerTraSua, @phone, N'hash_demo', N'MERCHANT', N'ACTIVE');
+        SET @MerTraSuaUserId = SCOPE_IDENTITY();
+    END
+
+    /* Merchant profiles (status must be PENDING/APPROVED/REJECTED/SUSPENDED) */
+    IF NOT EXISTS (SELECT 1 FROM dbo.MerchantProfiles WHERE user_id = @MerBunBoUserId)
+        INSERT INTO dbo.MerchantProfiles
+        (user_id, shop_name, shop_phone, shop_address_line,
+         province_code, province_name, district_code, district_name, ward_code, ward_name,
+         latitude, longitude, status)
+        VALUES
+        (@MerBunBoUserId, N'Bún Bò Gia Truyền Demo', (SELECT phone FROM dbo.Users WHERE id=@MerBunBoUserId), N'12 Nguyễn Huệ',
+         N'79', N'TP.HCM', N'760', N'Quận 1', N'26734', N'Bến Nghé',
+         10.7765300, 106.7009800, N'APPROVED');
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.MerchantProfiles WHERE user_id = @MerTraSuaUserId)
+        INSERT INTO dbo.MerchantProfiles
+        (user_id, shop_name, shop_phone, shop_address_line,
+         province_code, province_name, district_code, district_name, ward_code, ward_name,
+         latitude, longitude, status)
+        VALUES
+        (@MerTraSuaUserId, N'Trà Sữa Tuyết Demo', (SELECT phone FROM dbo.Users WHERE id=@MerTraSuaUserId), N'34 Lê Lợi',
+         N'79', N'TP.HCM', N'760', N'Quận 1', N'26737', N'Bến Thành',
+         10.7721600, 106.6981700, N'APPROVED');
+
+    /* Merchant wallets */
+    IF NOT EXISTS (SELECT 1 FROM dbo.MerchantWallets WHERE merchant_user_id = @MerBunBoUserId)
+        INSERT INTO dbo.MerchantWallets(merchant_user_id, balance) VALUES (@MerBunBoUserId, 0);
+    IF NOT EXISTS (SELECT 1 FROM dbo.MerchantWallets WHERE merchant_user_id = @MerTraSuaUserId)
+        INSERT INTO dbo.MerchantWallets(merchant_user_id, balance) VALUES (@MerTraSuaUserId, 0);
+
+
+    /* Shippers */
+    DECLARE @EmailShipPro NVARCHAR(200) = N'demo.shipper.pro@clickeat.vn';
+    DECLARE @EmailShipNew NVARCHAR(200) = N'demo.shipper.new@clickeat.vn';
+
+    DECLARE @ShipProId BIGINT = (SELECT id FROM dbo.Users WHERE email = @EmailShipPro);
+    IF @ShipProId IS NULL
+    BEGIN
+        SET @phone = N'09' + RIGHT(N'00000000' + CAST(ABS(CHECKSUM(NEWID())) % 100000000 AS NVARCHAR(8)), 8);
+        WHILE EXISTS (SELECT 1 FROM dbo.Users WHERE phone = @phone)
+            SET @phone = N'09' + RIGHT(N'00000000' + CAST(ABS(CHECKSUM(NEWID())) % 100000000 AS NVARCHAR(8)), 8);
+
+        INSERT INTO dbo.Users(full_name,email,phone,password_hash,role,status)
+        VALUES (N'Demo Pro Shipper', @EmailShipPro, @phone, N'hash_demo', N'SHIPPER', N'ACTIVE');
+        SET @ShipProId = SCOPE_IDENTITY();
+    END
+
+    DECLARE @ShipNewId BIGINT = (SELECT id FROM dbo.Users WHERE email = @EmailShipNew);
+    IF @ShipNewId IS NULL
+    BEGIN
+        SET @phone = N'09' + RIGHT(N'00000000' + CAST(ABS(CHECKSUM(NEWID())) % 100000000 AS NVARCHAR(8)), 8);
+        WHILE EXISTS (SELECT 1 FROM dbo.Users WHERE phone = @phone)
+            SET @phone = N'09' + RIGHT(N'00000000' + CAST(ABS(CHECKSUM(NEWID())) % 100000000 AS NVARCHAR(8)), 8);
+
+        INSERT INTO dbo.Users(full_name,email,phone,password_hash,role,status)
+        VALUES (N'Demo New Shipper', @EmailShipNew, @phone, N'hash_demo', N'SHIPPER', N'ACTIVE');
+        SET @ShipNewId = SCOPE_IDENTITY();
+    END
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.ShipperProfiles WHERE user_id = @ShipProId)
+        INSERT INTO dbo.ShipperProfiles(user_id, vehicle_type, vehicle_name, license_plate, status)
+        VALUES (@ShipProId, N'MOTORBIKE', N'Honda Vision', N'59D1-12345', N'ACTIVE');
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.ShipperProfiles WHERE user_id = @ShipNewId)
+        INSERT INTO dbo.ShipperProfiles(user_id, vehicle_type, vehicle_name, license_plate, status)
+        VALUES (@ShipNewId, N'MOTORBIKE', N'Wave Alpha', N'59X1-67890', N'ACTIVE');
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.ShipperWallets WHERE shipper_user_id = @ShipProId)
+        INSERT INTO dbo.ShipperWallets(shipper_user_id, balance) VALUES (@ShipProId, 0);
+    IF NOT EXISTS (SELECT 1 FROM dbo.ShipperWallets WHERE shipper_user_id = @ShipNewId)
+        INSERT INTO dbo.ShipperWallets(shipper_user_id, balance) VALUES (@ShipNewId, 0);
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.ShipperAvailability WHERE shipper_user_id = @ShipProId)
+        INSERT INTO dbo.ShipperAvailability(shipper_user_id, is_online, current_status, current_latitude, current_longitude)
+        VALUES (@ShipProId, 1, N'AVAILABLE', 10.7760, 106.7010);
+
+
+    /* =========================================================
+       2) Catalog (Categories + FoodItems)
+       ========================================================= */
+    DECLARE @CatBunBoId BIGINT = (SELECT TOP 1 id FROM dbo.Categories WHERE merchant_user_id = @MerBunBoUserId AND name = N'Bún Bò');
+    IF @CatBunBoId IS NULL
+    BEGIN
+        INSERT INTO dbo.Categories(merchant_user_id, name, is_active, sort_order)
+        VALUES (@MerBunBoUserId, N'Bún Bò', 1, 1);
+        SET @CatBunBoId = SCOPE_IDENTITY();
+    END
+
+    DECLARE @CatDrinkId BIGINT = (SELECT TOP 1 id FROM dbo.Categories WHERE merchant_user_id = @MerTraSuaUserId AND name = N'Đồ Uống');
+    IF @CatDrinkId IS NULL
+    BEGIN
+        INSERT INTO dbo.Categories(merchant_user_id, name, is_active, sort_order)
+        VALUES (@MerTraSuaUserId, N'Đồ Uống', 1, 1);
+        SET @CatDrinkId = SCOPE_IDENTITY();
+    END
+
+    DECLARE @FiBunBoDacBietId BIGINT = (SELECT TOP 1 id FROM dbo.FoodItems WHERE merchant_user_id=@MerBunBoUserId AND name=N'Bún bò đặc biệt');
+    IF @FiBunBoDacBietId IS NULL
+    BEGIN
+        INSERT INTO dbo.FoodItems(merchant_user_id, category_id, name, description, price, image_url, is_available, is_fried, calories, protein_g, carbs_g, fat_g)
+        VALUES (@MerBunBoUserId, @CatBunBoId, N'Bún bò đặc biệt', N'Chả cua, gân, nạm', 75000, NULL, 1, 0, 620, 32, 78, 18);
+        SET @FiBunBoDacBietId = SCOPE_IDENTITY();
+    END
+
+    DECLARE @FiTraSuaTcId BIGINT = (SELECT TOP 1 id FROM dbo.FoodItems WHERE merchant_user_id=@MerTraSuaUserId AND name=N'Trà sữa trân châu');
+    IF @FiTraSuaTcId IS NULL
+    BEGIN
+        INSERT INTO dbo.FoodItems(merchant_user_id, category_id, name, description, price, image_url, is_available, is_fried, calories, protein_g, carbs_g, fat_g)
+        VALUES (@MerTraSuaUserId, @CatDrinkId, N'Trà sữa trân châu', N'Đường 70%, đá 50%', 45000, NULL, 1, 0, 420, 8, 72, 10);
+        SET @FiTraSuaTcId = SCOPE_IDENTITY();
+    END
+
+
+    /* =========================================================
+       3) Voucher + usage
+       ========================================================= */
+    DECLARE @VoucherId BIGINT = (SELECT TOP 1 id FROM dbo.Vouchers WHERE merchant_user_id=@MerBunBoUserId AND code=N'DEMO15K');
+    IF @VoucherId IS NULL
+    BEGIN
+        INSERT INTO dbo.Vouchers(merchant_user_id, code, title, description, discount_type, discount_value,
+                                max_discount_amount, min_order_amount, start_at, end_at, max_uses_total, max_uses_per_user,
+                                is_published, status)
+        VALUES (@MerBunBoUserId, N'DEMO15K', N'Giảm 15K demo', N'Voucher demo 1 tuần', N'FIXED', 15000,
+                NULL, 100000, DATEADD(DAY,-7,@now), DATEADD(DAY,7,@now), 200, 2,
+                1, N'ACTIVE');
+        SET @VoucherId = SCOPE_IDENTITY();
+    END
+
+
+    /* =========================================================
+       4) Guest sessions + behavior events
+       ========================================================= */
+    DECLARE @Guest1 UNIQUEIDENTIFIER = (SELECT TOP 1 guest_id FROM dbo.GuestSessions WHERE contact_email = N'demo.guest1@clickeat.vn');
+    IF @Guest1 IS NULL
+    BEGIN
+        INSERT INTO dbo.GuestSessions(contact_phone, contact_email, expires_at)
+        VALUES (NULL, N'demo.guest1@clickeat.vn', DATEADD(DAY, 7, @now));
+        SET @Guest1 = (SELECT guest_id FROM dbo.GuestSessions WHERE contact_email = N'demo.guest1@clickeat.vn');
+    END
+
+    -- a few realistic behavior events (both customer and guest)
+    IF NOT EXISTS (SELECT 1 FROM dbo.UserBehaviorEvents WHERE customer_user_id=@CusStudentId AND event_type=N'SEARCH' AND keyword=N'trà sữa' AND created_at >= DATEADD(DAY,-7,@now))
+        INSERT INTO dbo.UserBehaviorEvents(customer_user_id, guest_id, event_type, food_item_id, keyword, created_at)
+        VALUES (@CusStudentId, NULL, N'SEARCH', NULL, N'trà sữa', DATEADD(DAY,-2,@now));
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.UserBehaviorEvents WHERE guest_id=@Guest1 AND event_type=N'VIEW_ITEM' AND food_item_id=@FiTraSuaTcId AND created_at >= DATEADD(DAY,-7,@now))
+        INSERT INTO dbo.UserBehaviorEvents(customer_user_id, guest_id, event_type, food_item_id, keyword, created_at)
+        VALUES (NULL, @Guest1, N'VIEW_ITEM', @FiTraSuaTcId, NULL, DATEADD(MINUTE,-30,@now));
+
+
+    /* =========================================================
+       5) Carts + CartItems (trigger enforces single merchant)
+       ========================================================= */
+    DECLARE @CartVip BIGINT = (SELECT TOP 1 id FROM dbo.Carts WHERE customer_user_id=@CusVipId AND status=N'ACTIVE');
+    IF @CartVip IS NULL
+    BEGIN
+        INSERT INTO dbo.Carts(customer_user_id, guest_id, merchant_user_id, status)
+        VALUES (@CusVipId, NULL, @MerBunBoUserId, N'ACTIVE');
+        SET @CartVip = SCOPE_IDENTITY();
+    END
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.CartItems WHERE cart_id=@CartVip AND food_item_id=@FiBunBoDacBietId)
+        INSERT INTO dbo.CartItems(cart_id, food_item_id, quantity, unit_price_snapshot, note)
+        VALUES (@CartVip, @FiBunBoDacBietId, 1, 75000, NULL);
+
+
+     /* =========================================================
+         6) Orders in last 7 days (realistic distribution)
+         - Use fixed order codes so the script is truly idempotent.
+         ========================================================= */
+     DECLARE @OrderCode1 NVARCHAR(30) = N'DEMO1W_VIP_001';
+
+     DECLARE @Order1Id BIGINT = NULL;
+     IF NOT EXISTS (SELECT 1 FROM dbo.Orders WHERE order_code = @OrderCode1)
+    BEGIN
+        INSERT INTO dbo.Orders(
+            order_code, customer_user_id, guest_id, merchant_user_id, shipper_user_id,
+            receiver_name, receiver_phone, delivery_address_line,
+            province_code, province_name, district_code, district_name, ward_code, ward_name,
+            latitude, longitude, delivery_note,
+            payment_method, payment_status, order_status, expires_at,
+            subtotal_amount, delivery_fee, discount_amount, total_amount,
+            accepted_at, ready_at, picked_up_at, delivered_at
+        )
+        VALUES (
+            @OrderCode1, @CusVipId, NULL, @MerBunBoUserId, @ShipProId,
+            N'Nguyễn Demo VIP', (SELECT phone FROM dbo.Users WHERE id=@CusVipId), N'12 Nguyễn Huệ',
+            N'79', N'TP.HCM', N'760', N'Quận 1', N'26734', N'Bến Nghé',
+            10.77653, 106.70098, N'Gọi trước 5 phút',
+            N'VNPAY', N'PAID', N'DELIVERED', NULL,
+            150000, 15000, 15000, 150000,
+            DATEADD(DAY,-6,DATEADD(HOUR,4,@now)), DATEADD(DAY,-6,DATEADD(HOUR,4,@now)), DATEADD(DAY,-6,DATEADD(HOUR,4,@now)), DATEADD(DAY,-6,DATEADD(HOUR,5,@now))
+        );
+        SET @Order1Id = SCOPE_IDENTITY();
+
+        INSERT INTO dbo.OrderItems(order_id, food_item_id, item_name_snapshot, unit_price_snapshot, quantity, note)
+        VALUES (@Order1Id, @FiBunBoDacBietId, N'Bún bò đặc biệt', 75000, 2, NULL);
+
+        INSERT INTO dbo.OrderStatusHistory(order_id, from_status, to_status, updated_by_role, updated_by_user_id, note, created_at)
+        VALUES
+            (@Order1Id, NULL, N'CREATED', N'CUSTOMER', @CusVipId, NULL, DATEADD(DAY,-6,@now)),
+            (@Order1Id, N'CREATED', N'MERCHANT_ACCEPTED', N'MERCHANT', @MerBunBoUserId, NULL, DATEADD(DAY,-6,DATEADD(MINUTE,5,@now))),
+            (@Order1Id, N'MERCHANT_ACCEPTED', N'DELIVERED', N'SHIPPER', @ShipProId, NULL, DATEADD(DAY,-6,DATEADD(HOUR,1,@now)));
+
+        IF NOT EXISTS (SELECT 1 FROM dbo.VoucherUsages WHERE order_id=@Order1Id)
+            INSERT INTO dbo.VoucherUsages(voucher_id, order_id, customer_user_id, guest_id)
+            VALUES (@VoucherId, @Order1Id, @CusVipId, NULL);
+
+        IF NOT EXISTS (SELECT 1 FROM dbo.PaymentTransactions WHERE order_id=@Order1Id)
+            INSERT INTO dbo.PaymentTransactions(order_id, provider, amount, status, provider_txn_ref, vnp_txn_ref, vnp_transaction_no, vnp_response_code, vnp_pay_date)
+            VALUES (@Order1Id, N'VNPAY', 150000, N'SUCCESS', N'DEMO-TXN-1', @OrderCode1, NULL, N'00', CONVERT(NVARCHAR(50), @now, 112));
+
+        -- One rating for merchant + one for shipper (unique (order_id,target_type))
+        IF NOT EXISTS (SELECT 1 FROM dbo.Ratings WHERE order_id=@Order1Id AND target_type=N'MERCHANT')
+            INSERT INTO dbo.Ratings(order_id, rater_customer_id, rater_guest_id, target_type, target_user_id, stars, comment)
+            VALUES (@Order1Id, @CusVipId, NULL, N'MERCHANT', @MerBunBoUserId, 5, N'Ngon, chuẩn vị.');
+
+        IF NOT EXISTS (SELECT 1 FROM dbo.Ratings WHERE order_id=@Order1Id AND target_type=N'SHIPPER')
+            INSERT INTO dbo.Ratings(order_id, rater_customer_id, rater_guest_id, target_type, target_user_id, stars, comment)
+            VALUES (@Order1Id, @CusVipId, NULL, N'SHIPPER', @ShipProId, 5, N'Giao nhanh, thân thiện.');
+
+        -- Notification
+        INSERT INTO dbo.Notifications(user_id, guest_id, type, content, is_read)
+        VALUES (@CusVipId, NULL, N'ORDER_CONFIRMED', N'Đơn ' + @OrderCode1 + N' đã được xác nhận.', 1);
+
+        -- Chat history (Messages)
+        IF NOT EXISTS (SELECT 1 FROM dbo.Messages WHERE sender_id=@MerBunBoUserId AND receiver_id=@CusVipId AND created_at >= DATEADD(DAY,-7,@now))
+            INSERT INTO dbo.Messages(sender_id, receiver_id, content, is_read, created_at)
+            VALUES (@MerBunBoUserId, @CusVipId, N'Chào bạn, quán đang đông, giao trong 35-45 phút nhé.', 1, DATEADD(DAY,-6,DATEADD(MINUTE,2,@now)));
+    END
+
+    /* Complaint case: delivered then refund */
+    DECLARE @OrderCode2 NVARCHAR(30) = N'DEMO1W_COMPLAINT_001';
+    DECLARE @Order2Id BIGINT = NULL;
+
+    INSERT INTO dbo.Orders(
+        order_code, customer_user_id, guest_id, merchant_user_id, shipper_user_id,
+        receiver_name, receiver_phone, delivery_address_line,
+        province_code, province_name, district_code, district_name, ward_code, ward_name,
+        payment_method, payment_status, order_status,
+        subtotal_amount, delivery_fee, discount_amount, total_amount,
+        accepted_at, delivered_at
+    )
+    SELECT
+        @OrderCode2, @CusComplaintId, NULL, @MerBunBoUserId, @ShipProId,
+        N'Lê Demo Khiếu Nại', (SELECT phone FROM dbo.Users WHERE id=@CusComplaintId), N'34 Lê Lợi',
+        N'79', N'TP.HCM', N'760', N'Quận 1', N'26737', N'Bến Thành',
+        N'VNPAY', N'PAID', N'DELIVERED',
+        75000, 15000, 0, 90000,
+        DATEADD(DAY,-1,DATEADD(HOUR,1,@now)), DATEADD(DAY,-1,DATEADD(HOUR,2,@now))
+    WHERE NOT EXISTS (SELECT 1 FROM dbo.Orders WHERE order_code=@OrderCode2);
+
+    SET @Order2Id = (SELECT id FROM dbo.Orders WHERE order_code=@OrderCode2);
+
+    IF @Order2Id IS NOT NULL
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM dbo.OrderItems WHERE order_id=@Order2Id)
+            INSERT INTO dbo.OrderItems(order_id, food_item_id, item_name_snapshot, unit_price_snapshot, quantity, note)
+            VALUES (@Order2Id, @FiBunBoDacBietId, N'Bún bò đặc biệt', 75000, 1, N'Ít cay');
+
+        -- Order issue (schema: reporter_user_id, description, status)
+        IF NOT EXISTS (SELECT 1 FROM dbo.OrderIssues WHERE order_id=@Order2Id)
+            INSERT INTO dbo.OrderIssues(order_id, reporter_user_id, issue_type, description, status, created_at)
+            VALUES (@Order2Id, @CusComplaintId, 'FOOD_QUALITY', N'Món bị nguội và thiếu rau.', 'PENDING', DATEADD(DAY,-1,DATEADD(HOUR,3,@now)));
+
+        -- Appeal (schema is simple: user_id, reason, status, admin_note, resolved_at)
+        IF NOT EXISTS (SELECT 1 FROM dbo.UserAppeals WHERE user_id=@CusComplaintId AND created_at >= DATEADD(DAY,-7,@now))
+            INSERT INTO dbo.UserAppeals(user_id, reason, status, admin_note, resolved_at)
+            VALUES (@CusComplaintId, N'Khiếu nại chất lượng món của đơn ' + @OrderCode2, N'APPROVED', N'Xác minh hợp lệ, tiến hành hoàn tiền.', DATEADD(DAY,-1,DATEADD(HOUR,6,@now)));
+
+        -- Refund request
+        IF NOT EXISTS (SELECT 1 FROM dbo.RefundRequests WHERE order_id=@Order2Id)
+            INSERT INTO dbo.RefundRequests(order_id, merchant_user_id, refund_amount, reason, status, created_at)
+            VALUES (@Order2Id, @MerBunBoUserId, 90000, N'Hoàn tiền theo khiếu nại', N'COMPLETED', DATEADD(DAY,-1,DATEADD(HOUR,6,@now)));
+
+        -- Mark payment as refunded (optional)
+        IF NOT EXISTS (SELECT 1 FROM dbo.PaymentTransactions WHERE order_id=@Order2Id)
+            INSERT INTO dbo.PaymentTransactions(order_id, provider, amount, status, provider_txn_ref, vnp_txn_ref, vnp_response_code)
+            VALUES (@Order2Id, N'VNPAY', 90000, N'REFUNDED', N'DEMO-TXN-2', @OrderCode2, N'00');
+
+        UPDATE dbo.Orders
+        SET payment_status = N'REFUNDED', order_status = N'REFUNDED'
+        WHERE id = @Order2Id;
+
+        INSERT INTO dbo.OrderStatusHistory(order_id, from_status, to_status, updated_by_role, updated_by_user_id, note, created_at)
+        SELECT @Order2Id, N'DELIVERED', N'REFUNDED', N'ADMIN', @AdminId, N'Hoàn tiền theo khiếu nại', DATEADD(DAY,-1,DATEADD(HOUR,6,@now))
+        WHERE NOT EXISTS (SELECT 1 FROM dbo.OrderStatusHistory WHERE order_id=@Order2Id AND to_status=N'REFUNDED');
+    END
+
+
+    /* =========================================================
+       7) AI chat + auto cart proposal (only if AI feature is demoed)
+       ========================================================= */
+    DECLARE @ConvId BIGINT = (SELECT TOP 1 id FROM dbo.AIConversations WHERE customer_user_id=@CusStudentId ORDER BY id DESC);
+    IF @ConvId IS NULL
+    BEGIN
+        INSERT INTO dbo.AIConversations(customer_user_id) VALUES (@CusStudentId);
+        SET @ConvId = SCOPE_IDENTITY();
+
+        INSERT INTO dbo.AIMessages(conversation_id, role, content)
+        VALUES
+            (@ConvId, N'USER', N'Mình có 50k, gợi ý đồ uống gần mình.'),
+            (@ConvId, N'ASSISTANT', N'Bạn thử Trà sữa trân châu 45k, đang bán chạy.');
+    END
+
+    DECLARE @ProposalId BIGINT = (SELECT TOP 1 id FROM dbo.AutoCartProposals WHERE customer_user_id=@CusStudentId AND merchant_user_id=@MerTraSuaUserId ORDER BY id DESC);
+    IF @ProposalId IS NULL
+    BEGIN
+        INSERT INTO dbo.AutoCartProposals(customer_user_id, merchant_user_id, conversation_id, status, expires_at)
+        VALUES (@CusStudentId, @MerTraSuaUserId, @ConvId, N'PROPOSED', DATEADD(MINUTE, 30, @now));
+        SET @ProposalId = SCOPE_IDENTITY();
+    END
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.AutoCartProposalItems WHERE proposal_id=@ProposalId AND food_item_id=@FiTraSuaTcId)
+        INSERT INTO dbo.AutoCartProposalItems(proposal_id, food_item_id, quantity, unit_price)
+        VALUES (@ProposalId, @FiTraSuaTcId, 1, 45000);
+
+
+    /* =========================================================
+       8) Withdrawals (merchant + shipper)
+       ========================================================= */
+    IF NOT EXISTS (SELECT 1 FROM dbo.MerchantWithdrawals WHERE merchant_user_id=@MerBunBoUserId AND created_at >= DATEADD(DAY,-7,@now))
+        INSERT INTO dbo.MerchantWithdrawals(merchant_user_id, amount, bank_name, bank_account_number, status, created_at)
+        VALUES (@MerBunBoUserId, 500000, N'Vietcombank', N'001122334455', N'PENDING', DATEADD(DAY,-2,@now));
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.WithdrawalRequests WHERE shipper_user_id=@ShipProId AND created_at >= DATEADD(DAY,-7,@now))
+        INSERT INTO dbo.WithdrawalRequests(shipper_user_id, amount, bank_name, bank_account_number, status, created_at, processed_at)
+        VALUES (@ShipProId, 300000, N'Techcombank', N'88990011', N'COMPLETED', DATEADD(DAY,-1,@now), DATEADD(DAY,-1,DATEADD(HOUR,1,@now)));
+
+
+    COMMIT TRAN;
+    PRINT N'✅ Seed demo 1 tuần thành công (idempotent).';
+END TRY
+BEGIN CATCH
+    IF @@TRANCOUNT > 0 ROLLBACK TRAN;
+
+    DECLARE @Err NVARCHAR(4000) = ERROR_MESSAGE();
+    DECLARE @Line INT = ERROR_LINE();
+
+    PRINT N'❌ Seed thất bại tại dòng: ' + CAST(@Line AS NVARCHAR(20));
+    PRINT @Err;
+
+    THROW;
+END CATCH;
+GO
+
+/* Final normalization: đồng bộ app_fee sau toàn bộ seed */
+UPDATE o
+SET o.app_fee = ROUND(
+    CASE
+        WHEN mp.commission_rate IS NULL OR mp.commission_rate <= 0 THEN 0
+        WHEN mp.commission_rate > 1 THEN
+            CASE WHEN (ISNULL(o.total_amount, 0) - ISNULL(o.delivery_fee, 0)) < 0 THEN 0
+                 ELSE (ISNULL(o.total_amount, 0) - ISNULL(o.delivery_fee, 0)) * (mp.commission_rate / 100.0)
+            END
+        ELSE
+            CASE WHEN (ISNULL(o.total_amount, 0) - ISNULL(o.delivery_fee, 0)) < 0 THEN 0
+                 ELSE (ISNULL(o.total_amount, 0) - ISNULL(o.delivery_fee, 0)) * mp.commission_rate
+            END
+    END
+, 2)
+FROM dbo.Orders o
+JOIN dbo.MerchantProfiles mp ON mp.user_id = o.merchant_user_id
+WHERE (o.app_fee IS NULL OR o.app_fee = 0)
+  AND o.order_status IN (N'PAID', N'MERCHANT_ACCEPTED', N'PREPARING', N'READY_FOR_PICKUP', N'PICKED_UP', N'DELIVERING', N'DELIVERED');
 GO

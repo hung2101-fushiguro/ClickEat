@@ -1,10 +1,15 @@
 package com.clickeat.filter;
 
+import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
+
 import com.clickeat.dal.impl.CartDAO;
 import com.clickeat.dal.impl.CartItemViewDAO;
 import com.clickeat.model.Cart;
 import com.clickeat.model.CartItemView;
 import com.clickeat.model.User;
+
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -13,15 +18,14 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
-import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
 
 @WebFilter("/*")
 public class HeaderCartFilter implements Filter {
 
     private boolean isStatic(String uri) {
-        if (uri == null) return false;
+        if (uri == null) {
+            return false;
+        }
         return uri.endsWith(".css") || uri.endsWith(".js") || uri.endsWith(".png") || uri.endsWith(".jpg")
                 || uri.endsWith(".jpeg") || uri.endsWith(".webp") || uri.endsWith(".svg") || uri.endsWith(".ico")
                 || uri.endsWith(".woff") || uri.endsWith(".woff2") || uri.endsWith(".ttf") || uri.endsWith(".map");
@@ -30,6 +34,8 @@ public class HeaderCartFilter implements Filter {
     private boolean shouldSkip(String path) {
         // Skip admin and auth pages if you want
         return path.startsWith("/admin")
+                || path.startsWith("/merchant")
+                || path.startsWith("/shipper")
                 || path.startsWith("/login")
                 || path.startsWith("/register")
                 || path.startsWith("/logout")
@@ -63,7 +69,7 @@ public class HeaderCartFilter implements Filter {
             HttpSession session = request.getSession(false);
             if (session != null) {
                 User account = (User) session.getAttribute("account");
-                if (account != null) {
+                if (account != null && "CUSTOMER".equals(account.getRole())) {
                     int customerId = account.getId();
 
                     CartDAO cartDAO = new CartDAO();

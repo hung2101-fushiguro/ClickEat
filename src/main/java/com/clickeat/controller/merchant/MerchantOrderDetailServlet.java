@@ -48,6 +48,10 @@ public class MerchantOrderDetailServlet extends HttpServlet {
             request.setAttribute("order", order);
             request.setAttribute("items", items);
             request.setAttribute("currentPage", "orders"); // Sáng nút ở Sidebar
+            request.setAttribute("successMsg", request.getSession().getAttribute("merchantOrderSuccess"));
+            request.setAttribute("errorMsg", request.getSession().getAttribute("merchantOrderError"));
+            request.getSession().removeAttribute("merchantOrderSuccess");
+            request.getSession().removeAttribute("merchantOrderError");
 
             request.getRequestDispatcher("/views/merchant/order-detail.jsp").forward(request, response);
 
@@ -71,6 +75,8 @@ public class MerchantOrderDetailServlet extends HttpServlet {
         try {
             String action = request.getParameter("action");
             int orderId = Integer.parseInt(request.getParameter("orderId"));
+            boolean success = false;
+            String message = null;
 
             OrderDAO orderDAO = new OrderDAO();
             Order order = orderDAO.findById(orderId);
@@ -79,14 +85,27 @@ public class MerchantOrderDetailServlet extends HttpServlet {
             if (order != null && order.getMerchantId() == account.getId()) {
 
                 if ("accept".equals(action)) {
-                    orderDAO.transitionMerchantOrderStatus(orderId, account.getId(), "PREPARING", "Merchant accepted order from detail");
-
+                    success = orderDAO.transitionMerchantOrderStatus(orderId, account.getId(), "PREPARING", "Merchant accepted order from detail");
+                    message = success ? "Đã nhận đơn và chuyển sang ĐANG CHUẨN BỊ." : "Không thể nhận đơn do trạng thái hiện tại không hợp lệ.";
                 } else if ("reject".equals(action)) {
                     String reason = request.getParameter("cancelReason");
-                    orderDAO.transitionMerchantOrderStatus(orderId, account.getId(), "CANCELLED", reason);
-
+                    success = orderDAO.transitionMerchantOrderStatus(orderId, account.getId(), "CANCELLED", reason);
+                    message = success ? "Đơn đã được hủy." : "Không thể hủy đơn ở trạng thái hiện tại.";
                 } else if ("ready".equals(action)) {
-                    orderDAO.transitionMerchantOrderStatus(orderId, account.getId(), "READY_FOR_PICKUP", "Merchant marked ready from detail");
+                    success = orderDAO.transitionMerchantOrderStatus(orderId, account.getId(), "READY_FOR_PICKUP", "Merchant marked ready from detail");
+                    message = success ? "Đơn đã sẵn sàng để shipper lấy." : "Không thể chuyển đơn sang trạng thái sẵn sàng lấy hàng.";
+                } else {
+                    message = "Thao tác không hợp lệ.";
+                }
+            } else {
+                message = "Không thể thao tác với đơn hàng này.";
+            }
+
+            if (message != null) {
+                if (success) {
+                    request.getSession().setAttribute("merchantOrderSuccess", message);
+                } else {
+                    request.getSession().setAttribute("merchantOrderError", message);
                 }
             }
 
