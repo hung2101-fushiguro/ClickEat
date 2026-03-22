@@ -28,13 +28,24 @@ public class MerchantOrderServlet extends HttpServlet {
         if (tab == null || tab.isEmpty()) {
             tab = "pending";
         }
+        String statusFilter = request.getParameter("status");
+        String fromDateTime = request.getParameter("from");
+        String toDateTime = request.getParameter("to");
 
         OrderDAO orderDAO = new OrderDAO();
-        List<Order> orders = orderDAO.getOrdersByMerchantAndStatus(account.getId(), tab);
+        List<Order> orders = orderDAO.getOrdersByMerchantAndStatus(account.getId(), tab, statusFilter, fromDateTime, toDateTime);
 
         request.setAttribute("orders", orders);
         request.setAttribute("currentTab", tab);
+        request.setAttribute("statusFilter", statusFilter);
+        request.setAttribute("fromDateTime", fromDateTime);
+        request.setAttribute("toDateTime", toDateTime);
         request.setAttribute("currentPage", "orders");
+
+        request.setAttribute("successMsg", request.getSession().getAttribute("merchantOrderSuccess"));
+        request.setAttribute("errorMsg", request.getSession().getAttribute("merchantOrderError"));
+        request.getSession().removeAttribute("merchantOrderSuccess");
+        request.getSession().removeAttribute("merchantOrderError");
 
         request.getRequestDispatcher("/views/merchant/orders.jsp").forward(request, response);
     }
@@ -52,27 +63,52 @@ public class MerchantOrderServlet extends HttpServlet {
         String action = request.getParameter("action");
         long orderId = Long.parseLong(request.getParameter("orderId"));
         String currentTab = request.getParameter("tab"); // Để redirect về đúng tab cũ
+        String statusFilter = request.getParameter("status");
+        String fromDateTime = request.getParameter("from");
+        String toDateTime = request.getParameter("to");
+        String cancelReason = request.getParameter("cancelReason");
 
         OrderDAO orderDAO = new OrderDAO();
+        boolean success = false;
+        String message = null;
 
         try {
             if ("accept".equals(action)) {
-
-                orderDAO.updateOrderStatus(orderId, account.getId(), "PREPARING");
+                success = orderDAO.transitionMerchantOrderStatus(orderId, account.getId(), "PREPARING", "Merchant accepted order");
+                message = success ? "Đã nhận đơn và chuyển sang ĐANG CHUẨN BỊ." : "Không thể nhận đơn do trạng thái không hợp lệ.";
             } else if ("ready".equals(action)) {
-
-                orderDAO.updateOrderStatus(orderId, account.getId(), "READY_FOR_PICKUP");
+                success = orderDAO.transitionMerchantOrderStatus(orderId, account.getId(), "READY_FOR_PICKUP", "Merchant marked ready for pickup");
+                message = success ? "Đơn đã sẵn sàng để shipper lấy." : "Không thể chuyển sang SẴN SÀNG LẤY HÀNG.";
             } else if ("cancel".equals(action)) {
-
-                orderDAO.updateOrderStatus(orderId, account.getId(), "MERCHANT_REJECTED");
+                success = orderDAO.transitionMerchantOrderStatus(orderId, account.getId(), "CANCELLED", cancelReason);
+                message = success ? "Đơn đã được hủy." : "Không thể hủy đơn ở trạng thái hiện tại.";
             }
         } catch (Exception e) {
             e.printStackTrace();
+            message = "Có lỗi khi cập nhật đơn hàng.";
+        }
+
+        if (message != null) {
+            if (success) {
+                request.getSession().setAttribute("merchantOrderSuccess", message);
+            } else {
+                request.getSession().setAttribute("merchantOrderError", message);
+            }
         }
 
         if (currentTab == null) {
             currentTab = "pending";
         }
-        response.sendRedirect(request.getContextPath() + "/merchant/orders?tab=" + currentTab);
+        StringBuilder redirect = new StringBuilder(request.getContextPath() + "/merchant/orders?tab=" + currentTab);
+        if (statusFilter != null && !statusFilter.isBlank()) {
+            redirect.append("&status=").append(java.net.URLEncoder.encode(statusFilter, java.nio.charset.StandardCharsets.UTF_8));
+        }
+        if (fromDateTime != null && !fromDateTime.isBlank()) {
+            redirect.append("&from=").append(java.net.URLEncoder.encode(fromDateTime, java.nio.charset.StandardCharsets.UTF_8));
+        }
+        if (toDateTime != null && !toDateTime.isBlank()) {
+            redirect.append("&to=").append(java.net.URLEncoder.encode(toDateTime, java.nio.charset.StandardCharsets.UTF_8));
+        }
+        response.sendRedirect(redirect.toString());
     }
 }

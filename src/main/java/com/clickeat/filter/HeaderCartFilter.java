@@ -28,7 +28,6 @@ public class HeaderCartFilter implements Filter {
     }
 
     private boolean shouldSkip(String path) {
-        // Skip admin and auth pages if you want
         return path.startsWith("/admin")
                 || path.startsWith("/login")
                 || path.startsWith("/register")
@@ -53,7 +52,6 @@ public class HeaderCartFilter implements Filter {
             return;
         }
 
-        // Defaults
         request.setAttribute("cartItems", Collections.emptyList());
         request.setAttribute("cartCount", 0);
         request.setAttribute("cartTotal", 0.0);
@@ -63,40 +61,40 @@ public class HeaderCartFilter implements Filter {
             HttpSession session = request.getSession(false);
             if (session != null) {
                 User account = (User) session.getAttribute("account");
+                String guestId = (String) session.getAttribute("guestId");
+
+                CartDAO cartDAO = new CartDAO();
+                Cart cart = null;
+
                 if (account != null) {
-                    int customerId = account.getId();
+                    cart = cartDAO.getActiveCartByCustomerId(account.getId());
+                } else if (guestId != null && !guestId.isBlank()) {
+                    cart = cartDAO.getActiveCartByGuestId(guestId);
+                }
 
-                    CartDAO cartDAO = new CartDAO();
-                    Cart cart = cartDAO.getActiveCartByCustomerId(customerId);
+                if (cart != null) {
+                    CartItemViewDAO viewDAO = new CartItemViewDAO();
+                    List<CartItemView> items = viewDAO.getByCartId(cart.getId());
 
-                    if (cart != null) {
-                        CartItemViewDAO viewDAO = new CartItemViewDAO();
-                        List<CartItemView> items = viewDAO.getByCartId(cart.getId());
+                    int count = 0;
+                    double total = 0;
+                    for (CartItemView it : items) {
+                        count += it.getQuantity();
+                        total += it.getLineTotal();
+                    }
 
-                        int count = 0;
-                        double total = 0;
-                        for (CartItemView it : items) {
-                            count += it.getQuantity();
-                            total += it.getLineTotal();
-                        }
+                    request.setAttribute("cartItems", items);
+                    request.setAttribute("cartCount", count);
+                    request.setAttribute("cartTotal", total);
 
-                        request.setAttribute("cartItems", items);
-                        request.setAttribute("cartCount", count);
-                        request.setAttribute("cartTotal", total);
-
-                        // lastStoreUrl: quay lại shop theo merchant_user_id trong carts
-                        int merchantId = cart.getMerchantUserId(); // bạn đang set 0 nếu null
-                        if (merchantId > 0) {
-                            // Bạn đổi URL này theo routing store của bạn
-                            request.setAttribute("lastStoreUrl", ctx + "/store/detail?merchantId=" + merchantId);
-                        } else {
-                            request.setAttribute("lastStoreUrl", ctx + "/store");
-                        }
+                    Integer merchantId = cart.getMerchantUserId();
+                    if (merchantId != null && merchantId > 0) {
+                        request.setAttribute("lastStoreUrl", ctx + "/store-detail?id=" + merchantId);
                     }
                 }
             }
-        } catch (Exception ignored) {
-            // Nếu lỗi filter thì vẫn cho trang load bình thường
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
         chain.doFilter(req, res);

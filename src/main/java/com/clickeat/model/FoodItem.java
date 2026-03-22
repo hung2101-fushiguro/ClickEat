@@ -3,6 +3,7 @@ package com.clickeat.model;
 import java.sql.Timestamp;
 
 public class FoodItem {
+
     private int id;
     private int merchantUserId;
     private int categoryId;
@@ -25,6 +26,7 @@ public class FoodItem {
     private int discountPercent;
     private double rating;
     private String badgeText;
+    private String outOfStockReason;
 
     public FoodItem() {
     }
@@ -195,5 +197,13 @@ public class FoodItem {
 
     public void setBadgeText(String badgeText) {
         this.badgeText = badgeText;
+    }
+
+    public String getOutOfStockReason() {
+        return outOfStockReason;
+    }
+
+    public void setOutOfStockReason(String outOfStockReason) {
+        this.outOfStockReason = outOfStockReason;
     }
 }

@@ -8,7 +8,8 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>ClickEat - Trang chủ</title>
-
+        <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/logo-icon.png?v=2">
+        <link rel="shortcut icon" href="${pageContext.request.contextPath}/logo-icon.png?v=2">
         <script src="https://cdn.tailwindcss.com"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
@@ -991,7 +992,7 @@
                                     <div class="relative h-[230px] overflow-hidden bg-gray-100">
                                         <c:choose>
                                             <c:when test="${not empty f.imageUrl}">
-                                                <img src="${f.imageUrl}" alt="${f.name}" class="w-full h-full object-cover">
+                                                <img src="${ctx}${f.imageUrl}" alt="${f.name}" class="w-full h-full object-cover">
                                             </c:when>
                                             <c:otherwise>
                                                 <img src="https://placehold.co/600x400/orange/white?text=ClickEat" alt="${f.name}" class="w-full h-full object-cover">
@@ -1064,36 +1065,52 @@
                         </div>
                     </c:if>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-                        <c:forEach var="m" items="${merchants}">
-                            <article class="restaurant-card bg-white overflow-hidden border border-gray-100 shadow-soft card-hover">
-                                <div class="relative h-[240px] overflow-hidden">
-                                    <img src="${m.imageUrl}" alt="${m.shopName}" class="w-full h-full object-cover">
-                                    <span class="absolute top-4 right-4 pill bg-orange-50 text-orange-500">NỔI BẬT</span>
-                                </div>
-                                <div class="p-7">
-                                    <h3 class="text-[22px] font-black text-gray-900 leading-tight line-clamp-1">${m.shopName}</h3>
+                    <c:if test="${not empty merchants}">
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                            <c:forEach var="m" items="${merchants}">
+                                <a href="${ctx}/store-detail?id=${m.userId}" class="block h-full">
+                                    <article class="restaurant-card bg-white overflow-hidden border border-gray-100 shadow-soft card-hover h-full">
+                                        <div class="relative h-[240px] overflow-hidden">
+                                            <c:choose>
+                                                <c:when test="${not empty m.imageUrl}">
+                                                    <img src="${ctx}${m.imageUrl}" alt="${m.shopName}" class="w-full h-full object-cover">
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <img src="${ctx}/assets/images/default-store.jpg" alt="${m.shopName}" class="w-full h-full object-cover">
+                                                </c:otherwise>
+                                            </c:choose>
 
-                                    <div class="flex items-center gap-5 text-[15px] text-gray-500 mt-4 font-semibold flex-wrap">
-                                        <span><i class="fa-regular fa-clock text-orange-500 mr-1"></i> ${m.deliveryTime}</span>
-                                        <span><i class="fa-solid fa-location-dot text-orange-500 mr-1"></i> ${m.distance}</span>
-                                        <span><i class="fa-solid fa-map text-orange-500 mr-1"></i> ${m.districtName}</span>
-                                    </div>
-
-                                    <div class="flex items-center justify-between gap-4 mt-6 flex-wrap">
-                                        <div class="flex flex-wrap gap-2">
-                                            <span class="pill pill-orange">${m.categoryName}</span>
-                                            <span class="pill pill-green line-clamp-1">${m.voucherTitle}</span>
+                                            <span class="absolute top-4 right-4 pill bg-orange-50 text-orange-500">NỔI BẬT</span>
                                         </div>
-                                        <span class="pill bg-orange-50 text-orange-500">
-                                            <i class="fa-solid fa-star mr-1"></i>
-                                            <fmt:formatNumber value="${m.rating}" type="number" minFractionDigits="1" maxFractionDigits="1" />
-                                        </span>
-                                    </div>
-                                </div>
-                            </article>
-                        </c:forEach>
-                    </div>
+
+                                        <div class="p-7">
+                                            <h3 class="text-[22px] font-black text-gray-900 leading-tight line-clamp-1">
+                                                ${m.shopName}
+                                            </h3>
+
+                                            <div class="flex items-center gap-5 text-[15px] text-gray-500 mt-4 font-semibold flex-wrap">
+                                                <span><i class="fa-regular fa-clock text-orange-500 mr-1"></i> ${m.deliveryTime}</span>
+                                                <span><i class="fa-solid fa-location-dot text-orange-500 mr-1"></i> ${m.distance}</span>
+                                                <span><i class="fa-solid fa-map text-orange-500 mr-1"></i> ${m.districtName}</span>
+                                            </div>
+
+                                            <div class="flex items-center justify-between gap-4 mt-6 flex-wrap">
+                                                <div class="flex flex-wrap gap-2">
+                                                    <span class="pill pill-orange">${empty m.categoryName ? 'Món ăn' : m.categoryName}</span>
+                                                    <span class="pill pill-green line-clamp-1">${empty m.voucherTitle ? 'Đang mở bán' : m.voucherTitle}</span>
+                                                </div>
+
+                                                <span class="pill bg-orange-50 text-orange-500">
+                                                    <i class="fa-solid fa-star mr-1"></i>
+                                                    <fmt:formatNumber value="${m.rating}" type="number" minFractionDigits="1" maxFractionDigits="1" />
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </article>
+                                </a>
+                            </c:forEach>
+                        </div>
+                    </c:if>
                 </div>
             </section>
 

@@ -30,23 +30,7 @@ public class OrderItemDAO extends AbstractDAO<OrderItem> {
     
     @Override public List<OrderItem> findAll() { return null; }
     @Override public OrderItem findById(int id) { return null; }
-    @Override
-    public int insert(OrderItem item) {
-        String sql = """
-            INSERT INTO OrderItems (
-                order_id, food_item_id, item_name_snapshot, 
-                unit_price_snapshot, quantity, note
-            ) VALUES (?, ?, ?, ?, ?, ?)
-        """;
-        return update(sql, 
-            item.getOrderId(),
-            item.getFoodItemId(),
-            item.getItemNameSnapshot(),
-            item.getUnitPriceSnapshot(),
-            item.getQuantity(),
-            item.getNote()
-        );
-    }
+    @Override public int insert(OrderItem t) { return 0; }
     @Override public boolean update(OrderItem t) { return false; }
     @Override public boolean delete(int id) { return false; }
 }

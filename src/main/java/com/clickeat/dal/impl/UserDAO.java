@@ -2,14 +2,18 @@ package com.clickeat.dal.impl;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Base64;
 import java.util.List;
 
 import com.clickeat.dal.interfaces.IUserDAO;
 import com.clickeat.model.User;
 
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+
 public class UserDAO extends AbstractDAO<User> implements IUserDAO {
 
-    @Override //day la ham map du lieu tu 1 dong trong database sang object java
+    @Override
     protected User mapRow(ResultSet rs) throws SQLException {
         User user = new User();
         user.setId(rs.getInt("id"));
@@ -26,9 +30,30 @@ public class UserDAO extends AbstractDAO<User> implements IUserDAO {
 
     @Override
     public User checkLogin(String username, String password) {
-        // Đã xóa điều kiện "AND status = 'ACTIVE'"
-        String sql = "SELECT * FROM Users WHERE (phone = ? OR email = ?) AND password_hash = ?";
-        return queryOne(sql, username, username, password);
+        String sql = "SELECT * FROM Users WHERE (phone = ? OR email = ?)";
+        User user = queryOne(sql, username, username);
+
+        if (user == null) {
+            return null;
+        }
+
+        String storedHash = user.getPasswordHash();
+        if (storedHash == null || storedHash.isBlank()) {
+            return null;
+        }
+
+        boolean matched;
+        if (storedHash.contains(":")) {
+            matched = verifyPassword(password, storedHash);
+        } else {
+            matched = storedHash.equals(password); // hỗ trợ tài khoản cũ lưu plain text
+        }
+
+        if (!matched) {
+            return null;
+        }
+
+        return user;
     }
 
     @Override
@@ -61,14 +86,12 @@ public class UserDAO extends AbstractDAO<User> implements IUserDAO {
     @Override
     public boolean changePassword(int userId, String newPasswordHash) {
         String sql = "UPDATE Users SET password_hash = ?, updated_at = GETDATE() WHERE id = ?";
-        // update() trả về số dòng ảnh hưởng, > 0 nghĩa là thành công
         return update(sql, newPasswordHash, userId) > 0;
     }
 
     @Override
     public boolean changeUserStatus(int userId, String newStatus) {
         String sql = "UPDATE Users SET status = ?, updated_at = GETDATE() WHERE id = ?";
-        // Giả định hàm update() của IGenericDAO trả về int (số dòng bị ảnh hưởng)
         return update(sql, newStatus, userId) > 0;
     }
 
@@ -76,6 +99,33 @@ public class UserDAO extends AbstractDAO<User> implements IUserDAO {
     public boolean updateAvatar(int userId, String avatarUrl) {
         String sql = "UPDATE Users SET avatar_url = ?, updated_at = GETDATE() WHERE id = ?";
         return update(sql, avatarUrl, userId) > 0;
+    }
+
+    public boolean updateCustomerProfileInfo(int userId, String fullName, String email, String avatarUrl) {
+        String sql = """
+        UPDATE Users
+        SET full_name = ?,
+            email = ?,
+            avatar_url = ?,
+            updated_at = GETDATE()
+        WHERE id = ?
+    """;
+        return update(sql, fullName, email, avatarUrl, userId) > 0;
+    }
+
+    public boolean isEmailUsedByAnother(String email, int currentUserId) {
+        String sql = "SELECT 1 FROM Users WHERE email = ? AND id <> ?";
+        try (java.sql.Connection conn = getConnection(); java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, email);
+            ps.setInt(2, currentUserId);
+
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
     @Override
@@ -86,15 +136,15 @@ public class UserDAO extends AbstractDAO<User> implements IUserDAO {
             java.sql.PreparedStatement ps = conn.prepareStatement(sql);
             ps.setString(1, phone);
             ps.setString(2, email);
-            ps.setInt(3, currentUserId); // Dùng setInt vì ID trong Model của bạn là int
+            ps.setInt(3, currentUserId);
             java.sql.ResultSet rs = ps.executeQuery();
             if (rs.next()) {
-                return true; // Trùng với người khác
+                return true;
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return false; // An toàn
+        return false;
     }
 
     @Override
@@ -111,8 +161,6 @@ public class UserDAO extends AbstractDAO<User> implements IUserDAO {
 
     @Override
     public int insert(User user) {
-        // Insert user mới (Đăng ký)
-        // status mặc định là ACTIVE
         String sql = "INSERT INTO Users (full_name, email, phone, password_hash, role, status, created_at) VALUES (?, ?, ?, ?, ?, ?, GETDATE())";
         return update(sql,
                 user.getFullName(),
@@ -125,14 +173,12 @@ public class UserDAO extends AbstractDAO<User> implements IUserDAO {
 
     @Override
     public boolean update(User user) {
-        // Đã xóa bỏ updated_at để tránh lỗi Silent Fail
         String sql = "UPDATE Users SET full_name = ?, email = ?, phone = ? WHERE id = ?";
         return update(sql, user.getFullName(), user.getEmail(), user.getPhone(), user.getId()) > 0;
     }
 
     @Override
     public boolean delete(int id) {
-        // Xóa mềm (Soft Delete) - Chỉ đổi trạng thái sang INACTIVE chứ không xóa mất dữ liệu
         String sql = "UPDATE Users SET status = 'INACTIVE', updated_at = GETDATE() WHERE id = ?";
         return update(sql, id) > 0;
     }
@@ -150,20 +196,42 @@ public class UserDAO extends AbstractDAO<User> implements IUserDAO {
     public void linkGoogleProvider(int userId, String sub) {
         String check = "SELECT COUNT(*) AS c FROM UserAuthProviders WHERE provider='GOOGLE' AND provider_user_id=?";
         Integer existed = queryInt(check, sub);
-        if (existed != null && existed > 0) return;
+        if (existed != null && existed > 0) {
+            return;
+        }
         String sql = "INSERT INTO UserAuthProviders(user_id, provider, provider_user_id) VALUES(?, 'GOOGLE', ?)";
         update(sql, userId, sub);
     }
 
-    public long createGoogleUserReturnId(String fullName, String email, String phone) {
-        String sql = "INSERT INTO Users(full_name, email, phone, password_hash, role, status, created_at, updated_at) OUTPUT INSERTED.id VALUES(?, ?, ?, NULL, 'CUSTOMER', 'ACTIVE', SYSUTCDATETIME(), SYSUTCDATETIME())";
+    // Dùng cho GoogleCompleteServlet mới
+    public long createGoogleUserReturnId(String fullName, String email, String phone, String passwordHash) {
+        String sql = """
+            INSERT INTO Users(full_name, email, phone, password_hash, role, status, created_at, updated_at)
+            OUTPUT INSERTED.id
+            VALUES(?, ?, ?, ?, 'CUSTOMER', 'ACTIVE', SYSUTCDATETIME(), SYSUTCDATETIME())
+        """;
+
         try (java.sql.Connection conn = getConnection(); java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, fullName); ps.setString(2, email); ps.setString(3, phone);
+
+            ps.setString(1, fullName);
+            ps.setString(2, email);
+            ps.setString(3, phone);
+            ps.setString(4, passwordHash);
+
             try (java.sql.ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return rs.getLong(1);
+                if (rs.next()) {
+                    return rs.getLong(1);
+                }
             }
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return -1;
+    }
+
+    // Giữ lại nếu chỗ khác còn gọi hàm cũ
+    public long createGoogleUserReturnId(String fullName, String email, String phone) {
+        return createGoogleUserReturnId(fullName, email, phone, null);
     }
 
     public void createCustomerProfile(long userId, String food, String allergies, String goal, Integer dailyCal) {
@@ -179,9 +247,73 @@ public class UserDAO extends AbstractDAO<User> implements IUserDAO {
                 }
             }
             try (java.sql.ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return rs.getInt(1);
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
             }
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return null;
+    }
+
+    private boolean verifyPassword(String rawPassword, String storedPasswordHash) {
+        try {
+            String[] parts = storedPasswordHash.split(":");
+            if (parts.length != 2) {
+                return false;
+            }
+
+            byte[] salt = Base64.getDecoder().decode(parts[0]);
+            byte[] expectedHash = Base64.getDecoder().decode(parts[1]);
+
+            PBEKeySpec spec = new PBEKeySpec(rawPassword.toCharArray(), salt, 65536, 256);
+            SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+            byte[] actualHash = skf.generateSecret(spec).getEncoded();
+
+            return slowEquals(expectedHash, actualHash);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean isSameAsCurrentPassword(int userId, String rawPassword) {
+        String sql = "SELECT password_hash FROM Users WHERE id = ?";
+        try (java.sql.Connection conn = getConnection(); java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, userId);
+
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    String storedHash = rs.getString("password_hash");
+
+                    if (storedHash == null || storedHash.isBlank()) {
+                        return false;
+                    }
+
+                    if (storedHash.contains(":")) {
+                        return verifyPassword(rawPassword, storedHash);
+                    } else {
+                        return storedHash.equals(rawPassword);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    private boolean slowEquals(byte[] a, byte[] b) {
+        if (a == null || b == null || a.length != b.length) {
+            return false;
+        }
+
+        int diff = 0;
+        for (int i = 0; i < a.length; i++) {
+            diff |= a[i] ^ b[i];
+        }
+        return diff == 0;
     }
 }

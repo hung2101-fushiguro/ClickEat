@@ -34,6 +34,13 @@ public class MerchantSettingsServlet extends HttpServlet {
             request.setAttribute("dbShopAvatar", profile.getShopAvatar());
             request.setAttribute("dbBusinessHours", profile.getBusinessHours());
             request.setAttribute("dbNotifySettings", profile.getNotificationSettings());
+            request.setAttribute("dbMinOrderAmount", profile.getMinOrderAmount());
+            request.setAttribute("dbIsOpen", profile.getIsOpen());
+            request.setAttribute("dbMerchantStatus", profile.getStatus());
+            request.setAttribute("dbRejectionReason", profile.getRejectionReason());
+
+            request.getSession().setAttribute("merchantShopName", profile.getShopName());
+            request.getSession().setAttribute("merchantIsOpen", profile.getIsOpen() == null ? true : profile.getIsOpen());
         }
 
         // Lấy thông báo thành công và tab hiện tại từ Session
@@ -67,20 +74,31 @@ public class MerchantSettingsServlet extends HttpServlet {
             String shopPhone = request.getParameter("shopPhone");
             String shopAddress = request.getParameter("shopAddress");
             String avatarData = request.getParameter("avatarData");
+            String minOrderRaw = request.getParameter("minOrderAmount");
+            String isOpenRaw = request.getParameter("isOpen");
 
             MerchantProfile current = dao.findById((int) userId);
             String finalAvatar = (avatarData != null && !avatarData.trim().isEmpty()) ? avatarData : (current != null ? current.getShopAvatar() : null);
+            Double minOrderAmount = null;
+            if (minOrderRaw != null && !minOrderRaw.trim().isEmpty()) {
+                minOrderAmount = Double.parseDouble(minOrderRaw.trim());
+            }
+            boolean isOpen = "on".equalsIgnoreCase(isOpenRaw) || "true".equalsIgnoreCase(isOpenRaw);
 
             if (current != null) {
                 current.setShopName(shopName);
                 current.setShopPhone(shopPhone);
                 current.setShopAddressLine(shopAddress);
                 current.setShopAvatar(finalAvatar);
+                current.setMinOrderAmount(minOrderAmount);
+                current.setIsOpen(isOpen);
                 dao.update(current);
             }
 
             // Cập nhật lại tên hiển thị trên Sidebar (nếu có lưu trên Session)
             request.getSession().setAttribute("merchantName", shopName);
+            request.getSession().setAttribute("merchantShopName", shopName);
+            request.getSession().setAttribute("merchantIsOpen", isOpen);
             request.getSession().setAttribute("successMsg", "Cập nhật hồ sơ cửa hàng thành công!");
 
         } else if ("hours".equals(tab)) {

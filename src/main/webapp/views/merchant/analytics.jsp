@@ -13,13 +13,14 @@
             tailwind.config = {
                 theme: {
                     extend: {
+                        fontFamily: {sans: ['Inter', 'sans-serif']},
                         colors: {primary: '#c86601', 'primary-dark': '#a05201'}
                     }
                 }
             };
         </script>
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
         <style>
             body {
@@ -105,34 +106,34 @@
         </main>
 
         <script>
-            // 1. Chuyển đổi dữ liệu từ Java sang Javascript 
+            // 1. Chuyển đổi dữ liệu từ Java sang Javascript
             const rawLabels = [<c:forEach var="entry" items="${revenueData}">"${entry.key}",</c:forEach>];
-                    const rawData = [<c:forEach var="entry" items="${revenueData}">${entry.value},</c:forEach>];
-
+            const rawData = [<c:forEach var="entry" items="${revenueData}">${entry.value},</c:forEach>];
+            
             // 2. Vẽ biểu đồ chính
             (function initMainChart() {
                 const ctx = document.getElementById('mainRevenueChart').getContext('2d');
                 let gradient = ctx.createLinearGradient(0, 0, 0, 400);
                 gradient.addColorStop(0, 'rgba(200, 102, 1, 0.15)');
                 gradient.addColorStop(1, 'rgba(200, 102, 1, 0)');
-
+                
                 new Chart(ctx, {
                     type: 'line',
                     data: {
                         labels: rawLabels,
                         datasets: [{
-                                label: 'Doanh thu (đ)',
-                                data: rawData,
-                                borderColor: '#c86601',
-                                backgroundColor: gradient,
-                                fill: true,
-                                tension: 0.4,
-                                borderWidth: 3,
-                                pointBackgroundColor: '#fff',
-                                pointBorderColor: '#c86601',
-                                pointBorderWidth: 2,
-                                pointRadius: 4
-                            }]
+                            label: 'Doanh thu (đ)',
+                            data: rawData,
+                            borderColor: '#c86601',
+                            backgroundColor: gradient,
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 3,
+                            pointBackgroundColor: '#fff',
+                            pointBorderColor: '#c86601',
+                            pointBorderWidth: 2,
+                            pointRadius: 4
+                        }]
                     },
                     options: {
                         responsive: true,
@@ -145,7 +146,7 @@
                     }
                 });
             })();
-
+            
             function changePeriod(v) {
                 window.location.href = '${pageContext.request.contextPath}/merchant/analytics?period=' + v;
             }

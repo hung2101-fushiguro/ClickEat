@@ -44,6 +44,10 @@ public class MerchantCatalogServlet extends HttpServlet {
         request.setAttribute("categories", categories);
         request.setAttribute("foodItems", foodItems);
         request.setAttribute("currentPage", "catalog");
+        request.setAttribute("successMsg", request.getSession().getAttribute("catalogSuccess"));
+        request.setAttribute("errorMsg", request.getSession().getAttribute("catalogError"));
+        request.getSession().removeAttribute("catalogSuccess");
+        request.getSession().removeAttribute("catalogError");
 
         request.getRequestDispatcher("/views/merchant/catalog.jsp").forward(request, response);
     }
@@ -66,14 +70,38 @@ public class MerchantCatalogServlet extends HttpServlet {
             // 1. Xử lý Toggle (Bật/Tắt) bằng AJAX
             if ("toggle".equals(action)) {
                 int itemId = Integer.parseInt(request.getParameter("itemId"));
+                String availableRaw = request.getParameter("isAvailable");
+                String reason = request.getParameter("reason");
                 FoodItem item = foodItemDAO.findById(itemId);
 
                 // Chỉ cho phép update nếu món ăn thuộc về đúng chủ quán đó
                 if (item != null && item.getMerchantUserId() == merchantId) {
-                    boolean newStatus = !item.isAvailable();
-                    foodItemDAO.toggleStatus(itemId, merchantId, newStatus);
+                    boolean newStatus = availableRaw == null ? !item.isAvailable() : Boolean.parseBoolean(availableRaw);
+                    foodItemDAO.toggleStatus(itemId, merchantId, newStatus, reason);
                 }
-                return; 
+                return;
+            } else if ("bulk-toggle".equals(action)) {
+                String[] rawIds = request.getParameterValues("itemIds");
+                String availableRaw = request.getParameter("isAvailable");
+                String reason = request.getParameter("reason");
+                boolean newStatus = Boolean.parseBoolean(availableRaw);
+
+                if (rawIds == null || rawIds.length == 0) {
+                    request.getSession().setAttribute("catalogError", "Vui lòng chọn ít nhất 1 món để cập nhật.");
+                } else {
+                    List<Integer> itemIds = new java.util.ArrayList<>();
+                    for (String rawId : rawIds) {
+                        try {
+                            itemIds.add(Integer.parseInt(rawId));
+                        } catch (NumberFormatException ignored) {
+                        }
+                    }
+
+                    int affected = foodItemDAO.bulkToggleStatus(itemIds, merchantId, newStatus, reason);
+                    request.getSession().setAttribute("catalogSuccess", "Đã cập nhật trạng thái " + affected + " món.");
+                }
+                response.sendRedirect(request.getContextPath() + "/merchant/catalog");
+                return;
             } // 2. Xử lý Thêm mới hoặc Cập nhật món
             else if ("add".equals(action) || "edit".equals(action)) {
                 String name = request.getParameter("name");
@@ -112,6 +140,7 @@ public class MerchantCatalogServlet extends HttpServlet {
             }
         } catch (Exception e) {
             e.printStackTrace();
+            request.getSession().setAttribute("catalogError", "Có lỗi khi cập nhật danh mục món.");
             response.sendRedirect(request.getContextPath() + "/merchant/catalog?error=1");
         }
     }

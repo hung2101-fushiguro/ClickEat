@@ -1,0 +1,41 @@
+# Merchant Features Migration Log
+The following changes were applied to migrate missing merchant functionalities from ClickEat-dat (1) to the current ClickEat project without breaking existing user roles (esp. PBKDF2 password hashing).
+
+## 1. Controllers Addressed
+Replaced existing files and added new files to `src/main/java/com/clickeat/controller/merchant/`:
+- MerchantCatalogServlet.java
+- MerchantDashboardServlet.java
+- MerchantLogoutServlet.java
+- MerchantOrderDetailServlet.java
+- MerchantOrderServlet.java
+- MerchantPromotionServlet.java
+- MerchantSettingsServlet.java
+- MerchantToggleOpenServlet.java (NEW)
+
+## 2. Views Addressed
+Replaced existing files in `src/main/webapp/views/merchant/`:
+- analytics.jsp
+- catalog.jsp
+- chat.jsp
+- dashboard.jsp
+- orders.jsp
+- promotions.jsp
+- refund.jsp
+- register.jsp
+- reviews.jsp
+- settings.jsp
+- wallet.jsp
+
+## 3. DAO Models Merged (No full overrides to protect existing Auth logic)
+Extra methods required by merchant UI were selectively injected at the end of the DAO implementations:
+- **OrderDAO.java**: Added `getOrdersByMerchantAndStatus`, `transitionMerchantOrderStatus`, `getDashboardSummary`, `getOrderCountByHourToday`, `findByCode`
+- **FoodItemDAO.java**: Added `getPromotedFoods`, `toggleStatus` (with out-of-stock reasons), `bulkToggleStatus`
+- **VoucherDAO.java**: Added `togglePublishByMerchant`
+- **MerchantProfileDAO.java**: Added `getByUserId`, `updateStoreInfo`, `updateBusinessHours`, `updateNotificationSettings`, `updateOpenState`. Fixed `setLatitude` and `setLongitude` parameter casting issues.
+
+## 4. Entity Models
+- `MerchantProfile.java`: Overwritten with the properties from dat (1) model (`minOrderAmount`, `isOpen`, `shopAvatar`, `businessHours`, `notificationSettings`, `rejectionReason`). Surgically restored UI properties required by current project components (`rating`, `reviewCount`, `itemCount`, `isDefault`, `note`, `minPrice`, `deliveryTime`, `distance`, `categoryName`, `voucherTitle`, `imageUrl`, `coverImageUrl`).
+- `Order.java` & `FoodItem.java`: Verified model alignment through diffs and merged missing fields.
+
+## 5. Build Status
+- Build was compiled successfully using `mvn clean compile`. All dependencies resolved perfectly and there are no syntax errors.

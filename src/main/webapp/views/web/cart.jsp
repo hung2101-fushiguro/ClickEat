@@ -50,16 +50,27 @@
 
                             <c:otherwise>
                                 <form id="cartUpdateForm" action="${ctx}/cart?action=update" method="post">
+                                    <input type="hidden" name="action" value="update" />
                                     <input type="hidden" name="removeId" id="removeId" value="" />
 
                                     <div class="space-y-5">
                                         <c:forEach var="it" items="${cartItems}">
                                             <c:set var="itemId" value="${it.cartItemId}" />
+
                                             <div class="flex gap-4 border-b pb-5">
-                                                <img src="${it.imageUrl}"
-                                                     onerror="this.src='https://via.placeholder.com/96x96?text=Food';"
-                                                     class="w-20 h-20 rounded-full object-cover shadow"
-                                                     alt="${it.name}" />
+                                                <c:choose>
+                                                    <c:when test="${not empty it.imageUrl}">
+                                                        <img src="${it.imageUrl}"
+                                                             onerror="this.onerror=null;this.src='${ctx}/assets/images/food-placeholder.png';"
+                                                             class="w-20 h-20 rounded-full object-cover shadow"
+                                                             alt="${it.name}" />
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <img src="${ctx}/assets/images/food-placeholder.png"
+                                                             class="w-20 h-20 rounded-full object-cover shadow"
+                                                             alt="${it.name}" />
+                                                    </c:otherwise>
+                                                </c:choose>
 
                                                 <div class="flex-1">
                                                     <div class="flex items-start justify-between gap-3">
@@ -128,7 +139,7 @@
                         </div>
 
                         <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-                            <a href="${empty cartItems ? ctx.concat('/menu') : lastStoreUrl}"
+                            <a href="${empty cartItems ? ctx.concat('/store') : lastStoreUrl}"
                                class="h-12 px-6 rounded-full border border-gray-200 font-extrabold text-gray-900 hover:bg-gray-50 flex items-center justify-center whitespace-nowrap leading-none">
                                 Tiếp tục mua sắm
                             </a>
@@ -293,10 +304,19 @@
                                 <div class="lg:col-span-2 space-y-4">
                                     <c:forEach var="item" items="${cartItems}">
                                         <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
-                                            <img src="${item.imageUrl}"
-                                                 alt="${item.name}"
-                                                 class="w-20 h-20 object-cover rounded-xl bg-gray-100"
-                                                 onerror="this.src='https://via.placeholder.com/96x96?text=Food';">
+                                            <c:choose>
+                                                <c:when test="${not empty item.imageUrl}">
+                                                    <img src="${item.imageUrl}"
+                                                         alt="${item.name}"
+                                                         class="w-20 h-20 object-cover rounded-xl bg-gray-100"
+                                                         onerror="this.onerror=null;this.src='${ctx}/assets/images/food-placeholder.png';">
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <img src="${ctx}/assets/images/food-placeholder.png"
+                                                         alt="${item.name}"
+                                                         class="w-20 h-20 object-cover rounded-xl bg-gray-100">
+                                                </c:otherwise>
+                                            </c:choose>
 
                                             <div class="flex-grow">
                                                 <h3 class="text-lg font-bold text-gray-900">${item.name}</h3>
@@ -309,7 +329,7 @@
                                                 <span class="font-medium text-gray-700">SL: ${item.quantity}</span>
                                             </div>
 
-                                            <a href="${ctx}/cart?action=delete&itemId=${item.id}"
+                                            <a href="${ctx}/cart?action=delete&itemId=${item.cartItemId}"
                                                class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors ml-2"
                                                onclick="return confirm('Bạn có chắc chắn muốn xóa món này không?');">
                                                 <i class="fa-solid fa-trash"></i>
@@ -346,7 +366,6 @@
                         </c:otherwise>
                     </c:choose>
                 </main>
-
                 <jsp:include page="footer.jsp" />
             </body>
         </html>

@@ -91,39 +91,6 @@ public class FoodItemDAO extends AbstractDAO<FoodItem> implements IFoodItemDAO {
         return query(sql, limit);
     }
 
-    public List<FoodItem> getPromotedFoods(int limit) {
-        if (limit <= 0) {
-            limit = 12;
-        }
-
-        String sql = """
-        SELECT fi.*,
-               mp.shop_name AS merchant_name,
-               c.name AS category_name,
-               CASE
-                   WHEN fi.id % 4 = 1 THEN 27
-                   WHEN fi.id % 4 = 2 THEN 16
-                   WHEN fi.id % 4 = 3 THEN 24
-                   ELSE 19
-               END AS discount_percent,
-               CASE
-                   WHEN fi.id % 4 = 1 THEN ROUND(fi.price / 0.73, 0)
-                   WHEN fi.id % 4 = 2 THEN ROUND(fi.price / 0.84, 0)
-                   WHEN fi.id % 4 = 3 THEN ROUND(fi.price / 0.76, 0)
-                   ELSE ROUND(fi.price / 0.81, 0)
-               END AS original_price
-        FROM FoodItems fi
-        INNER JOIN MerchantProfiles mp ON mp.user_id = fi.merchant_user_id
-        INNER JOIN Categories c ON c.id = fi.category_id
-        WHERE fi.is_available = 1
-          AND mp.status = 'APPROVED'
-        ORDER BY discount_percent DESC, fi.id DESC
-        OFFSET 0 ROWS FETCH NEXT ? ROWS ONLY
-    """;
-
-        return query(sql, limit);
-    }
-
     @Override
     public List<FoodItem> findByMerchant(int merchantUserId) {
         String sql = """
@@ -340,4 +307,40 @@ public class FoodItemDAO extends AbstractDAO<FoodItem> implements IFoodItemDAO {
         String sql = "UPDATE FoodItems SET is_available = ?, updated_at = SYSUTCDATETIME() WHERE id = ? AND merchant_user_id = ?";
         return update(sql, isAvailable, itemId, merchantId) > 0;
     }
+
+    public java.util.List<com.clickeat.model.FoodItem> getPromotedFoods(int limit) {
+        if (limit <= 0) limit = 12;
+        String sql = "SELECT fi.*, mp.shop_name AS merchant_name, c.name AS category_name, " +
+               "CASE WHEN fi.id % 4 = 1 THEN 27 WHEN fi.id % 4 = 2 THEN 16 WHEN fi.id % 4 = 3 THEN 24 ELSE 19 END AS discount_percent, " +
+               "CASE WHEN fi.id % 4 = 1 THEN ROUND(fi.price / 0.73, 0) WHEN fi.id % 4 = 2 THEN ROUND(fi.price / 0.84, 0) WHEN fi.id % 4 = 3 THEN ROUND(fi.price / 0.76, 0) ELSE ROUND(fi.price / 0.81, 0) END AS original_price " +
+               "FROM FoodItems fi " +
+               "INNER JOIN MerchantProfiles mp ON mp.user_id = fi.merchant_user_id " +
+               "INNER JOIN Categories c ON c.id = fi.category_id " +
+               "WHERE fi.is_available = 1 AND mp.status = 'APPROVED' " +
+               "ORDER BY discount_percent DESC, fi.id DESC " +
+               "OFFSET 0 ROWS FETCH NEXT ? ROWS ONLY";
+        return query(sql, limit);
+    }
+
+
+
+    public boolean toggleStatus(int itemId, int merchantId, boolean isAvailable, String reason) {
+        String sqlWithReason = "UPDATE FoodItems SET is_available = ?, out_of_stock_reason = ?, updated_at = SYSUTCDATETIME() WHERE id = ? AND merchant_user_id = ?";
+        String finalReason = isAvailable ? null : reason;
+        int updated = update(sqlWithReason, isAvailable, finalReason, itemId, merchantId);
+        if (updated > 0) return true;
+        String fallbackSql = "UPDATE FoodItems SET is_available = ?, updated_at = SYSUTCDATETIME() WHERE id = ? AND merchant_user_id = ?";
+        return update(fallbackSql, isAvailable, itemId, merchantId) > 0;
+    }
+
+    public int bulkToggleStatus(java.util.List<Integer> itemIds, int merchantId, boolean isAvailable, String reason) {
+        if (itemIds == null || itemIds.isEmpty()) return 0;
+        int affected = 0;
+        for (Integer itemId : itemIds) {
+            if (itemId == null) continue;
+            if (toggleStatus(itemId, merchantId, isAvailable, reason)) affected++;
+        }
+        return affected;
+    }
+
 }

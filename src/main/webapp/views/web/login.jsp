@@ -6,7 +6,8 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Đăng nhập - Click Eat</title>
-
+        <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/logo-icon.png?v=2">
+        <link rel="shortcut icon" href="${pageContext.request.contextPath}/logo-icon.png?v=2">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -401,7 +402,12 @@
                         <div class="field">
                             <label>Email hoặc Số điện thoại</label>
                             <!-- giữ name giống code cũ của bạn -->
-                            <input class="input" type="text" name="username" placeholder="example@email.com" required>
+                            <input class="input"
+                                   type="text"
+                                   name="username"
+                                   value="${username}"
+                                   placeholder="example@email.com"
+                                   required>
                         </div>
 
                         <div class="field">
@@ -419,11 +425,12 @@
 
                         <div class="row">
                             <label class="remember">
-                                <input type="checkbox" name="remember" value="1">
-                                Ghi nhớ đăng nhập
-                            </label>
+                                <input type="checkbox" name="remember" value="1"
+                                       <c:if test="${remember}">checked</c:if>>
+                                       Ghi nhớ đăng nhập
+                                </label>
 
-                            <a class="link" href="${pageContext.request.contextPath}/forgot-password">Quên mật khẩu?</a>
+                                <a class="link" href="${pageContext.request.contextPath}/forgot-password">Quên mật khẩu?</a>
                         </div>
 
                         <button class="btn primary" type="submit">Đăng nhập</button>
@@ -431,7 +438,7 @@
                         <div class="divider">HOẶC</div>
 
                         <!-- Nếu bạn có OAuth Google: đổi href sang endpoint của bạn (vd: google-login) -->
-                        <button class="btn google" type="button" onclick="location.href='${pageContext.request.contextPath}/google-login'">
+                        <button class="btn google" type="button" onclick="location.href = '${pageContext.request.contextPath}/google-login'">
                             <svg class="googleIcon" viewBox="0 0 48 48" aria-hidden="true">
                             <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.2 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.1-.1-2.3-.4-3.5z"/>
                             <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.5 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.2 6.1 29.3 4 24 4 16.3 4 9.6 8.3 6.3 14.7z"/>
@@ -442,8 +449,8 @@
                         </button>
 
                         <div class="footer">
-                            Chưa có tài khoản? <a class="link" href="register">Đăng ký</a><br/>
-                            <span class="small">Bạn là đối tác? <a class="link" href="merchant-login">Đăng nhập Merchant</a> · <a class="link" href="merchant-register">Đi tới Merchant</a></span>
+                            Chưa có tài khoản? <a class="link" href="${pageContext.request.contextPath}/register">Đăng ký</a><br/>
+                            <span class="small">Bạn là đối tác? <a class="link" href="${pageContext.request.contextPath}/merchant-login">Đăng nhập Merchant</a> · <a class="link" href="${pageContext.request.contextPath}/merchant-register">Đi tới Merchant</a></span>
                         </div>
                     </form>
                 </section>

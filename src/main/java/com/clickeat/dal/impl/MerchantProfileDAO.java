@@ -28,13 +28,19 @@ public class MerchantProfileDAO extends AbstractDAO<MerchantProfile> {
         try {
             m.setLatitude(rs.getDouble("latitude"));
         } catch (Exception e) {
-            m.setLatitude(0);
+            m.setLatitude(0.0);
         }
 
         try {
             m.setLongitude(rs.getDouble("longitude"));
         } catch (Exception e) {
-            m.setLongitude(0);
+            m.setLongitude(0.0);
+        }
+
+        try {
+            m.setIsDefault(rs.getBoolean("is_default"));
+        } catch (Exception e) {
+            m.setIsDefault(null);
         }
 
         try {
@@ -61,10 +67,43 @@ public class MerchantProfileDAO extends AbstractDAO<MerchantProfile> {
             m.setUpdatedAt(null);
         }
 
-        try { m.setShopAvatar(rs.getString("shop_avatar")); } catch (Exception e) {}
-        try { m.setBusinessHours(rs.getString("business_hours")); } catch (Exception e) {}
-        try { m.setShopDescription(rs.getString("shop_description")); } catch (Exception e) {}
-        try { m.setNotificationSettings(rs.getString("notification_settings")); } catch (Exception e) {}
+        try {
+            m.setShopAvatar(rs.getString("shop_avatar"));
+        } catch (Exception e) {
+            m.setShopAvatar(null);
+        }
+
+        try {
+            m.setBusinessHours(rs.getString("business_hours"));
+        } catch (Exception e) {
+            m.setBusinessHours(null);
+        }
+
+        try {
+            m.setShopDescription(rs.getString("shop_description"));
+        } catch (Exception e) {
+            m.setShopDescription(null);
+        }
+
+        try {
+            m.setNotificationSettings(rs.getString("notification_settings"));
+        } catch (Exception e) {
+            m.setNotificationSettings(null);
+        }
+
+        // ảnh đọc từ DB
+        try {
+            m.setImageUrl(rs.getString("image_url"));
+        } catch (Exception e) {
+            m.setImageUrl(null);
+        }
+
+        // nếu sau này DB có cover_image_url thì sẽ đọc được, chưa có thì bỏ qua
+        try {
+            m.setCoverImageUrl(rs.getString("cover_image_url"));
+        } catch (Exception e) {
+            m.setCoverImageUrl(null);
+        }
 
         // field mở rộng phục vụ giao diện store/store-detail
         try {
@@ -103,15 +142,19 @@ public class MerchantProfileDAO extends AbstractDAO<MerchantProfile> {
             m.setVoucherTitle(null);
         }
 
-        // ảnh giả lập để render UI đẹp hơn nếu DB chưa có cột ảnh
+        // chỉ fallback ảnh khi DB chưa có
         try {
-            m.setImageUrl(resolveStoreImage(m.getShopName(), m.getDistrictName()));
+            if (m.getImageUrl() == null || m.getImageUrl().trim().isEmpty()) {
+                m.setImageUrl(resolveStoreImage(m.getShopName(), m.getDistrictName()));
+            }
         } catch (Exception e) {
             // bỏ qua
         }
 
         try {
-            m.setCoverImageUrl(resolveStoreCover(m.getShopName(), m.getDistrictName()));
+            if (m.getCoverImageUrl() == null || m.getCoverImageUrl().trim().isEmpty()) {
+                m.setCoverImageUrl(resolveStoreCover(m.getShopName(), m.getDistrictName()));
+            }
         } catch (Exception e) {
             // bỏ qua
         }
@@ -119,13 +162,13 @@ public class MerchantProfileDAO extends AbstractDAO<MerchantProfile> {
         try {
             m.setDeliveryTime(resolveDeliveryTime(m.getDistrictName()));
         } catch (Exception e) {
-            // bỏ qua
+            m.setDeliveryTime("15-25p");
         }
 
         try {
             m.setDistance(resolveDistance(m.getDistrictName()));
         } catch (Exception e) {
-            // bỏ qua
+            m.setDistance("1.8km");
         }
 
         try {
@@ -293,14 +336,14 @@ public class MerchantProfileDAO extends AbstractDAO<MerchantProfile> {
         }
 
         if (province != null && !province.trim().isEmpty()) {
-    sql.append(" AND mp.province_name = ? ");
-    params.add(province.trim());
-}
+            sql.append(" AND mp.province_name = ? ");
+            params.add(province.trim());
+        }
 
-if (district != null && !district.trim().isEmpty()) {
-    sql.append(" AND mp.district_name = ? ");
-    params.add(district.trim());
-}
+        if (district != null && !district.trim().isEmpty()) {
+            sql.append(" AND mp.district_name = ? ");
+            params.add(district.trim());
+        }
 
         if ("rating".equalsIgnoreCase(sortBy)) {
             sql.append(" ORDER BY rating DESC, mp.shop_name ASC ");
@@ -372,8 +415,7 @@ if (district != null && !district.trim().isEmpty()) {
     private List<String> queryString(String sql, Object... params) {
         List<String> list = new ArrayList<>();
 
-        try (Connection conn = getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
 
             if (params != null) {
                 for (int i = 0; i < params.length; i++) {
@@ -402,8 +444,8 @@ if (district != null && !district.trim().isEmpty()) {
     // Helper render UI
     // =========================
     private String resolveStoreImage(String shopName, String districtName) {
-        String key = ((shopName == null ? "" : shopName) + " " +
-                      (districtName == null ? "" : districtName)).toLowerCase();
+        String key = ((shopName == null ? "" : shopName) + " "
+                + (districtName == null ? "" : districtName)).toLowerCase();
 
         if (key.contains("burger")) {
             return "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=1200&auto=format&fit=crop";
@@ -418,8 +460,8 @@ if (district != null && !district.trim().isEmpty()) {
     }
 
     private String resolveStoreCover(String shopName, String districtName) {
-        String key = ((shopName == null ? "" : shopName) + " " +
-                      (districtName == null ? "" : districtName)).toLowerCase();
+        String key = ((shopName == null ? "" : shopName) + " "
+                + (districtName == null ? "" : districtName)).toLowerCase();
 
         if (key.contains("burger")) {
             return "https://images.unsplash.com/photo-1571091718767-18b5b1457add?q=80&w=1600&auto=format&fit=crop";
@@ -428,57 +470,81 @@ if (district != null && !district.trim().isEmpty()) {
     }
 
     private String resolveDeliveryTime(String districtName) {
-        if (districtName == null) return "15-25p";
+        if (districtName == null) {
+            return "15-25p";
+        }
         String key = districtName.toLowerCase();
-        if (key.contains("quận 1")) return "15-20p";
-        if (key.contains("quận 3")) return "15-25p";
+        if (key.contains("quận 1")) {
+            return "15-20p";
+        }
+        if (key.contains("quận 3")) {
+            return "15-25p";
+        }
         return "20-30p";
     }
 
     private String resolveDistance(String districtName) {
-        if (districtName == null) return "1.8km";
+        if (districtName == null) {
+            return "1.8km";
+        }
         String key = districtName.toLowerCase();
-        if (key.contains("quận 1")) return "1.2km";
-        if (key.contains("quận 3")) return "1.6km";
+        if (key.contains("quận 1")) {
+            return "1.2km";
+        }
+        if (key.contains("quận 3")) {
+            return "1.6km";
+        }
         return "2.1km";
     }
-    
+
     public List<MerchantProfile> getFeaturedMerchants(int limit) {
         String sql = """
-            SELECT TOP (?)
-                   mp.*,
-                   COALESCE(
-                       AVG(CASE WHEN r.target_type = N'MERCHANT' THEN CAST(r.stars AS DECIMAL(10,2)) END),
-                       4.5
-                   ) AS rating,
-                   (
-                       SELECT TOP 1 c.name
-                       FROM Categories c
-                       WHERE c.merchant_user_id = mp.user_id
-                         AND c.is_active = 1
-                       ORDER BY c.sort_order ASC, c.id ASC
-                   ) AS category_name,
-                   (
-                       SELECT TOP 1 v.title
-                       FROM Vouchers v
-                       WHERE v.merchant_user_id = mp.user_id
-                         AND v.is_published = 1
-                         AND v.status = N'ACTIVE'
-                         AND GETUTCDATE() BETWEEN v.start_at AND v.end_at
-                       ORDER BY v.id DESC
-                   ) AS voucher_title
-            FROM MerchantProfiles mp
-            LEFT JOIN Ratings r
-                   ON r.target_type = N'MERCHANT'
-                  AND r.target_user_id = mp.user_id
-            WHERE mp.status = N'APPROVED'
-            GROUP BY
-                   mp.user_id, mp.shop_name, mp.shop_phone, mp.shop_address_line,
-                   mp.province_code, mp.province_name, mp.district_code, mp.district_name,
-                   mp.ward_code, mp.ward_name, mp.latitude, mp.longitude,
-                   mp.status, mp.created_at, mp.updated_at
-            ORDER BY rating DESC, mp.user_id ASC
-        """;
+        SELECT TOP (?)
+               mp.*,
+               COALESCE(
+                   AVG(CASE WHEN r.target_type = N'MERCHANT' THEN CAST(r.stars AS DECIMAL(10,2)) END),
+                   4.5
+               ) AS rating,
+               (
+                   SELECT TOP 1 c.name
+                   FROM Categories c
+                   WHERE c.merchant_user_id = mp.user_id
+                     AND c.is_active = 1
+                   ORDER BY c.sort_order ASC, c.id ASC
+               ) AS category_name,
+               (
+                   SELECT TOP 1 v.title
+                   FROM Vouchers v
+                   WHERE v.merchant_user_id = mp.user_id
+                     AND v.is_published = 1
+                     AND v.status = N'ACTIVE'
+                     AND GETUTCDATE() BETWEEN v.start_at AND v.end_at
+                   ORDER BY v.id DESC
+               ) AS voucher_title
+        FROM MerchantProfiles mp
+        LEFT JOIN Ratings r
+               ON r.target_type = N'MERCHANT'
+              AND r.target_user_id = mp.user_id
+        WHERE mp.status = N'APPROVED'
+        GROUP BY
+               mp.user_id,
+               mp.shop_name,
+               mp.shop_phone,
+               mp.shop_address_line,
+               mp.province_code,
+               mp.province_name,
+               mp.district_code,
+               mp.district_name,
+               mp.ward_code,
+               mp.ward_name,
+               mp.latitude,
+               mp.longitude,
+               mp.status,
+               mp.created_at,
+               mp.updated_at,
+               mp.image_url
+        ORDER BY rating DESC, mp.user_id ASC
+    """;
 
         List<MerchantProfile> merchants = query(sql, limit);
 
@@ -506,8 +572,9 @@ if (district != null && !district.trim().isEmpty()) {
 
         return merchants;
     }
+
     public List<String> getAllApprovedProvinces() {
-    String sql = """
+        String sql = """
         SELECT DISTINCT province_name
         FROM MerchantProfiles
         WHERE status = 'APPROVED'
@@ -515,11 +582,11 @@ if (district != null && !district.trim().isEmpty()) {
           AND LTRIM(RTRIM(province_name)) <> ''
         ORDER BY province_name
     """;
-    return queryString(sql);
-}
+        return queryString(sql);
+    }
 
-public List<String> getDistrictsByProvince(String provinceName) {
-    String sql = """
+    public List<String> getDistrictsByProvince(String provinceName) {
+        String sql = """
         SELECT DISTINCT district_name
         FROM MerchantProfiles
         WHERE status = 'APPROVED'
@@ -528,6 +595,72 @@ public List<String> getDistrictsByProvince(String provinceName) {
           AND LTRIM(RTRIM(district_name)) <> ''
         ORDER BY district_name
     """;
-    return queryString(sql, provinceName);
-}
+        return queryString(sql, provinceName);
+    }
+
+    public List<MerchantProfile> suggestStoresByName(String province, String keyword, int limit) {
+        int safeLimit = Math.max(1, Math.min(limit, 20));
+
+        String sql = """
+        SELECT TOP """ + safeLimit + """
+               mp.user_id,
+               mp.shop_name,
+               mp.district_name,
+               mp.province_name,
+               mp.image_url
+        FROM MerchantProfiles mp
+        WHERE mp.status = 'APPROVED'
+          AND (? IS NULL OR LTRIM(RTRIM(?)) = '' OR mp.province_name = ?)
+          AND mp.shop_name COLLATE Vietnamese_CI_AI LIKE ?
+        ORDER BY
+            CASE
+                WHEN mp.shop_name COLLATE Vietnamese_CI_AI LIKE ? THEN 0
+                ELSE 1
+            END,
+            mp.shop_name ASC
+    """;
+
+        String cleanKeyword = keyword == null ? "" : keyword.trim();
+        String kwContains = "%" + cleanKeyword + "%";
+        String kwPrefix = cleanKeyword + "%";
+
+        System.out.println("=== DAO SUGGEST ===");
+        System.out.println("province = [" + province + "]");
+        System.out.println("keyword = [" + cleanKeyword + "]");
+        System.out.println("kwContains = [" + kwContains + "]");
+        System.out.println("kwPrefix = [" + kwPrefix + "]");
+        System.out.println("===================");
+
+        return query(sql,
+                province, province, province,
+                kwContains,
+                kwPrefix
+        );
+    }
+
+    public com.clickeat.model.MerchantProfile getByUserId(long userId) {
+        String sql = "SELECT * FROM MerchantProfiles WHERE user_id = ?";
+        return queryOne(sql, userId);
+    }
+
+    public boolean updateStoreInfo(long userId, String name, String phone, String address, String avatar) {
+        String sql = "UPDATE MerchantProfiles SET shop_name = ?, shop_phone = ?, shop_address_line = ?, shop_avatar = ?, updated_at = SYSUTCDATETIME() WHERE user_id = ?";
+        return update(sql, name, phone, address, avatar, userId) > 0;
+    }
+
+    public boolean updateBusinessHours(long userId, String hoursJson) {
+        String sql = "UPDATE MerchantProfiles SET business_hours = ?, updated_at = SYSUTCDATETIME() WHERE user_id = ?";
+        return update(sql, hoursJson, userId) > 0;
+    }
+
+    public boolean updateNotificationSettings(long userId, String settingsJson) {
+        String sql = "UPDATE MerchantProfiles SET notification_settings = ?, updated_at = SYSUTCDATETIME() WHERE user_id = ?";
+        return update(sql, settingsJson, userId) > 0;
+    }
+
+    public boolean updateOpenState(long userId, boolean isOpen) {
+        String sql = "UPDATE MerchantProfiles SET is_open = ?, updated_at = SYSUTCDATETIME() WHERE user_id = ?";
+        return update(sql, isOpen, userId) > 0;
+    }
+
 }
