@@ -8,6 +8,8 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Cửa hàng - ClickEat</title>
+        <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/logo-icon.png?v=2">
+        <link rel="shortcut icon" href="${pageContext.request.contextPath}/logo-icon.png?v=2">
         <script src="https://cdn.tailwindcss.com"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     </head>
@@ -21,7 +23,7 @@
         <main class="pb-20">
             <section class="pt-8">
                 <div class="max-w-7xl mx-auto px-6">
-                    <form action="${ctx}/store" method="get" class="max-w-4xl mx-auto">
+                    <form action="${ctx}/store" method="get" class="max-w-4xl mx-auto relative" autocomplete="off">
                         <input type="hidden" name="district" value="${district}">
                         <input type="hidden" name="sort" value="${sort}">
 
@@ -42,15 +44,36 @@
                             <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
 
                             <input type="text"
+                                   id="storeKeyword"
                                    name="keyword"
                                    value="${keyword}"
-                                   placeholder="Tìm kiếm quán ăn, món nổi bật..."
+                                   placeholder="Tìm kiếm quán ăn..."
                                    class="flex-1 outline-none bg-transparent text-[15px] h-full leading-none" />
 
-                            <button type="submit"
-                                    class="shrink-0 inline-flex items-center justify-center bg-orange-500 hover:bg-orange-600 text-white font-bold px-8 h-11 rounded-full leading-none">
-                                Tìm kiếm
-                            </button>
+                            <c:choose>
+                                <c:when test="${not empty keyword}">
+                                    <c:url var="clearSearchUrl" value="/store">
+                                        <c:param name="province" value="${province}" />
+                                        <c:param name="district" value="${district}" />
+                                        <c:param name="sort" value="${sort}" />
+                                    </c:url>
+
+                                    <a href="${clearSearchUrl}"
+                                       class="shrink-0 inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold px-8 h-11 rounded-full leading-none">
+                                        Huỷ
+                                    </a>
+                                </c:when>
+                                <c:otherwise>
+                                    <button type="submit"
+                                            class="shrink-0 inline-flex items-center justify-center bg-orange-500 hover:bg-orange-600 text-white font-bold px-8 h-11 rounded-full leading-none">
+                                        Tìm kiếm
+                                    </button>
+                                </c:otherwise>
+                            </c:choose>
+                        </div>
+
+                        <div id="storeSuggestionBox"
+                             class="hidden absolute left-0 right-0 top-[72px] bg-white border border-gray-200 rounded-2xl shadow-lg z-50 overflow-hidden">
                         </div>
                     </form>
                 </div>
@@ -62,14 +85,27 @@
                     <p class="text-lg text-[#9a7b66] mt-3">Chọn quán bạn thích — đặt nhanh trong vài giây.</p>
 
                     <div class="mt-8 flex flex-wrap gap-3">
-                        <a href="${ctx}/store"
+                        <c:url var="allStoreUrl" value="/store">
+                            <c:param name="province" value="${province}" />
+                            <c:param name="keyword" value="${keyword}" />
+                            <c:param name="sort" value="${sort}" />
+                        </c:url>
+
+                        <a href="${allStoreUrl}"
                            class="px-7 h-12 rounded-full border font-bold inline-flex items-center justify-center
                            ${empty district ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-[#8b6b52] border-[#eadfd7]'}">
                             ALL
                         </a>
 
                         <c:forEach var="d" items="${districts}">
-                            <a href="${ctx}/store?district=${d}"
+                            <c:url var="districtUrl" value="/store">
+                                <c:param name="province" value="${province}" />
+                                <c:param name="district" value="${d}" />
+                                <c:param name="keyword" value="${keyword}" />
+                                <c:param name="sort" value="${sort}" />
+                            </c:url>
+
+                            <a href="${districtUrl}"
                                class="px-7 h-12 rounded-full border font-bold inline-flex items-center justify-center
                                ${district == d ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-[#8b6b52] border-[#eadfd7]'}">
                                 ${d}
@@ -79,26 +115,55 @@
 
                     <div class="mt-8 flex flex-wrap items-center justify-between gap-4">
                         <div class="flex flex-wrap gap-3">
-                            <a href="${ctx}/store?keyword=${keyword}&district=${district}"
+                            <c:url var="nearUrl" value="/store">
+                                <c:param name="province" value="${province}" />
+                                <c:param name="keyword" value="${keyword}" />
+                                <c:param name="district" value="${district}" />
+                            </c:url>
+
+                            <c:url var="ratingUrl" value="/store">
+                                <c:param name="province" value="${province}" />
+                                <c:param name="keyword" value="${keyword}" />
+                                <c:param name="district" value="${district}" />
+                                <c:param name="sort" value="rating" />
+                            </c:url>
+
+                            <c:url var="priceUrl" value="/store">
+                                <c:param name="province" value="${province}" />
+                                <c:param name="keyword" value="${keyword}" />
+                                <c:param name="district" value="${district}" />
+                                <c:param name="sort" value="price" />
+                            </c:url>
+
+                            <c:url var="latestUrl" value="/store">
+                                <c:param name="province" value="${province}" />
+                                <c:param name="keyword" value="${keyword}" />
+                                <c:param name="district" value="${district}" />
+                                <c:param name="sort" value="latest" />
+                            </c:url>
+
+                            <a href="${nearUrl}"
                                class="px-6 h-11 rounded-full border bg-white border-[#eadfd7] font-semibold inline-flex items-center gap-2">
                                 <i class="fa-regular fa-paper-plane"></i> Gần tôi
                             </a>
-                            <a href="${ctx}/store?keyword=${keyword}&district=${district}&sort=rating"
+                            <a href="${ratingUrl}"
                                class="px-6 h-11 rounded-full border bg-white border-[#eadfd7] font-semibold inline-flex items-center gap-2">
                                 <i class="fa-solid fa-arrow-trend-up"></i> Bán chạy
                             </a>
-                            <a href="${ctx}/store?keyword=${keyword}&district=${district}&sort=price"
+                            <a href="${priceUrl}"
                                class="px-6 h-11 rounded-full border bg-white border-[#eadfd7] font-semibold inline-flex items-center gap-2">
                                 <i class="fa-regular fa-star"></i> Giá tốt
                             </a>
-                            <a href="${ctx}/store?keyword=${keyword}&district=${district}&sort=latest"
+                            <a href="${latestUrl}"
                                class="px-6 h-11 rounded-full border bg-white border-[#eadfd7] font-semibold inline-flex items-center gap-2">
                                 <i class="fa-solid fa-bolt"></i> Mới lên
                             </a>
                         </div>
 
                         <form action="${ctx}/store" method="get">
+                            <input type="hidden" name="province" value="${province}">
                             <input type="hidden" name="keyword" value="${keyword}">
+                            <input type="hidden" name="sort" value="${sort}">
                             <select name="district"
                                     onchange="this.form.submit()"
                                     class="bg-white border border-[#eadfd7] rounded-full h-11 px-5 min-w-[220px] outline-none font-semibold text-[#8b6b52]">
@@ -120,11 +185,27 @@
                     <c:if test="${not empty stores}">
                         <div class="mt-8 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-7 items-stretch">
                             <c:forEach var="s" items="${stores}">
+                                <c:url var="storeDetailUrl" value="/store-detail">
+                                    <c:param name="id" value="${s.userId}" />
+                                    <c:param name="province" value="${province}" />
+                                    <c:param name="district" value="${district}" />
+                                    <c:param name="keyword" value="${keyword}" />
+                                    <c:param name="sort" value="${sort}" />
+                                </c:url>
+
                                 <article class="bg-white rounded-[28px] overflow-hidden border border-[#eee4dc] shadow-sm hover:shadow-lg transition h-full">
-                                    <a href="${ctx}/store-detail?id=${s.userId}" class="block h-full">
+                                    <a href="${storeDetailUrl}" class="block h-full">
                                         <div class="h-full flex flex-col">
                                             <div class="relative h-[240px] overflow-hidden">
-                                                <img src="${s.imageUrl}" alt="${s.shopName}" class="w-full h-full object-cover">
+                                                <c:choose>
+                                                    <c:when test="${not empty s.imageUrl}">
+                                                        <img src="${ctx}${s.imageUrl}" alt="${s.shopName}" class="w-full h-full object-cover">
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <img src="${ctx}/assets/images/default-store.jpg" alt="${s.shopName}" class="w-full h-full object-cover">
+                                                    </c:otherwise>
+                                                </c:choose>
+
                                                 <div class="absolute top-4 left-4 flex gap-2">
                                                     <span class="bg-red-500 text-white text-xs font-extrabold px-3 py-2 rounded-full">
                                                         <i class="fa-solid fa-bolt"></i> Hot Deal
@@ -202,5 +283,158 @@
         </main>
 
         <jsp:include page="footer.jsp" />
+
+        <script>
+            const ctx = '${ctx}';
+            const currentProvince = '${province != null ? province : ""}';
+            const currentDistrict = '${district != null ? district : ""}';
+            const currentSort = '${sort != null ? sort : ""}';
+
+            const keywordInput = document.getElementById('storeKeyword');
+            const suggestionBox = document.getElementById('storeSuggestionBox');
+
+            let debounceTimer = null;
+
+            function hideSuggestions() {
+                if (!suggestionBox)
+                    return;
+                suggestionBox.classList.add('hidden');
+                suggestionBox.innerHTML = '';
+            }
+
+            function showNoResult(message) {
+                if (!suggestionBox)
+                    return;
+                suggestionBox.innerHTML = `
+            <div class="px-4 py-3 text-sm text-gray-500">
+            ${message}
+            </div>
+        `;
+                suggestionBox.classList.remove('hidden');
+            }
+
+            function buildStoreDetailUrl(itemId, keywordValue) {
+                const params = new URLSearchParams();
+                params.set('id', itemId);
+
+                if (currentProvince)
+                    params.set('province', currentProvince);
+                if (currentDistrict)
+                    params.set('district', currentDistrict);
+                if (keywordValue)
+                    params.set('keyword', keywordValue);
+                if (currentSort)
+                    params.set('sort', currentSort);
+
+                return ctx + '/store-detail?' + params.toString();
+            }
+
+            function escapeHtml(str) {
+                if (!str)
+                    return '';
+                return str
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#39;');
+            }
+
+            function renderSuggestions(items) {
+                if (!Array.isArray(items) || items.length === 0) {
+                    showNoResult('Không có quán phù hợp');
+                    return;
+                }
+
+                const keywordValue = keywordInput.value.trim();
+
+                suggestionBox.innerHTML = items.map(item => {
+                    const name = escapeHtml(item.shopName || '');
+                    const districtName = escapeHtml(item.districtName || '');
+                    const provinceName = escapeHtml(item.provinceName || '');
+                    const href = buildStoreDetailUrl(item.userId, keywordValue);
+
+                    return `
+                <a href="${href}"
+                   class="flex items-center justify-between px-4 py-3 hover:bg-orange-50 border-b last:border-b-0 border-gray-100">
+                    <div>
+                        <div class="font-bold text-gray-900">${name}</div>
+                        <div class="text-sm text-gray-500">${districtName}${districtName && provinceName ? ', ' : ''}${provinceName}</div>
+                    </div>
+                    <i class="fa-solid fa-arrow-right text-orange-500"></i>
+                </a>
+            `;
+                }).join('');
+
+                suggestionBox.classList.remove('hidden');
+            }
+
+            async function fetchSuggestions(keyword) {
+                const url = ctx + '/store-suggest?province='
+                        + encodeURIComponent(currentProvince)
+                        + '&keyword=' + encodeURIComponent(keyword);
+
+                console.log('Suggest URL:', url);
+
+                const res = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                console.log('Suggest status:', res.status);
+
+                if (!res.ok) {
+                    throw new Error('HTTP ' + res.status);
+                }
+
+                const text = await res.text();
+                console.log('Suggest raw response:', text);
+
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    throw new Error('Response không phải JSON hợp lệ');
+                }
+
+                renderSuggestions(data);
+            }
+
+            if (keywordInput && suggestionBox) {
+                keywordInput.addEventListener('input', function () {
+                    const keyword = this.value.trim();
+
+                    clearTimeout(debounceTimer);
+
+                    if (!keyword) {
+                        hideSuggestions();
+                        return;
+                    }
+
+                    debounceTimer = setTimeout(async () => {
+                        try {
+                            await fetchSuggestions(keyword);
+                        } catch (err) {
+                            console.error('Suggest error:', err);
+                            showNoResult('Không tải được gợi ý');
+                        }
+                    }, 250);
+                });
+
+                keywordInput.addEventListener('focus', function () {
+                    if (this.value.trim()) {
+                        this.dispatchEvent(new Event('input'));
+                    }
+                });
+
+                document.addEventListener('click', function (e) {
+                    if (!suggestionBox.contains(e.target) && e.target !== keywordInput) {
+                        hideSuggestions();
+                    }
+                });
+            }
+        </script>
     </body>
 </html>

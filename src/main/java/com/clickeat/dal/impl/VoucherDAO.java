@@ -52,10 +52,25 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
             v.setMaxUsesPerUser(null);
         }
 
-        v.setPublished(rs.getBoolean("is_published"));
-        v.setStatus(rs.getString("status"));
-        v.setCreatedAt(rs.getTimestamp("created_at"));
-        v.setUpdatedAt(rs.getTimestamp("updated_at"));
+        try {
+            v.setCreatedAt(rs.getTimestamp("created_at"));
+        } catch (SQLException e) {
+            v.setCreatedAt(null);
+        }
+        try {
+            v.setUpdatedAt(rs.getTimestamp("updated_at"));
+        } catch (SQLException e) {
+            v.setUpdatedAt(null);
+        }
+
+        try {
+            Object usedCount = rs.getObject("used_order_count");
+            if (usedCount != null) {
+                v.setUsedOrderCount(((Number) usedCount).intValue());
+            }
+        } catch (SQLException e) {
+            v.setUsedOrderCount(0);
+        }
 
         try {
             v.setMerchantName(rs.getString("merchant_name"));
@@ -90,8 +105,8 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
         INNER JOIN MerchantProfiles mp ON mp.user_id = v.merchant_user_id
         WHERE v.is_published = 1
           AND v.status = N'ACTIVE'
-          AND GETDATE() BETWEEN v.start_at AND v.end_at
-          AND mp.status = N'APPROVED'
+          AND (GETUTCDATE() BETWEEN v.start_at AND v.end_at OR GETDATE() BETWEEN v.start_at AND v.end_at)
+          AND (mp.status = N'APPROVED' OR mp.status = N'Approved' OR mp.status = N'active')
         ORDER BY
             CASE
                 WHEN UPPER(v.discount_type) = 'PERCENT'
@@ -259,6 +274,29 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
         return update(sql, id) > 0;
     }
 
+    public List<Voucher> getAvailableVouchersForCustomer(int customerUserId) {
+        String sql = """
+        SELECT v.*,
+               mp.shop_name AS merchant_name
+        FROM Vouchers v
+        INNER JOIN MerchantProfiles mp ON mp.user_id = v.merchant_user_id
+        WHERE v.is_published = 1
+          AND v.status = N'ACTIVE'
+          AND (GETUTCDATE() BETWEEN v.start_at AND v.end_at OR GETDATE() BETWEEN v.start_at AND v.end_at)
+          AND (mp.status = N'APPROVED' OR mp.status = N'Approved' OR mp.status = N'active')
+          AND (
+                v.max_uses_per_user IS NULL
+                OR v.max_uses_per_user >
+                    (SELECT COUNT(*)
+                     FROM VoucherUsages vu
+                     WHERE vu.voucher_id = v.id
+                       AND vu.customer_user_id = ?)
+              )
+        ORDER BY v.end_at ASC, v.id DESC
+    """;
+        return query(sql, customerUserId);
+    }
+
     public boolean publishVoucher(int id) {
         String sql = "UPDATE Vouchers SET is_published = 1 WHERE id = ?";
         return update(sql, id) > 0;
@@ -359,4 +397,10 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
         }
         return "Giảm " + ((int) discountValue / 1000) + "k";
     }
+
+    public boolean togglePublishByMerchant(int voucherId, int merchantId, boolean publish) {
+        String sql = "UPDATE Vouchers SET is_published = ?, updated_at = SYSUTCDATETIME() WHERE id = ? AND merchant_user_id = ?";
+        return update(sql, publish, voucherId, merchantId) > 0;
+    }
+
 }

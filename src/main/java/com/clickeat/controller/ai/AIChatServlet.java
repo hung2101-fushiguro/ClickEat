@@ -19,9 +19,9 @@ import org.json.JSONObject;
 public class AIChatServlet extends HttpServlet {
 
     // Thay bằng API Key thật của bạn lấy từ Google AI Studio
-    private static final String GEMINI_API_KEY = "AIzaSyC_tGE7zVoKheXzPdkZM1GE5s_kCWKKi6k";
+    private static final String GEMINI_API_KEY = "";
     private static final String GEMINI_API_URL
-            = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key="
+            = ""
             + GEMINI_API_KEY;
 
     @Override

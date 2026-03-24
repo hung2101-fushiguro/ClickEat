@@ -31,6 +31,57 @@ public class MerchantProfile {
     private int totalRatings;
     private int foodCount;
 
+    private Boolean isDefault;
+    private String note;
+    private String imageUrl;
+    private String coverImageUrl;
+    private double rating;
+    private int reviewCount;
+    private int itemCount;
+    private double minPrice;
+    private String categoryName;
+    private String voucherTitle;
+    private String deliveryTime;
+    private String distance;
+
+    public Boolean getIsDefault() { return isDefault; }
+    public void setIsDefault(Boolean isDefault) { this.isDefault = isDefault; }
+
+    public String getNote() { return note; }
+    public void setNote(String note) { this.note = note; }
+
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+
+    public String getCoverImageUrl() { return coverImageUrl; }
+    public void setCoverImageUrl(String coverImageUrl) { this.coverImageUrl = coverImageUrl; }
+
+    public double getRating() { return rating; }
+    public void setRating(double rating) { this.rating = rating; }
+
+    public int getReviewCount() { return reviewCount; }
+    public void setReviewCount(int reviewCount) { this.reviewCount = reviewCount; }
+
+    public int getItemCount() { return itemCount; }
+    public void setItemCount(int itemCount) { this.itemCount = itemCount; }
+
+    public double getMinPrice() { return minPrice; }
+    public void setMinPrice(double minPrice) { this.minPrice = minPrice; }
+
+    public String getCategoryName() { return categoryName; }
+    public void setCategoryName(String categoryName) { this.categoryName = categoryName; }
+
+    public String getVoucherTitle() { return voucherTitle; }
+    public void setVoucherTitle(String voucherTitle) { this.voucherTitle = voucherTitle; }
+
+    public String getDeliveryTime() { return deliveryTime; }
+    public void setDeliveryTime(String deliveryTime) { this.deliveryTime = deliveryTime; }
+
+    public String getDistance() { return distance; }
+    public void setDistance(String distance) { this.distance = distance; }
+
+    public void setOpen(boolean open) { this.isOpen = open; }
+
     public MerchantProfile() {
     }
 

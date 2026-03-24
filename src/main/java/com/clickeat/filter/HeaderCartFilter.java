@@ -1,15 +1,10 @@
 package com.clickeat.filter;
 
-import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-
 import com.clickeat.dal.impl.CartDAO;
 import com.clickeat.dal.impl.CartItemViewDAO;
 import com.clickeat.model.Cart;
 import com.clickeat.model.CartItemView;
 import com.clickeat.model.User;
-
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -18,24 +13,22 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 
 @WebFilter("/*")
 public class HeaderCartFilter implements Filter {
 
     private boolean isStatic(String uri) {
-        if (uri == null) {
-            return false;
-        }
+        if (uri == null) return false;
         return uri.endsWith(".css") || uri.endsWith(".js") || uri.endsWith(".png") || uri.endsWith(".jpg")
                 || uri.endsWith(".jpeg") || uri.endsWith(".webp") || uri.endsWith(".svg") || uri.endsWith(".ico")
                 || uri.endsWith(".woff") || uri.endsWith(".woff2") || uri.endsWith(".ttf") || uri.endsWith(".map");
     }
 
     private boolean shouldSkip(String path) {
-        // Skip admin and auth pages if you want
         return path.startsWith("/admin")
-                || path.startsWith("/merchant")
-                || path.startsWith("/shipper")
                 || path.startsWith("/login")
                 || path.startsWith("/register")
                 || path.startsWith("/logout")
@@ -59,7 +52,6 @@ public class HeaderCartFilter implements Filter {
             return;
         }
 
-        // Defaults
         request.setAttribute("cartItems", Collections.emptyList());
         request.setAttribute("cartCount", 0);
         request.setAttribute("cartTotal", 0.0);
@@ -69,40 +61,40 @@ public class HeaderCartFilter implements Filter {
             HttpSession session = request.getSession(false);
             if (session != null) {
                 User account = (User) session.getAttribute("account");
-                if (account != null && "CUSTOMER".equals(account.getRole())) {
-                    int customerId = account.getId();
+                String guestId = (String) session.getAttribute("guestId");
 
-                    CartDAO cartDAO = new CartDAO();
-                    Cart cart = cartDAO.getActiveCartByCustomerId(customerId);
+                CartDAO cartDAO = new CartDAO();
+                Cart cart = null;
 
-                    if (cart != null) {
-                        CartItemViewDAO viewDAO = new CartItemViewDAO();
-                        List<CartItemView> items = viewDAO.getByCartId(cart.getId());
+                if (account != null) {
+                    cart = cartDAO.getActiveCartByCustomerId(account.getId());
+                } else if (guestId != null && !guestId.isBlank()) {
+                    cart = cartDAO.getActiveCartByGuestId(guestId);
+                }
 
-                        int count = 0;
-                        double total = 0;
-                        for (CartItemView it : items) {
-                            count += it.getQuantity();
-                            total += it.getLineTotal();
-                        }
+                if (cart != null) {
+                    CartItemViewDAO viewDAO = new CartItemViewDAO();
+                    List<CartItemView> items = viewDAO.getByCartId(cart.getId());
 
-                        request.setAttribute("cartItems", items);
-                        request.setAttribute("cartCount", count);
-                        request.setAttribute("cartTotal", total);
+                    int count = 0;
+                    double total = 0;
+                    for (CartItemView it : items) {
+                        count += it.getQuantity();
+                        total += it.getLineTotal();
+                    }
 
-                        // lastStoreUrl: quay lại shop theo merchant_user_id trong carts
-                        int merchantId = cart.getMerchantUserId(); // bạn đang set 0 nếu null
-                        if (merchantId > 0) {
-                            // Bạn đổi URL này theo routing store của bạn
-                            request.setAttribute("lastStoreUrl", ctx + "/store/detail?merchantId=" + merchantId);
-                        } else {
-                            request.setAttribute("lastStoreUrl", ctx + "/store");
-                        }
+                    request.setAttribute("cartItems", items);
+                    request.setAttribute("cartCount", count);
+                    request.setAttribute("cartTotal", total);
+
+                    Integer merchantId = cart.getMerchantUserId();
+                    if (merchantId != null && merchantId > 0) {
+                        request.setAttribute("lastStoreUrl", ctx + "/store-detail?id=" + merchantId);
                     }
                 }
             }
-        } catch (Exception ignored) {
-            // Nếu lỗi filter thì vẫn cho trang load bình thường
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
         chain.doFilter(req, res);

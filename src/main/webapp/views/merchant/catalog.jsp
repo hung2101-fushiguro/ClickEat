@@ -8,13 +8,6 @@
         <meta charset="UTF-8"/>
         <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
         <title>Thực đơn – ClickEat Merchant</title>
-        <script>
-            const originalWarn = console.warn;
-            console.warn = function() {
-                if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes('cdn.tailwindcss.com should not be used in production')) return;
-                originalWarn.apply(console, arguments);
-            };
-        </script>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
@@ -38,8 +31,8 @@
             .toggle-cb:checked + .toggle-track {
                 background-color: #22c55e;
             }
-            .toggle-cb:checked ~ .toggle-dot {
-                transform: translateX(20px);
+            .toggle-cb:checked + .toggle-track .toggle-dot {
+                transform: translateX(100%);
                 border-color: #fff;
             }
         </style>
@@ -54,14 +47,9 @@
                     <h1 class="text-2xl font-black text-gray-900 tracking-tight">Thực đơn</h1>
                     <p class="text-sm text-gray-500 font-medium mt-1">Quản lý món ăn và danh mục của nhà hàng</p>
                 </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="document.getElementById('addCategoryModal').classList.remove('hidden')" class="bg-white hover:bg-gray-50 text-gray-800 border border-gray-200 px-5 py-2.5 rounded-xl font-bold transition-all shadow-sm flex items-center gap-2">
-                        <span class="material-symbols-outlined text-[20px]">category</span>Thêm danh mục
-                    </button>
-                    <button onclick="document.getElementById('addModal').classList.remove('hidden')" class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-md hover:shadow-lg flex items-center gap-2">
-                        <span class="material-symbols-outlined text-[20px]">add</span>Thêm món mới
-                    </button>
-                </div>
+                <button onclick="document.getElementById('addModal').classList.remove('hidden')" class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-md hover:shadow-lg flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[20px]">add</span>Thêm món mới
+                </button>
             </header>
 
             <div class="p-8 max-w-7xl mx-auto w-full">
@@ -118,11 +106,11 @@
                                                 <p class="font-bold text-gray-900">${f.name}</p>
                                                 <p class="text-xs text-gray-500 mt-0.5 max-w-[200px] truncate">${f.description}</p>
                                                 <c:if test="${not f.available and not empty f.outOfStockReason}">
-                                                    <p class="text-[11px] text-red-500 font-semibold mt-1">Hết món hôm nay: ${f.outOfStockReason}</p>
+                                                    <p class="text-[11px] text-red-500 font-semibold mt-1">Lý do tạm ngưng: ${f.outOfStockReason}</p>
                                                 </c:if>
                                             </div>
                                         </div>
-                                    </td>
+                                          </td>
                                     <td class="py-4 px-6 font-bold text-gray-900">
                                         <fmt:formatNumber value="${f.price}" type="currency" currencySymbol="đ" maxFractionDigits="0"/>
                                     </td>
@@ -136,7 +124,7 @@
                                             <div class="ml-3">
                                                 <div id="dot-${f.id}" class="w-2 h-2 rounded-full mb-1 ${f.available ? 'bg-green-500' : 'bg-gray-300'}"></div>
                                                 <span id="text-${f.id}" class="text-[10px] font-bold uppercase tracking-wider ${f.available ? 'text-green-600' : 'text-gray-400'}">
-                                                    ${f.available ? 'Đang bán' : 'Hết món hôm nay'}
+                                                    ${f.available ? 'Đang bán' : 'Tạm ngưng'}
                                                 </span>
                                             </div>
                                         </label>
@@ -203,26 +191,6 @@
         </div>
     </div>
 
-    <div id="addCategoryModal" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm">
-        <div class="bg-white rounded-[2rem] p-8 w-full max-w-md shadow-2xl relative">
-            <button onclick="document.getElementById('addCategoryModal').classList.add('hidden')" class="absolute top-6 right-6 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors">
-                <span class="material-symbols-outlined text-[20px]">close</span>
-            </button>
-            <h2 class="text-2xl font-black text-gray-900 mb-6 tracking-tight">Thêm danh mục mới</h2>
-
-            <form action="${pageContext.request.contextPath}/merchant/catalog" method="POST" class="space-y-5">
-                <input type="hidden" name="action" value="add-category">
-                <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">Tên danh mục <span class="text-red-500">*</span></label>
-                    <input type="text" name="categoryName" required maxlength="100" placeholder="VD: Món nước, Món chính, Tráng miệng..." class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors font-medium">
-                </div>
-                <div class="pt-2">
-                    <button type="submit" class="w-full bg-gray-900 hover:bg-black text-white font-bold py-3.5 rounded-xl transition-all shadow-md">Tạo danh mục</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <div id="editModal" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm">
         <div class="bg-white rounded-[2rem] p-8 w-full max-w-lg shadow-2xl relative">
             <button onclick="document.getElementById('editModal').classList.add('hidden')" class="absolute top-6 right-6 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors">
@@ -280,7 +248,6 @@
         // Gọi AJAX để Bật/Tắt trạng thái "Đang bán" cực mượt mà
         function toggleItem(itemId, checkbox) {
             const isAvailable = checkbox.checked;
-            const previousState = !isAvailable;
             let reason = '';
             if (!isAvailable) {
                 reason = prompt('Nhập lý do hết món hôm nay (không bắt buộc):', 'Hết món hôm nay') || '';
@@ -296,7 +263,7 @@
                 } else {
                     dot.className = 'w-2 h-2 rounded-full mb-1 bg-gray-300';
                     text.className = 'text-[10px] font-bold uppercase tracking-wider text-gray-400';
-                    text.innerText = 'Hết món hôm nay';
+                    text.innerText = 'Tạm ngưng';
                 }
                 
                 // Gửi dữ liệu ngầm lên Servlet
@@ -304,69 +271,39 @@
                     method: 'POST',
                     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                     body: 'action=toggle&itemId=' + itemId + '&isAvailable=' + isAvailable + '&reason=' + encodeURIComponent(reason)
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (!data.success) {
-                        checkbox.checked = previousState;
-                        if (previousState) {
-                            dot.className = 'w-2 h-2 rounded-full mb-1 bg-green-500';
-                            text.className = 'text-[10px] font-bold uppercase tracking-wider text-green-600';
-                            text.innerText = 'Đang bán';
-                            } else {
-                                dot.className = 'w-2 h-2 rounded-full mb-1 bg-gray-300';
-                                text.className = 'text-[10px] font-bold uppercase tracking-wider text-gray-400';
-                                text.innerText = 'Hết món hôm nay';
-                            }
-                            alert(data.message || 'Không thể cập nhật trạng thái món.');
-                        }
-                    })
-                    .catch(error => {
-                        checkbox.checked = previousState;
-                        if (previousState) {
-                            dot.className = 'w-2 h-2 rounded-full mb-1 bg-green-500';
-                            text.className = 'text-[10px] font-bold uppercase tracking-wider text-green-600';
-                            text.innerText = 'Đang bán';
-                            } else {
-                                dot.className = 'w-2 h-2 rounded-full mb-1 bg-gray-300';
-                                text.className = 'text-[10px] font-bold uppercase tracking-wider text-gray-400';
-                                text.innerText = 'Hết món hôm nay';
-                            }
-                            console.error('Lỗi cập nhật trạng thái', error);
-                            alert('Mất kết nối khi cập nhật trạng thái món. Vui lòng thử lại.');
-                        });
-                    }
-                    
-                    function toggleAllRows(master) {
-                        document.querySelectorAll('.row-check').forEach(cb => cb.checked = master.checked);
-                    }
-                    
-                    function submitBulkToggle(isAvailable) {
-                        const selected = Array.from(document.querySelectorAll('.row-check:checked'));
-                        if (!selected.length) {
-                            alert('Vui lòng chọn ít nhất 1 món.');
-                            return;
-                        }
-                        
-                        let reason = '';
-                        if (!isAvailable) {
-                            reason = prompt('Nhập lý do hết món cho các món đã chọn (không bắt buộc):', 'Hết món hôm nay') || '';
-                        }
-                        
-                        const form = document.getElementById('bulkForm');
-                        document.getElementById('bulkIsAvailable').value = isAvailable;
-                        document.getElementById('bulkReason').value = reason;
-                        
-                        form.querySelectorAll('input[name="itemIds"]').forEach(el => el.remove());
-                        selected.forEach(cb => {
-                            const input = document.createElement('input');
-                            input.type = 'hidden';
-                            input.name = 'itemIds';
-                            input.value = cb.value;
-                            form.appendChild(input);
-                        });
-                        form.submit();
-                    }
-                </script>
-            </body>
-        </html>
+                }).catch(error => console.error("Lỗi cập nhật trạng thái", error));
+            }
+            
+            function toggleAllRows(master) {
+                document.querySelectorAll('.row-check').forEach(cb => cb.checked = master.checked);
+            }
+            
+            function submitBulkToggle(isAvailable) {
+                const selected = Array.from(document.querySelectorAll('.row-check:checked'));
+                if (!selected.length) {
+                    alert('Vui lòng chọn ít nhất 1 món.');
+                    return;
+                }
+                
+                let reason = '';
+                if (!isAvailable) {
+                    reason = prompt('Nhập lý do hết món cho các món đã chọn (không bắt buộc):', 'Hết món hôm nay') || '';
+                }
+                
+                const form = document.getElementById('bulkForm');
+                document.getElementById('bulkIsAvailable').value = isAvailable;
+                document.getElementById('bulkReason').value = reason;
+                
+                form.querySelectorAll('input[name="itemIds"]').forEach(el => el.remove());
+                selected.forEach(cb => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'itemIds';
+                    input.value = cb.value;
+                    form.appendChild(input);
+                });
+                form.submit();
+            }
+        </script>
+    </body>
+</html>

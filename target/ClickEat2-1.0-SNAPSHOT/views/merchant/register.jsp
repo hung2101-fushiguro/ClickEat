@@ -36,8 +36,8 @@
             <span class="material-symbols-outlined text-3xl">restaurant</span>
             <span class="text-xl font-bold text-gray-900">ClickEat <span class="text-primary">Merchant</span></span>
         </div>
-        <a href="${pageContext.request.contextPath}/merchant/login"
-           class="flex items-center gap-1.5 text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors">
+          <a href="${pageContext.request.contextPath}/login"
+              class="flex items-center gap-1.5 text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors">
             <span class="material-symbols-outlined text-base">arrow_back</span>
             Về trang đăng nhập
         </a>
@@ -219,7 +219,7 @@
 
                     <p class="text-center text-gray-500 text-sm">
                         Đã có tài khoản?
-                        <a href="${pageContext.request.contextPath}/merchant/login" class="text-primary font-semibold hover:underline">Đăng nhập</a>
+                        <a href="${pageContext.request.contextPath}/login" class="text-primary font-semibold hover:underline">Đăng nhập</a>
                     </p>
                 </div>
 

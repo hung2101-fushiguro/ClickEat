@@ -15,7 +15,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -83,35 +82,36 @@ public class StoreDetailServlet extends HttpServlet {
         int cartCount = 0;
         double cartTotal = 0;
         List<CartItemView> popupCartItems = Collections.emptyList();
-        List<CartItemView> storeCartItems = new ArrayList<>();
+        List<CartItemView> storeCartItems = Collections.emptyList();
 
         CartDAO cartDAO = new CartDAO();
-        CartItemViewDAO viewDAO = new CartItemViewDAO();
+        CartItemViewDAO cartItemViewDAO = new CartItemViewDAO();
 
         try {
             Cart cart = null;
             User account = (User) session.getAttribute("account");
+            String guestId = (String) session.getAttribute("guestId");
 
             if (account != null) {
-                // User đã đăng nhập
                 cart = cartDAO.getActiveCartByCustomerId(account.getId());
-            } else {
-                // Guest chưa đăng nhập
-                String guestId = (String) session.getAttribute("guestId");
-                if (guestId != null && !guestId.isBlank()) {
-                    cart = cartDAO.getActiveCartByGuestId(guestId);
-                }
+            } else if (guestId != null && !guestId.isBlank()) {
+                cart = cartDAO.getActiveCartByGuestId(guestId);
             }
 
             if (cart != null) {
-                popupCartItems = viewDAO.getByCartId(cart.getId());
+                popupCartItems = cartItemViewDAO.getByCartId(cart.getId());
+
+                if (popupCartItems == null) {
+                    popupCartItems = Collections.emptyList();
+                }
 
                 for (CartItemView item : popupCartItems) {
                     cartCount += item.getQuantity();
                     cartTotal += item.getLineTotal();
                 }
 
-                if (cart.getId() > 0) {
+                Integer cartMerchantUserId = cart.getMerchantUserId();
+                if (cartMerchantUserId != null && cartMerchantUserId == merchantId) {
                     storeCartItems = popupCartItems;
                 }
             }
@@ -127,10 +127,10 @@ public class StoreDetailServlet extends HttpServlet {
         request.setAttribute("storeCartItems", storeCartItems);
 
         String queryString = request.getQueryString();
+        String currentUrl = request.getRequestURI();
         if (queryString != null && !queryString.isBlank()) {
-            request.setAttribute("lastStoreUrl", request.getRequestURI() + "?" + queryString);
-        } else {
-            request.setAttribute("lastStoreUrl", request.getRequestURI());
+            currentUrl += "?" + queryString;
         }
+        request.setAttribute("lastStoreUrl", currentUrl);
     }
 }

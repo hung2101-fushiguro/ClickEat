@@ -36,6 +36,7 @@ public class HomeServlet extends HttpServlet {
 
         HttpSession session = request.getSession();
         User account = (User) session.getAttribute("account");
+        String guestId = (String) session.getAttribute("guestId");
 
         int cartCount = 0;
         List<FoodItem> foods = new ArrayList<>();
@@ -43,12 +44,22 @@ public class HomeServlet extends HttpServlet {
         List<MerchantProfile> merchants = new ArrayList<>();
 
         try {
+            Cart cart = null;
+
+            // Nếu đã đăng nhập thì lấy cart theo customer
             if (account != null) {
-                Cart cart = cartDAO.getActiveCartByCustomerId(account.getId());
-                if (cart != null) {
-                    List<CartItem> items = cartItemDAO.getItemsByCartId(cart.getId());
-                    if (items != null) {
-                        cartCount = items.size();
+                cart = cartDAO.getActiveCartByCustomerId(account.getId());
+            }
+            // Nếu chưa đăng nhập thì lấy cart theo guestId
+            else if (guestId != null && !guestId.trim().isEmpty()) {
+                cart = cartDAO.getActiveCartByGuestId(guestId);
+            }
+
+            if (cart != null) {
+                List<CartItem> items = cartItemDAO.getItemsByCartId(cart.getId());
+                if (items != null) {
+                    for (CartItem item : items) {
+                        cartCount += item.getQuantity(); // đếm tổng số lượng món
                     }
                 }
             }
@@ -81,9 +92,15 @@ public class HomeServlet extends HttpServlet {
             request.setAttribute("merchantsError", e.getMessage());
         }
 
-        if (foods == null) foods = new ArrayList<>();
-        if (vouchers == null) vouchers = new ArrayList<>();
-        if (merchants == null) merchants = new ArrayList<>();
+        if (foods == null) {
+            foods = new ArrayList<>();
+        }
+        if (vouchers == null) {
+            vouchers = new ArrayList<>();
+        }
+        if (merchants == null) {
+            merchants = new ArrayList<>();
+        }
 
         request.setAttribute("cartCount", cartCount);
         request.setAttribute("foods", foods);

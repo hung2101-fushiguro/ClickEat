@@ -21,12 +21,12 @@ public class Voucher {
     private String status;
     private Timestamp createdAt;
     private Timestamp updatedAt;
+    private int usedOrderCount;
 
     // field hiển thị
     private String merchantName;
     private String displayDiscount;
     private String themeClass;
-    private Integer usedOrderCount;
 
     public Voucher() {
     }
@@ -191,11 +191,11 @@ public class Voucher {
         this.themeClass = themeClass;
     }
 
-    public Integer getUsedOrderCount() {
+    public int getUsedOrderCount() {
         return usedOrderCount;
     }
 
-    public void setUsedOrderCount(Integer usedOrderCount) {
+    public void setUsedOrderCount(int usedOrderCount) {
         this.usedOrderCount = usedOrderCount;
     }
 }

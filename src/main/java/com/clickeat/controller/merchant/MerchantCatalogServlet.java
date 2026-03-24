@@ -4,21 +4,20 @@
  */
 package com.clickeat.controller.merchant;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-
 import com.clickeat.dal.impl.CategoryDAO;
 import com.clickeat.dal.impl.FoodItemDAO;
 import com.clickeat.model.Category;
-import com.clickeat.model.FoodItem;
 import com.clickeat.model.User;
-
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+
+import java.util.List;
+
+import com.clickeat.model.FoodItem;
 
 @WebServlet(name = "MerchantCatalogServlet", urlPatterns = {"/merchant/catalog"})
 public class MerchantCatalogServlet extends HttpServlet {
@@ -66,33 +65,20 @@ public class MerchantCatalogServlet extends HttpServlet {
         int merchantId = account.getId();
         String action = request.getParameter("action");
         FoodItemDAO foodItemDAO = new FoodItemDAO();
-        CategoryDAO categoryDAO = new CategoryDAO();
 
         try {
             // 1. Xử lý Toggle (Bật/Tắt) bằng AJAX
             if ("toggle".equals(action)) {
-                response.setContentType("application/json");
-                response.setCharacterEncoding(StandardCharsets.UTF_8.name());
                 int itemId = Integer.parseInt(request.getParameter("itemId"));
                 String availableRaw = request.getParameter("isAvailable");
                 String reason = request.getParameter("reason");
                 FoodItem item = foodItemDAO.findById(itemId);
-                boolean success = false;
-                String message = "Không thể cập nhật món ăn.";
 
                 // Chỉ cho phép update nếu món ăn thuộc về đúng chủ quán đó
                 if (item != null && item.getMerchantUserId() == merchantId) {
                     boolean newStatus = availableRaw == null ? !item.isAvailable() : Boolean.parseBoolean(availableRaw);
-                    String finalReason = (reason == null || reason.trim().isEmpty()) ? "Hết món hôm nay" : reason.trim();
-                    success = foodItemDAO.toggleStatus(itemId, merchantId, newStatus, finalReason);
-                    message = success
-                            ? (newStatus ? "Đã bật lại món." : "Đã đánh dấu hết món hôm nay.")
-                            : "Không thể cập nhật trạng thái món.";
-                } else {
-                    message = "Món ăn không thuộc quyền quản lý của bạn.";
+                    foodItemDAO.toggleStatus(itemId, merchantId, newStatus, reason);
                 }
-
-                response.getWriter().write("{\"success\":" + success + ",\"message\":\"" + escapeJson(message) + "\"}");
                 return;
             } else if ("bulk-toggle".equals(action)) {
                 String[] rawIds = request.getParameterValues("itemIds");
@@ -111,48 +97,9 @@ public class MerchantCatalogServlet extends HttpServlet {
                         }
                     }
 
-                    String finalReason = (reason == null || reason.trim().isEmpty()) ? "Hết món hôm nay" : reason.trim();
-                    int affected = foodItemDAO.bulkToggleStatus(itemIds, merchantId, newStatus, finalReason);
-                    int failed = itemIds.size() - affected;
-                    if (affected > 0) {
-                        String stateLabel = newStatus ? "đang bán" : "hết món hôm nay";
-                        String msg = "Đã cập nhật " + affected + " món sang trạng thái " + stateLabel + ".";
-                        if (failed > 0) {
-                            msg += " " + failed + " món không cập nhật được (không thuộc quyền quản lý hoặc dữ liệu không hợp lệ).";
-                        }
-                        request.getSession().setAttribute("catalogSuccess", msg);
-                    } else {
-                        request.getSession().setAttribute("catalogError", "Không có món nào được cập nhật. Vui lòng kiểm tra lại danh sách đã chọn.");
-                    }
+                    int affected = foodItemDAO.bulkToggleStatus(itemIds, merchantId, newStatus, reason);
+                    request.getSession().setAttribute("catalogSuccess", "Đã cập nhật trạng thái " + affected + " món.");
                 }
-                response.sendRedirect(request.getContextPath() + "/merchant/catalog");
-                return;
-            } else if ("add-category".equals(action)) {
-                String categoryName = request.getParameter("categoryName");
-                String normalizedName = categoryName == null ? "" : categoryName.trim();
-
-                if (normalizedName.isEmpty()) {
-                    request.getSession().setAttribute("catalogError", "Tên danh mục không được để trống.");
-                    response.sendRedirect(request.getContextPath() + "/merchant/catalog");
-                    return;
-                }
-
-                Category existing = categoryDAO.findByMerchantAndName(merchantId, normalizedName);
-                if (existing != null) {
-                    request.getSession().setAttribute("catalogError", "Danh mục đã tồn tại.");
-                    response.sendRedirect(request.getContextPath() + "/merchant/catalog");
-                    return;
-                }
-
-                Category category = new Category();
-                category.setMerchantUserId(merchantId);
-                category.setName(normalizedName);
-                category.setActive(true);
-                category.setSortOrder(categoryDAO.getNextSortOrderByMerchant(merchantId));
-
-                int created = categoryDAO.insert(category);
-                request.getSession().setAttribute(created > 0 ? "catalogSuccess" : "catalogError",
-                        created > 0 ? "Thêm danh mục mới thành công." : "Không thể thêm danh mục mới.");
                 response.sendRedirect(request.getContextPath() + "/merchant/catalog");
                 return;
             } // 2. Xử lý Thêm mới hoặc Cập nhật món
@@ -196,16 +143,5 @@ public class MerchantCatalogServlet extends HttpServlet {
             request.getSession().setAttribute("catalogError", "Có lỗi khi cập nhật danh mục món.");
             response.sendRedirect(request.getContextPath() + "/merchant/catalog?error=1");
         }
-    }
-
-    private String escapeJson(String value) {
-        if (value == null) {
-            return "";
-        }
-        return value
-                .replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r");
     }
 }

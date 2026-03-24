@@ -1,5 +1,6 @@
 package com.clickeat.controller.auth;
 
+import com.clickeat.util.RememberMeUtil;
 import java.io.IOException;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -14,14 +15,13 @@ public class LogoutServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
-        // 1. Lấy session hiện tại
-        HttpSession session = request.getSession();
-        
-        // 2. Hủy session (Xóa sạch thông tin đăng nhập)
-        session.invalidate();
-        
-        // 3. Quay về trang login
-        response.sendRedirect("login");
+
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+
+        RememberMeUtil.clearRememberMeCookie(request, response);
+        response.sendRedirect(request.getContextPath() + "/login");
     }
 }

@@ -8,13 +8,6 @@
         <meta charset="UTF-8"/>
         <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
         <title>Phân tích – ClickEat Merchant</title>
-        <script>
-            const originalWarn = console.warn;
-            console.warn = function() {
-                if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes('cdn.tailwindcss.com should not be used in production')) return;
-                originalWarn.apply(console, arguments);
-            };
-        </script>
         <script src="https://cdn.tailwindcss.com"></script>
         <script>
             tailwind.config = {
@@ -28,7 +21,7 @@
         </script>
         <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
         <style>
             body {
                 font-family: 'Inter', sans-serif;
@@ -117,16 +110,6 @@
             const rawLabels = [<c:forEach var="entry" items="${revenueData}">"${entry.key}",</c:forEach>];
             const rawData = [<c:forEach var="entry" items="${revenueData}">${entry.value},</c:forEach>];
             
-            const statusLabels = ['Chờ xử lý', 'Đang chuẩn bị', 'Sẵn sàng lấy', 'Đang giao', 'Đã giao', 'Đã hủy'];
-            const statusData = [
-            ${orderStatusData.PENDING},
-            ${orderStatusData.PREPARING},
-            ${orderStatusData.READY_FOR_PICKUP},
-            ${orderStatusData.DELIVERING},
-            ${orderStatusData.DELIVERED},
-            ${orderStatusData.CANCELLED}
-            ];
-            
             // 2. Vẽ biểu đồ chính
             (function initMainChart() {
                 const ctx = document.getElementById('mainRevenueChart').getContext('2d');
@@ -159,38 +142,6 @@
                         scales: {
                             y: {grid: {color: '#f0f0f0'}, ticks: {font: {size: 11}}},
                             x: {grid: {display: false}, ticks: {font: {size: 11}}}
-                        }
-                    }
-                });
-            })();
-            
-            (function initOrderStatusChart() {
-                const canvas = document.getElementById('orderStatusChart');
-                if (!canvas)
-                return;
-                
-                const total = statusData.reduce((sum, v) => sum + v, 0);
-                const chartData = total > 0 ? statusData : [1];
-                const chartLabels = total > 0 ? statusLabels : ['Chưa có dữ liệu'];
-                const chartColors = total > 0
-                ? ['#f59e0b', '#3b82f6', '#8b5cf6', '#06b6d4', '#22c55e', '#ef4444']
-                : ['#e5e7eb'];
-                
-                new Chart(canvas.getContext('2d'), {
-                    type: 'doughnut',
-                    data: {
-                        labels: chartLabels,
-                        datasets: [{
-                            data: chartData,
-                            backgroundColor: chartColors,
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {position: 'bottom'}
                         }
                     }
                 });

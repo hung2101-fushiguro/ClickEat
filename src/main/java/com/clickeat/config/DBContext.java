@@ -1,38 +1,38 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.clickeat.config;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class DBContext {
-    public static String driverName = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
-    public static String dbURL = "jdbc:sqlserver://localhost:1433;databaseName=ClickEat;encrypt=true;trustServerCertificate=true;";
-    public static String userDB = "sa";
-    public static String passDB = "11012004";
-    
-    public static Connection getConnection(){
-        Connection con = null;
-        try{
-            Class.forName(driverName);
-            con = DriverManager.getConnection(dbURL, userDB, passDB);
-            return con;
-        } catch(ClassNotFoundException | SQLException ex){
-            Logger.getLogger(DBContext.class.getName()).log(Level.SEVERE, null, ex);
+    private static final String DRIVER = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
+
+    // Local SQL Server (port 1433)
+    private static final String URL =
+            "jdbc:sqlserver://localhost:1433;"
+          + "database=ClickEat;"
+          + "encrypt=true;"
+          + "trustServerCertificate=true;"
+          + "loginTimeout=10;";
+
+    private static final String USER = "sa";
+    private static final String PASS = "hungsatoru";
+
+    public static Connection getConnection() throws SQLException {
+        try {
+            Class.forName(DRIVER);
+        } catch (ClassNotFoundException e) {
+            throw new SQLException("Thiếu JDBC Driver (mssql-jdbc). Kiểm tra Libraries/Maven dependency.", e);
         }
-        return null;
+        return DriverManager.getConnection(URL, USER, PASS);
     }
+
     public static void main(String[] args) {
-        try(Connection con = getConnection()){
-            if(con!=null)
-                System.out.println(" Connect to ClickEat Success");
-        } catch(SQLException ex){
-            Logger.getLogger(DBContext.class.getName()).log(Level.SEVERE, null, ex);
+        try (Connection con = getConnection()) {
+            System.out.println("✅ Connect to ClickEat Success: " + con.getCatalog());
+        } catch (SQLException e) {
+            System.err.println("❌ Connect FAIL: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }
