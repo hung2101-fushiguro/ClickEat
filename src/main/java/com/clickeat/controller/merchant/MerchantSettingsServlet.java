@@ -1,14 +1,16 @@
 package com.clickeat.controller.merchant;
 
+import java.io.IOException;
+
 import com.clickeat.dal.impl.MerchantProfileDAO;
 import com.clickeat.model.MerchantProfile;
 import com.clickeat.model.User;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
 
 @WebServlet(name = "MerchantSettingsServlet", urlPatterns = {"/merchant/settings"})
 public class MerchantSettingsServlet extends HttpServlet {
@@ -45,9 +47,11 @@ public class MerchantSettingsServlet extends HttpServlet {
 
         // Lấy thông báo thành công và tab hiện tại từ Session
         request.setAttribute("successMsg", request.getSession().getAttribute("successMsg"));
+        request.setAttribute("errorMsg", request.getSession().getAttribute("errorMsg"));
         request.setAttribute("activeTab", request.getSession().getAttribute("activeTab"));
 
         request.getSession().removeAttribute("successMsg");
+        request.getSession().removeAttribute("errorMsg");
         request.getSession().removeAttribute("activeTab");
 
         request.setAttribute("currentPage", "settings");
@@ -85,43 +89,68 @@ public class MerchantSettingsServlet extends HttpServlet {
             }
             boolean isOpen = "on".equalsIgnoreCase(isOpenRaw) || "true".equalsIgnoreCase(isOpenRaw);
 
-            if (current != null) {
-                current.setShopName(shopName);
-                current.setShopPhone(shopPhone);
-                current.setShopAddressLine(shopAddress);
-                current.setShopAvatar(finalAvatar);
-                current.setMinOrderAmount(minOrderAmount);
-                current.setIsOpen(isOpen);
-                dao.update(current);
-            }
+            boolean updatedStoreInfo = dao.updateStoreInfo(userId, shopName, shopPhone, shopAddress, finalAvatar);
+            boolean updatedOpenState = dao.updateOpenState(userId, isOpen);
+            boolean updatedMinOrder = dao.updateMinOrderAmount(userId, minOrderAmount);
 
             // Cập nhật lại tên hiển thị trên Sidebar (nếu có lưu trên Session)
             request.getSession().setAttribute("merchantName", shopName);
             request.getSession().setAttribute("merchantShopName", shopName);
-            request.getSession().setAttribute("merchantIsOpen", isOpen);
-            request.getSession().setAttribute("successMsg", "Cập nhật hồ sơ cửa hàng thành công!");
+            if (updatedOpenState) {
+                request.getSession().setAttribute("merchantIsOpen", isOpen);
+            }
+
+            if (updatedStoreInfo && updatedOpenState && updatedMinOrder) {
+                request.getSession().setAttribute("successMsg", "Cập nhật hồ sơ cửa hàng thành công!");
+            } else if (updatedStoreInfo || updatedOpenState || updatedMinOrder) {
+                request.getSession().setAttribute("successMsg", "Đã lưu một phần cài đặt cửa hàng.");
+                request.getSession().setAttribute("errorMsg", "Một số trường chưa lưu được do schema DB chưa đầy đủ (is_open/min_order_amount). Vui lòng chạy patch DB mới nhất.");
+            } else {
+                request.getSession().setAttribute("errorMsg", "Không thể lưu cài đặt cửa hàng. Vui lòng kiểm tra schema DB.");
+            }
 
         } else if ("hours".equals(tab)) {
             String businessHours = request.getParameter("businessHours");
-            MerchantProfile current = dao.findById((int) userId);
-            if (current != null) {
-                current.setBusinessHours(businessHours);
-                dao.update(current);
+            boolean ok = dao.updateBusinessHours(userId, businessHours);
+            if (ok) {
+                request.getSession().setAttribute("successMsg", "Đã lưu thiết lập Giờ mở cửa!");
+            } else {
+                request.getSession().setAttribute("errorMsg", "Không thể lưu giờ mở cửa (có thể DB thiếu cột business_hours).");
             }
-            request.getSession().setAttribute("successMsg", "Đã lưu thiết lập Giờ mở cửa!");
         } else if ("security".equals(tab)) {
             // === XỬ LÝ ĐỔI MẬT KHẨU ===
             String currentPw = request.getParameter("currentPw");
             String newPw = request.getParameter("newPw");
 
+            if (currentPw == null || currentPw.trim().isEmpty() || newPw == null || newPw.trim().isEmpty()) {
+                request.getSession().setAttribute("errorMsg", "Vui lòng nhập đầy đủ mật khẩu hiện tại và mật khẩu mới.");
+                request.getSession().setAttribute("activeTab", tab);
+                response.sendRedirect(request.getContextPath() + "/merchant/settings");
+                return;
+            }
+
+            String currentPwTrimmed = currentPw.trim();
+            String newPwTrimmed = newPw.trim();
+            if (newPwTrimmed.length() < 6) {
+                request.getSession().setAttribute("errorMsg", "Mật khẩu mới phải có ít nhất 6 ký tự.");
+                request.getSession().setAttribute("activeTab", tab);
+                response.sendRedirect(request.getContextPath() + "/merchant/settings");
+                return;
+            }
+            if (newPwTrimmed.equals(currentPwTrimmed)) {
+                request.getSession().setAttribute("errorMsg", "Mật khẩu mới phải khác mật khẩu hiện tại.");
+                request.getSession().setAttribute("activeTab", tab);
+                response.sendRedirect(request.getContextPath() + "/merchant/settings");
+                return;
+            }
+
             // Lấy lại mật khẩu thật từ Database để đối chiếu
             // (Giả sử bạn có UserDAO và hàm getById)
             com.clickeat.dal.impl.UserDAO userDAO = new com.clickeat.dal.impl.UserDAO();
-            User currentUserInfo = userDAO.findById((int) userId);
+            boolean currentPasswordMatched = userDAO.isSameAsCurrentPassword((int) userId, currentPwTrimmed);
 
-            if (currentUserInfo != null && currentUserInfo.getPasswordHash().equals(currentPw)) {
-                // Mật khẩu cũ khớp -> Cho phép đổi sang mật khẩu mới
-                userDAO.changePassword((int) userId, newPw); // Cần đảm bảo UserDAO của bạn có hàm này
+            if (currentPasswordMatched) {
+                userDAO.changePassword((int) userId, newPwTrimmed);
                 request.getSession().setAttribute("successMsg", "Đổi mật khẩu thành công!");
             } else {
                 // Sai mật khẩu cũ
@@ -129,12 +158,15 @@ public class MerchantSettingsServlet extends HttpServlet {
             }
         } else if ("notify".equals(tab)) {
             String notifyData = request.getParameter("notifyData");
-            MerchantProfile current = dao.findById((int) userId);
-            if (current != null) {
-                current.setNotificationSettings(notifyData);
-                dao.update(current);
+            if (notifyData == null || notifyData.trim().isEmpty()) {
+                notifyData = "{}";
             }
-            request.getSession().setAttribute("successMsg", "Đã lưu cài đặt thông báo!");
+            boolean ok = dao.updateNotificationSettings(userId, notifyData);
+            if (ok) {
+                request.getSession().setAttribute("successMsg", "Đã lưu cài đặt thông báo!");
+            } else {
+                request.getSession().setAttribute("errorMsg", "Không thể lưu cài đặt thông báo (có thể DB thiếu cột notification_settings).");
+            }
         }
 
         // Lưu lại tab vừa thao tác để trang tự động mở đúng tab

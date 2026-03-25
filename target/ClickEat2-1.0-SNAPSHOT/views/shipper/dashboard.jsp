@@ -47,9 +47,14 @@
             <div class="p-6 border-t border-gray-100 bg-white">
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Vị trí hiện tại của bạn</label>
                 <div class="flex gap-2">
-                    <input type="text" id="shipper-address" placeholder="VD: Phường Diên Hồng, Pleiku..." class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-orange-500 shadow-sm">
-                    <button type="button" onclick="updateLocationFromAddress()" class="bg-blue-500 text-white px-4 py-2 rounded-xl hover:bg-blue-600 transition shadow-sm flex items-center justify-center shrink-0">
+                    <button type="button" onclick="getGPSLocation()" class="bg-blue-500 text-white px-4 py-2 rounded-xl hover:bg-blue-600 transition shadow-sm flex items-center justify-center shrink-0" title="Dùng GPS hiện tại">
                         <i class="fa-solid fa-location-crosshairs"></i>
+                    </button>
+
+                    <input type="text" id="shipper-address" placeholder="Nhập địa chỉ (VD: 12 Nguyễn Văn Linh)..." class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-orange-500 shadow-sm">
+
+                    <button type="button" onclick="updateLocationFromAddress()" class="bg-orange-500 text-white px-4 py-2 rounded-xl hover:bg-orange-600 transition shadow-sm flex items-center justify-center shrink-0" title="Tìm tọa độ">
+                        <i class="fa-solid fa-magnifying-glass"></i>
                     </button>
                 </div>
                 <p id="location-status" class="text-xs text-gray-400 mt-2 font-medium"></p>
@@ -247,7 +252,12 @@
                                         <div>
                                             <h4 class="font-bold text-lg text-gray-900">${merchant.shopName}</h4>
                                             <p class="text-sm text-gray-500 line-clamp-1">${merchant.shopAddressLine}</p>
-                                            <p class="text-xs font-bold text-gray-400 mt-1">Mã: ${order.orderCode}</p>
+                                            <p class="text-xs font-bold text-gray-400 mt-1 mb-2">Mã: ${order.orderCode}</p>
+
+                                            <div class="inline-flex items-center gap-1.5 bg-blue-50 text-blue-600 px-2.5 py-1.5 rounded-lg text-xs font-black distance-badge" data-lat="${merchant.latitude}" data-lng="${merchant.longitude}">
+                                                <i class="fa-solid fa-location-dot"></i> 
+                                                <span class="distance-value">Đang đo khoảng cách...</span>
+                                            </div>
                                         </div>
                                         <div class="text-right shrink-0">
                                             <p class="text-2xl font-black text-orange-500">
@@ -521,7 +531,30 @@
                 });
             });
 
-            // Hàm chuyển đổi Địa chỉ thành Tọa độ (Geocoding)
+            // 1. Hàm lấy GPS tự động từ điện thoại/trình duyệt
+            function getGPSLocation() {
+                const statusText = document.getElementById('location-status');
+                statusText.innerHTML = '<span class="text-blue-500"><i class="fa-solid fa-spinner fa-spin"></i> Đang định vị GPS...</span>';
+
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                            (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        // ĐÃ THÊM DẤU \ TRƯỚC $
+                        statusText.innerHTML = `<span class="text-green-500"><i class="fa-solid fa-circle-check"></i> Đã lấy GPS: \${lat.toFixed(4)}, \${lng.toFixed(4)}</span>`;
+                        saveLocationToSystem(lat, lng);
+                    },
+                            (error) => {
+                        statusText.innerHTML = '<span class="text-red-500"><i class="fa-solid fa-triangle-exclamation"></i> Vui lòng bật GPS hoặc tự nhập địa chỉ!</span>';
+                    }
+                    );
+                } else {
+                    alert("Trình duyệt không hỗ trợ định vị GPS.");
+                }
+            }
+
+            // 2. Hàm chuyển đổi Địa chỉ gõ tay thành Tọa độ
             function updateLocationFromAddress() {
                 const address = document.getElementById('shipper-address').value.trim();
                 const statusText = document.getElementById('location-status');
@@ -533,9 +566,8 @@
 
                 statusText.innerHTML = '<span class="text-blue-500"><i class="fa-solid fa-spinner fa-spin"></i> Đang tìm tọa độ...</span>';
 
-                // Gọi API Nominatim của OpenStreetMap
-                // Thêm đuôi "Vietnam" để API ưu tiên tìm ở VN cho chính xác
                 const searchQuery = encodeURIComponent(address + ", Vietnam");
+                // ĐÃ THÊM DẤU \ TRƯỚC $
                 const url = `https://nominatim.openstreetmap.org/search?format=json&q=\${searchQuery}&limit=1`;
 
                 fetch(url)
@@ -544,21 +576,67 @@
                             if (data && data.length > 0) {
                                 const lat = data[0].lat;
                                 const lng = data[0].lon;
-
                                 statusText.innerHTML = `<span class="text-green-500"><i class="fa-solid fa-circle-check"></i> Đã ghim: \${parseFloat(lat).toFixed(4)}, \${parseFloat(lng).toFixed(4)}</span>`;
-
-                                // TODO: Gửi tọa độ này về Backend để lưu vào Database
-                                // saveLocationToDatabase(lat, lng);
-
-                                alert(`Tuyệt vời! Hệ thống đã xác định bạn đang ở tọa độ:\nVĩ độ: \${lat}\nKinh độ: \${lng}`);
+                                saveLocationToSystem(lat, lng);
                             } else {
                                 statusText.innerHTML = '<span class="text-red-500"><i class="fa-solid fa-triangle-exclamation"></i> Không tìm thấy địa chỉ này!</span>';
                             }
                         })
                         .catch(error => {
-                            console.error("Lỗi API: ", error);
                             statusText.innerHTML = '<span class="text-red-500"><i class="fa-solid fa-wifi"></i> Lỗi kết nối mạng!</span>';
                         });
+            }
+            function calculateDistance(lat1, lon1, lat2, lon2) {
+                const R = 6371; // Bán kính trái đất tính bằng KM
+                const dLat = (lat2 - lat1) * Math.PI / 180;
+                const dLon = (lon2 - lon1) * Math.PI / 180;
+                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                return R * c;
+            }
+
+            function updateAllDistances() {
+                const shipperLat = parseFloat(localStorage.getItem('shipperLat'));
+                const shipperLng = parseFloat(localStorage.getItem('shipperLng'));
+
+                if (!shipperLat || !shipperLng)
+                    return;
+
+                // Quét tất cả các nhãn KM trên màn hình và bơm số vào
+                document.querySelectorAll('.distance-badge').forEach(badge => {
+                    const shopLat = parseFloat(badge.getAttribute('data-lat'));
+                    const shopLng = parseFloat(badge.getAttribute('data-lng'));
+
+                    if (shopLat && shopLng) {
+                        const dist = calculateDistance(shipperLat, shipperLng, shopLat, shopLng);
+                        badge.querySelector('.distance-value').innerText = 'Cách bạn ' + dist.toFixed(1) + ' km';
+                    } else {
+                        badge.querySelector('.distance-value').innerText = 'Chưa rõ tọa độ Quán';
+                    }
+                });
+            }
+
+            // Gọi hàm tính toán ngay khi trang vừa load xong
+            document.addEventListener('DOMContentLoaded', updateAllDistances);
+
+            // 3. Hàm lưu trữ vị trí để các trang khác (như trang Tracking) dùng chung
+            function saveLocationToSystem(lat, lng) {
+                localStorage.setItem('shipperLat', lat);
+                localStorage.setItem('shipperLng', lng);
+
+                // Vừa lấy được GPS mới là phải cập nhật lại số KM trên màn hình ngay lập tức!
+                updateAllDistances();
+
+                $.ajax({
+                    url: '${pageContext.request.contextPath}/shipper/update-location',
+                    type: 'POST',
+                    data: {latitude: lat, longitude: lng},
+                    success: function () {
+                        console.log("Đã cập nhật vị trí lên Server thành công!");
+                    }
+                });
             }
             // Hàm mở/đóng Modal Rút tiền
             function openWithdrawModal() {
