@@ -1,6 +1,12 @@
 package com.clickeat.filter;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
 import com.clickeat.model.User;
+
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.FilterConfig;
@@ -11,10 +17,6 @@ import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
 
 @WebFilter("/*")
 public class AuthFilter implements Filter {
@@ -35,7 +37,9 @@ public class AuthFilter implements Filter {
         User account = (session != null) ? (User) session.getAttribute("account") : null;
 
         // Merchant portal (except public register page)
-        if (path.startsWith("/merchant/") && !path.equals("/merchant/register")) {
+        if (path.startsWith("/merchant/")
+                && !path.equals("/merchant/register")
+                && !path.equals("/merchant/auth/google")) {
             if (account == null || !"MERCHANT".equals(account.getRole())) {
                 response.sendRedirect(request.getContextPath() + "/login");
                 return;

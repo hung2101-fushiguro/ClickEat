@@ -212,6 +212,7 @@ CREATE TABLE dbo.MerchantProfiles (
     ward_name         NVARCHAR(100) NOT NULL,
     latitude          DECIMAL(10,7) NULL,
     longitude         DECIMAL(10,7) NULL,
+    source_platform   NVARCHAR(20)  NULL,
     status            NVARCHAR(20)  NOT NULL CONSTRAINT DF_MerchantProfiles_Status DEFAULT 'PENDING',
     created_at        DATETIME2     NOT NULL CONSTRAINT DF_MerchantProfiles_Created DEFAULT SYSUTCDATETIME(),
     updated_at        DATETIME2     NOT NULL CONSTRAINT DF_MerchantProfiles_Updated DEFAULT SYSUTCDATETIME(),
@@ -222,6 +223,10 @@ CREATE TABLE dbo.MerchantProfiles (
 
 ALTER TABLE dbo.MerchantProfiles
 ADD CONSTRAINT CK_MerchantProfiles_Status CHECK (status IN (N'PENDING',N'APPROVED',N'REJECTED',N'SUSPENDED'));
+GO
+
+ALTER TABLE dbo.MerchantProfiles
+ADD CONSTRAINT CK_MerchantProfiles_SourcePlatform CHECK (source_platform IS NULL OR source_platform IN (N'NONE',N'GRABFOOD',N'SHOPEEFOOD',N'OTHER'));
 GO
 
 CREATE TABLE dbo.MerchantKYC (

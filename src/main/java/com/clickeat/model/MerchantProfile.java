@@ -26,6 +26,7 @@ public class MerchantProfile {
     private Double minOrderAmount;
     private Boolean isOpen;
     private String rejectionReason;
+    private String sourcePlatform;
     // Transient stats – populated by JOIN queries
     private double avgRating;
     private int totalRatings;
@@ -44,43 +45,105 @@ public class MerchantProfile {
     private String deliveryTime;
     private String distance;
 
-    public Boolean getIsDefault() { return isDefault; }
-    public void setIsDefault(Boolean isDefault) { this.isDefault = isDefault; }
+    public Boolean getIsDefault() {
+        return isDefault;
+    }
 
-    public String getNote() { return note; }
-    public void setNote(String note) { this.note = note; }
+    public void setIsDefault(Boolean isDefault) {
+        this.isDefault = isDefault;
+    }
 
-    public String getImageUrl() { return imageUrl; }
-    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    public String getNote() {
+        return note;
+    }
 
-    public String getCoverImageUrl() { return coverImageUrl; }
-    public void setCoverImageUrl(String coverImageUrl) { this.coverImageUrl = coverImageUrl; }
+    public void setNote(String note) {
+        this.note = note;
+    }
 
-    public double getRating() { return rating; }
-    public void setRating(double rating) { this.rating = rating; }
+    public String getImageUrl() {
+        return imageUrl;
+    }
 
-    public int getReviewCount() { return reviewCount; }
-    public void setReviewCount(int reviewCount) { this.reviewCount = reviewCount; }
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
 
-    public int getItemCount() { return itemCount; }
-    public void setItemCount(int itemCount) { this.itemCount = itemCount; }
+    public String getCoverImageUrl() {
+        return coverImageUrl;
+    }
 
-    public double getMinPrice() { return minPrice; }
-    public void setMinPrice(double minPrice) { this.minPrice = minPrice; }
+    public void setCoverImageUrl(String coverImageUrl) {
+        this.coverImageUrl = coverImageUrl;
+    }
 
-    public String getCategoryName() { return categoryName; }
-    public void setCategoryName(String categoryName) { this.categoryName = categoryName; }
+    public double getRating() {
+        return rating;
+    }
 
-    public String getVoucherTitle() { return voucherTitle; }
-    public void setVoucherTitle(String voucherTitle) { this.voucherTitle = voucherTitle; }
+    public void setRating(double rating) {
+        this.rating = rating;
+    }
 
-    public String getDeliveryTime() { return deliveryTime; }
-    public void setDeliveryTime(String deliveryTime) { this.deliveryTime = deliveryTime; }
+    public int getReviewCount() {
+        return reviewCount;
+    }
 
-    public String getDistance() { return distance; }
-    public void setDistance(String distance) { this.distance = distance; }
+    public void setReviewCount(int reviewCount) {
+        this.reviewCount = reviewCount;
+    }
 
-    public void setOpen(boolean open) { this.isOpen = open; }
+    public int getItemCount() {
+        return itemCount;
+    }
+
+    public void setItemCount(int itemCount) {
+        this.itemCount = itemCount;
+    }
+
+    public double getMinPrice() {
+        return minPrice;
+    }
+
+    public void setMinPrice(double minPrice) {
+        this.minPrice = minPrice;
+    }
+
+    public String getCategoryName() {
+        return categoryName;
+    }
+
+    public void setCategoryName(String categoryName) {
+        this.categoryName = categoryName;
+    }
+
+    public String getVoucherTitle() {
+        return voucherTitle;
+    }
+
+    public void setVoucherTitle(String voucherTitle) {
+        this.voucherTitle = voucherTitle;
+    }
+
+    public String getDeliveryTime() {
+        return deliveryTime;
+    }
+
+    public void setDeliveryTime(String deliveryTime) {
+        this.deliveryTime = deliveryTime;
+    }
+
+    public String getDistance() {
+        return distance;
+    }
+
+    public void setDistance(String distance) {
+        this.distance = distance;
+    }
+
+    public void setOpen(boolean open) {
+        this.isOpen = open;
+    }
 
     public MerchantProfile() {
     }
@@ -283,5 +346,13 @@ public class MerchantProfile {
 
     public void setRejectionReason(String rejectionReason) {
         this.rejectionReason = rejectionReason;
+    }
+
+    public String getSourcePlatform() {
+        return sourcePlatform;
+    }
+
+    public void setSourcePlatform(String sourcePlatform) {
+        this.sourcePlatform = sourcePlatform;
     }
 }

@@ -52,6 +52,24 @@ BEGIN
         ALTER TABLE dbo.MerchantProfiles
         ADD shop_description NVARCHAR(1000) NULL;
     END
+
+    IF COL_LENGTH(N'dbo.MerchantProfiles', N'source_platform') IS NULL
+    BEGIN
+        ALTER TABLE dbo.MerchantProfiles
+        ADD source_platform NVARCHAR(20) NULL;
+    END
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM sys.check_constraints
+        WHERE name = N'CK_MerchantProfiles_SourcePlatform'
+          AND parent_object_id = OBJECT_ID(N'dbo.MerchantProfiles')
+    )
+    BEGIN
+        ALTER TABLE dbo.MerchantProfiles
+        ADD CONSTRAINT CK_MerchantProfiles_SourcePlatform
+            CHECK (source_platform IS NULL OR source_platform IN (N'NONE', N'GRABFOOD', N'SHOPEEFOOD', N'OTHER'));
+    END
 END
 GO
 

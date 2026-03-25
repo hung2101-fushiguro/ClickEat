@@ -114,6 +114,12 @@ public class MerchantProfileDAO extends AbstractDAO<MerchantProfile> {
             m.setRejectionReason(null);
         }
 
+        try {
+            m.setSourcePlatform(rs.getString("source_platform"));
+        } catch (Exception e) {
+            m.setSourcePlatform(null);
+        }
+
         // ảnh đọc từ DB
         try {
             m.setImageUrl(normalizeImageUrl(rs.getString("image_url")));
@@ -237,6 +243,38 @@ public class MerchantProfileDAO extends AbstractDAO<MerchantProfile> {
 
     @Override
     public int insert(MerchantProfile m) {
+        if (columnExists("MerchantProfiles", "source_platform")) {
+            String sql = """
+                INSERT INTO MerchantProfiles
+                (user_id, shop_name, shop_phone, shop_address_line,
+                 province_code, province_name, district_code, district_name,
+                 ward_code, ward_name, latitude, longitude, note, status,
+                 shop_avatar, business_hours, shop_description, notification_settings, source_platform)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """;
+
+            return update(sql,
+                    m.getUserId(),
+                    m.getShopName(),
+                    m.getShopPhone(),
+                    m.getShopAddressLine(),
+                    m.getProvinceCode(),
+                    m.getProvinceName(),
+                    m.getDistrictCode(),
+                    m.getDistrictName(),
+                    m.getWardCode(),
+                    m.getWardName(),
+                    m.getLatitude(),
+                    m.getLongitude(),
+                    m.getNote(),
+                    m.getStatus(),
+                    m.getShopAvatar(),
+                    m.getBusinessHours(),
+                    m.getShopDescription(),
+                    m.getNotificationSettings(),
+                    m.getSourcePlatform());
+        }
+
         String sql = """
             INSERT INTO MerchantProfiles
             (user_id, shop_name, shop_phone, shop_address_line,
@@ -269,6 +307,52 @@ public class MerchantProfileDAO extends AbstractDAO<MerchantProfile> {
 
     @Override
     public boolean update(MerchantProfile m) {
+        if (columnExists("MerchantProfiles", "source_platform")) {
+            String sql = """
+                UPDATE MerchantProfiles
+                SET shop_name = ?,
+                    shop_phone = ?,
+                    shop_address_line = ?,
+                    province_code = ?,
+                    province_name = ?,
+                    district_code = ?,
+                    district_name = ?,
+                    ward_code = ?,
+                    ward_name = ?,
+                    latitude = ?,
+                    longitude = ?,
+                    note = ?,
+                    status = ?,
+                    shop_avatar = ?,
+                    business_hours = ?,
+                    shop_description = ?,
+                    notification_settings = ?,
+                    source_platform = ?
+                WHERE user_id = ?
+            """;
+
+            return update(sql,
+                    m.getShopName(),
+                    m.getShopPhone(),
+                    m.getShopAddressLine(),
+                    m.getProvinceCode(),
+                    m.getProvinceName(),
+                    m.getDistrictCode(),
+                    m.getDistrictName(),
+                    m.getWardCode(),
+                    m.getWardName(),
+                    m.getLatitude(),
+                    m.getLongitude(),
+                    m.getNote(),
+                    m.getStatus(),
+                    m.getShopAvatar(),
+                    m.getBusinessHours(),
+                    m.getShopDescription(),
+                    m.getNotificationSettings(),
+                    m.getSourcePlatform(),
+                    m.getUserId()) > 0;
+        }
+
         String sql = """
             UPDATE MerchantProfiles
             SET shop_name = ?,

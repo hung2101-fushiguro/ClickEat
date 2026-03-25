@@ -131,6 +131,7 @@
         <!-- Hidden form — JS fills credential then submits -->
         <form id="googleAuthForm" method="POST" action="${pageContext.request.contextPath}/merchant/auth/google">
             <input type="hidden" id="googleCredential" name="credential"/>
+            <input type="hidden" name="mode" value="login"/>
         </form>
         <div id="googleBtnContainer" class="flex justify-center"></div>
 

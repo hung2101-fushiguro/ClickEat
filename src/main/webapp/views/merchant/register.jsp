@@ -10,6 +10,8 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script>
         tailwind.config = {
             theme: {
@@ -26,6 +28,7 @@
         /* File upload drag zone */
         .upload-zone:hover { border-color: #c86601; background: #fff7ed; }
         .upload-zone:hover .upload-icon { color: #c86601; }
+        #leafletMap { height: 280px; border-radius: 0.75rem; }
     </style>
 </head>
 <body class="min-h-screen bg-gray-50 font-sans">
@@ -153,6 +156,16 @@
                                 <option value="other">Khác</option>
                             </select>
                         </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-800 mb-2">Đang bán trên nền tảng</label>
+                            <select id="sourcePlatform"
+                                    class="w-full h-12 px-4 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 focus:bg-white focus:ring-4 focus:ring-orange-100 focus:border-primary outline-none transition-all">
+                                <option value="NONE">Chưa bán trên nền tảng khác</option>
+                                <option value="GRABFOOD">GrabFood</option>
+                                <option value="SHOPEEFOOD">ShopeeFood</option>
+                                <option value="OTHER">Nền tảng khác</option>
+                            </select>
+                        </div>
                         <c:choose>
                         <c:when test="${not empty sessionScope.googleSignup_sub}">
                         <!-- Google sign-up — no password needed (spans 2 cols) -->
@@ -214,6 +227,7 @@
                     <!-- Hidden form — JS fills credential then submits -->
                     <form id="googleAuthForm" method="POST" action="${pageContext.request.contextPath}/merchant/auth/google">
                         <input type="hidden" id="googleCredential" name="credential"/>
+                        <input type="hidden" name="mode" value="register"/>
                     </form>
                     <div id="googleBtnContainer" class="flex justify-center"></div>
 
@@ -240,8 +254,20 @@
                     <!-- Address -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-800 mb-2">Địa chỉ cửa hàng *</label>
-                        <input type="text" id="shopAddress" placeholder="Số nhà, đường, phường/xã, quận/huyện, thành phố"
-                               class="w-full h-12 px-4 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 focus:bg-white focus:ring-4 focus:ring-orange-100 focus:border-primary outline-none transition-all placeholder:text-gray-400"/>
+                        <div class="relative flex gap-2">
+                            <div class="flex-1 relative">
+                                <input type="text" id="shopAddress" placeholder="Số nhà, đường, phường/xã, quận/huyện, thành phố"
+                                       autocomplete="off"
+                                       class="w-full h-12 px-4 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 focus:bg-white focus:ring-4 focus:ring-orange-100 focus:border-primary outline-none transition-all placeholder:text-gray-400"/>
+                                <div id="addressSuggestBox" class="hidden absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-auto"></div>
+                            </div>
+                            <button type="button" id="searchAddressBtn"
+                                    class="h-12 px-4 bg-primary hover:bg-primary-dark text-white rounded-xl font-semibold transition-all whitespace-nowrap">
+                                Tìm trên bản đồ
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2">Gõ địa chỉ để hiện gợi ý ngay, hoặc bấm “Tìm trên bản đồ”, hoặc kéo thả ghim để chỉnh chính xác vị trí.</p>
+                        <div id="leafletMap" class="w-full mt-3 border border-gray-200"></div>
                     </div>
 
                     <!-- Shop phone -->
@@ -311,7 +337,10 @@
                     <input type="hidden" name="shopAddress" id="fShopAddress"/>
                     <input type="hidden" name="password"  id="fPassword"/>
                     <input type="hidden" name="businessType" id="fBusinessType"/>
+                    <input type="hidden" name="sourcePlatform" id="fSourcePlatform"/>
                     <input type="hidden" name="viaGoogle"   id="fViaGoogle"/>
+                    <input type="hidden" name="latitude" id="fLatitude"/>
+                    <input type="hidden" name="longitude" id="fLongitude"/>
 
                     <!-- Info summary card -->
                     <div class="bg-orange-50 border border-orange-100 rounded-xl p-4 space-y-2">
@@ -325,6 +354,8 @@
                             <span class="font-semibold text-gray-900 truncate" id="sumEmail">—</span>
                             <span class="text-gray-500">Địa chỉ</span>
                             <span class="font-semibold text-gray-900 truncate" id="sumAddr">—</span>
+                            <span class="text-gray-500">Nền tảng tham chiếu</span>
+                            <span class="font-semibold text-gray-900 truncate" id="sumPlatform">—</span>
                         </div>
                     </div>
 
@@ -423,6 +454,12 @@
     // ── Step definitions ────────────────────────────────────────────
     let currentStep = 1;
     const IS_GOOGLE_SIGNUP = ${not empty sessionScope.googleSignup_sub};
+    let leafletMap = null;
+    let leafletMarker = null;
+    let selectedLat = 0;
+    let selectedLng = 0;
+    let addressSuggestTimer = null;
+    let addressSuggestSeq = 0;
 
     // ── Check for server-side success (redirect after POST) ─────────
     <c:if test="${param.success == 'true'}">
@@ -476,6 +513,9 @@
         currentStep = n;
         renderSidebar();
         updateMobileBars();
+        if (n === 2 && leafletMap) {
+            setTimeout(function() { leafletMap.invalidateSize(); }, 80);
+        }
     }
 
     // ── Step 1 validation ────────────────────────────────────────────
@@ -530,8 +570,196 @@
         document.getElementById('sumShop').textContent  = document.getElementById('shopName').value.trim();
         document.getElementById('sumEmail').textContent = document.getElementById('regEmail').value.trim();
         document.getElementById('sumAddr').textContent  = addr;
+        const platformMap = {
+            NONE: 'Chưa có',
+            GRABFOOD: 'GrabFood',
+            SHOPEEFOOD: 'ShopeeFood',
+            OTHER: 'Khác'
+        };
+        const selectedPlatform = document.getElementById('sourcePlatform').value || 'NONE';
+        document.getElementById('sumPlatform').textContent = platformMap[selectedPlatform] || 'Chưa có';
 
         goStep(3);
+    }
+
+    async function searchAddressOnMap() {
+        const input = document.getElementById('shopAddress');
+        const query = input.value.trim();
+        if (!query) return;
+
+        const btn = document.getElementById('searchAddressBtn');
+        const prev = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Đang tìm...';
+
+        try {
+            const data = await fetchAddressResults(query, 1);
+            if (!Array.isArray(data) || data.length === 0) {
+                alert('Không tìm thấy địa chỉ phù hợp. Bạn thử nhập chi tiết hơn nhé.');
+                return;
+            }
+            const first = data[0];
+            const lat = parseFloat(first.lat);
+            const lng = parseFloat(first.lon);
+            if (Number.isNaN(lat) || Number.isNaN(lng)) {
+                alert('Không lấy được tọa độ từ kết quả tìm kiếm.');
+                return;
+            }
+            selectedLat = lat;
+            selectedLng = lng;
+            if (first.display_name) {
+                input.value = first.display_name;
+            }
+            updateMapMarker(lat, lng, input.value || query);
+        } catch (e) {
+            alert('Không thể tìm địa chỉ lúc này. Vui lòng thử lại.');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = prev;
+        }
+    }
+
+    async function fetchAddressResults(query, limit) {
+        const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=' + encodeURIComponent(String(limit || 1)) + '&q=' + encodeURIComponent(query);
+        const res = await fetch(url, {
+            headers: { 'Accept': 'application/json' }
+        });
+        return res.json();
+    }
+
+    function hideAddressSuggestions() {
+        const box = document.getElementById('addressSuggestBox');
+        if (!box) return;
+        box.classList.add('hidden');
+        box.innerHTML = '';
+    }
+
+    function renderAddressSuggestions(items) {
+        const box = document.getElementById('addressSuggestBox');
+        if (!box) return;
+        if (!Array.isArray(items) || items.length === 0) {
+            hideAddressSuggestions();
+            return;
+        }
+
+        box.innerHTML = items.map(function(item) {
+            const lat = Number.parseFloat(item.lat);
+            const lng = Number.parseFloat(item.lon);
+            if (Number.isNaN(lat) || Number.isNaN(lng)) return '';
+            const label = (item.display_name || '').replace(/"/g, '&quot;');
+            return '<button type="button" class="w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-orange-50 border-b border-gray-100 last:border-b-0" '
+                + 'data-lat="' + lat + '" data-lng="' + lng + '" data-label="' + label + '">'
+                + label
+                + '</button>';
+        }).join('');
+
+        if (!box.innerHTML.trim()) {
+            hideAddressSuggestions();
+            return;
+        }
+
+        box.classList.remove('hidden');
+        box.querySelectorAll('button[data-lat][data-lng]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const lat = Number.parseFloat(btn.getAttribute('data-lat'));
+                const lng = Number.parseFloat(btn.getAttribute('data-lng'));
+                const label = btn.getAttribute('data-label') || '';
+                if (Number.isNaN(lat) || Number.isNaN(lng)) return;
+                const addressInput = document.getElementById('shopAddress');
+                addressInput.value = label;
+                updateMapMarker(lat, lng, label);
+                hideAddressSuggestions();
+            });
+        });
+    }
+
+    function bindAddressAutocomplete() {
+        const input = document.getElementById('shopAddress');
+        if (!input) return;
+
+        input.addEventListener('input', function() {
+            const query = input.value.trim();
+            if (addressSuggestTimer) clearTimeout(addressSuggestTimer);
+            if (query.length < 3) {
+                hideAddressSuggestions();
+                return;
+            }
+
+            addressSuggestTimer = setTimeout(async function() {
+                const seq = ++addressSuggestSeq;
+                try {
+                    const results = await fetchAddressResults(query, 5);
+                    if (seq !== addressSuggestSeq) return;
+                    renderAddressSuggestions(results);
+                } catch (e) {
+                    if (seq !== addressSuggestSeq) return;
+                    hideAddressSuggestions();
+                }
+            }, 350);
+        });
+
+        input.addEventListener('focus', function() {
+            if (input.value.trim().length >= 3) {
+                input.dispatchEvent(new Event('input'));
+            }
+        });
+
+        input.addEventListener('blur', function() {
+            setTimeout(hideAddressSuggestions, 150);
+        });
+    }
+
+    function updateMapMarker(lat, lng, label) {
+        if (!leafletMap) return;
+        if (!leafletMarker) {
+            leafletMarker = L.marker([lat, lng], { draggable: true }).addTo(leafletMap);
+            leafletMarker.on('dragend', function(evt) {
+                const point = evt.target.getLatLng();
+                selectedLat = point.lat;
+                selectedLng = point.lng;
+            });
+        } else {
+            leafletMarker.setLatLng([lat, lng]);
+        }
+        selectedLat = lat;
+        selectedLng = lng;
+        leafletMap.setView([lat, lng], 16);
+        if (label) {
+            leafletMarker.bindPopup(label).openPopup();
+        }
+    }
+
+    function initLeafletMap() {
+        const mapEl = document.getElementById('leafletMap');
+        if (!mapEl || leafletMap) return;
+
+        leafletMap = L.map('leafletMap');
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(leafletMap);
+
+        leafletMap.setView([10.762622, 106.660172], 13);
+        setTimeout(function() { leafletMap.invalidateSize(); }, 50);
+
+        leafletMap.on('click', function(e) {
+            updateMapMarker(e.latlng.lat, e.latlng.lng, 'Vị trí đã chọn');
+        });
+
+        const searchBtn = document.getElementById('searchAddressBtn');
+        const addressInput = document.getElementById('shopAddress');
+        if (searchBtn) {
+            searchBtn.addEventListener('click', searchAddressOnMap);
+        }
+        if (addressInput) {
+            addressInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    searchAddressOnMap();
+                }
+            });
+        }
+        bindAddressAutocomplete();
     }
 
     // ── Prepare hidden fields before final submit ────────────────────
@@ -546,9 +774,13 @@
         document.getElementById('fPhone').value        = document.getElementById('regPhone').value.trim();
         document.getElementById('fShopPhone').value    = document.getElementById('shopPhone').value.trim();
         document.getElementById('fShopAddress').value  = document.getElementById('shopAddress').value.trim();
-        document.getElementById('fPassword').value     = document.getElementById('regPassword').value;
+        const pwInput = document.getElementById('regPassword');
+        document.getElementById('fPassword').value     = pwInput ? pwInput.value : '';
         document.getElementById('fBusinessType').value = document.getElementById('businessType').value;
+        document.getElementById('fSourcePlatform').value = document.getElementById('sourcePlatform').value;
         document.getElementById('fViaGoogle').value    = IS_GOOGLE_SIGNUP ? 'true' : '';
+        document.getElementById('fLatitude').value     = String(selectedLat || 0);
+        document.getElementById('fLongitude').value    = String(selectedLng || 0);
 
         // Show loading state
         const btn = document.getElementById('submitBtn');
@@ -598,6 +830,7 @@
     // ── Init ─────────────────────────────────────────────────────────
     renderSidebar();
     updateMobileBars();
+    initLeafletMap();
 
     // ── Google Sign-In (Step 1 quick-register) ────────────────────
     function handleGoogleSignIn(response) {
