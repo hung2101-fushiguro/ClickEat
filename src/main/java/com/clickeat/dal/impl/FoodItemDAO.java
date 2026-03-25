@@ -1,10 +1,11 @@
 package com.clickeat.dal.impl;
 
-import com.clickeat.dal.interfaces.IFoodItemDAO;
-import com.clickeat.model.FoodItem;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+
+import com.clickeat.dal.interfaces.IFoodItemDAO;
+import com.clickeat.model.FoodItem;
 
 public class FoodItemDAO extends AbstractDAO<FoodItem> implements IFoodItemDAO {
 
@@ -198,7 +199,14 @@ public class FoodItemDAO extends AbstractDAO<FoodItem> implements IFoodItemDAO {
 
     private String resolveFoodImage(String dbImage, String categoryName, String foodName, boolean isFried) {
         if (dbImage != null && !dbImage.trim().isEmpty()) {
-            return dbImage;
+            String normalized = dbImage.trim();
+            if (normalized.startsWith("http://")
+                    || normalized.startsWith("https://")
+                    || normalized.startsWith("data:")
+                    || normalized.startsWith("/")) {
+                return normalized;
+            }
+            return "/assets/images/" + normalized;
         }
 
         String key = ((categoryName == null ? "" : categoryName) + " "
@@ -309,11 +317,13 @@ public class FoodItemDAO extends AbstractDAO<FoodItem> implements IFoodItemDAO {
     }
 
     public boolean toggleStatus(int itemId, int merchantId, boolean isAvailable, String reason) {
-        String sqlWithReason = "UPDATE FoodItems SET is_available = ?, out_of_stock_reason = ?, updated_at = SYSUTCDATETIME() WHERE id = ? AND merchant_user_id = ?";
-        String finalReason = isAvailable ? null : reason;
-        int updated = update(sqlWithReason, isAvailable, finalReason, itemId, merchantId);
-        if (updated > 0) {
-            return true;
+        if (columnExists("FoodItems", "out_of_stock_reason")) {
+            String sqlWithReason = "UPDATE FoodItems SET is_available = ?, out_of_stock_reason = ?, updated_at = SYSUTCDATETIME() WHERE id = ? AND merchant_user_id = ?";
+            String finalReason = isAvailable ? null : reason;
+            int updated = update(sqlWithReason, isAvailable, finalReason, itemId, merchantId);
+            if (updated > 0) {
+                return true;
+            }
         }
 
         String fallbackSql = "UPDATE FoodItems SET is_available = ?, updated_at = SYSUTCDATETIME() WHERE id = ? AND merchant_user_id = ?";
@@ -350,26 +360,4 @@ public class FoodItemDAO extends AbstractDAO<FoodItem> implements IFoodItemDAO {
                "OFFSET 0 ROWS FETCH NEXT ? ROWS ONLY";
         return query(sql, limit);
     }
-
-
-
-    public boolean toggleStatus(int itemId, int merchantId, boolean isAvailable, String reason) {
-        String sqlWithReason = "UPDATE FoodItems SET is_available = ?, out_of_stock_reason = ?, updated_at = SYSUTCDATETIME() WHERE id = ? AND merchant_user_id = ?";
-        String finalReason = isAvailable ? null : reason;
-        int updated = update(sqlWithReason, isAvailable, finalReason, itemId, merchantId);
-        if (updated > 0) return true;
-        String fallbackSql = "UPDATE FoodItems SET is_available = ?, updated_at = SYSUTCDATETIME() WHERE id = ? AND merchant_user_id = ?";
-        return update(fallbackSql, isAvailable, itemId, merchantId) > 0;
-    }
-
-    public int bulkToggleStatus(java.util.List<Integer> itemIds, int merchantId, boolean isAvailable, String reason) {
-        if (itemIds == null || itemIds.isEmpty()) return 0;
-        int affected = 0;
-        for (Integer itemId : itemIds) {
-            if (itemId == null) continue;
-            if (toggleStatus(itemId, merchantId, isAvailable, reason)) affected++;
-        }
-        return affected;
-    }
-
 }

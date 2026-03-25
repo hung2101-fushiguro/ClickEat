@@ -1,9 +1,10 @@
 package com.clickeat.dal.impl;
 
-import com.clickeat.model.Rating;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+
+import com.clickeat.model.Rating;
 
 public class RatingDAO extends AbstractDAO<Rating> {
 
@@ -40,11 +41,18 @@ public class RatingDAO extends AbstractDAO<Rating> {
 
     // Lấy danh sách đánh giá có kèm Filter (Tất cả, Chưa trả lời, Tiêu cực)
     public List<Rating> getReviewsForMerchant(int merchantId, String filter) {
+        return getReviewsForMerchant(merchantId, filter, 1, 10);
+    }
+
+    public List<Rating> getReviewsForMerchant(int merchantId, String filter, int page, int pageSize) {
         String sql = "SELECT r.*, u.full_name, o.order_code "
                 + "FROM Ratings r "
                 + "LEFT JOIN Users u ON r.rater_customer_id = u.id "
                 + "LEFT JOIN Orders o ON r.order_id = o.id "
                 + "WHERE r.target_type = 'MERCHANT' AND r.target_user_id = ? ";
+
+        java.util.List<Object> params = new java.util.ArrayList<>();
+        params.add(merchantId);
 
         if ("unanswered".equals(filter)) {
             sql += " AND r.reply_comment IS NULL ";
@@ -52,8 +60,36 @@ public class RatingDAO extends AbstractDAO<Rating> {
             sql += " AND r.stars <= 3 ";
         }
 
-        sql += " ORDER BY r.created_at DESC";
-        return query(sql, merchantId);
+        int safePage = Math.max(1, page);
+        int safePageSize = Math.max(1, Math.min(pageSize, 100));
+        int offset = (safePage - 1) * safePageSize;
+
+        sql += " ORDER BY r.created_at DESC OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+        params.add(offset);
+        params.add(safePageSize);
+
+        return query(sql, params.toArray());
+    }
+
+    public int countReviewsForMerchant(int merchantId, String filter) {
+        String sql = "SELECT COUNT(*) AS total "
+                + "FROM Ratings r "
+                + "WHERE r.target_type = 'MERCHANT' AND r.target_user_id = ? ";
+
+        java.util.List<Object> params = new java.util.ArrayList<>();
+        params.add(merchantId);
+
+        if ("unanswered".equals(filter)) {
+            sql += " AND r.reply_comment IS NULL ";
+        } else if ("negative".equals(filter)) {
+            sql += " AND r.stars <= 3 ";
+        }
+
+        java.util.List<Object[]> rows = queryRaw(sql, params.toArray());
+        if (rows.isEmpty() || rows.get(0).length == 0 || rows.get(0)[0] == null) {
+            return 0;
+        }
+        return ((Number) rows.get(0)[0]).intValue();
     }
 
     // Tính điểm trung bình (Trả về Double để dễ làm tròn)

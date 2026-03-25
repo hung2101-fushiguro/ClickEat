@@ -1,15 +1,17 @@
 package com.clickeat.controller.merchant;
 
+import java.io.IOException;
+import java.util.List;
+
 import com.clickeat.dal.impl.OrderDAO;
 import com.clickeat.model.Order;
 import com.clickeat.model.User;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.List;
 
 @WebServlet(name = "MerchantOrderServlet", urlPatterns = {"/merchant/orders"})
 public class MerchantOrderServlet extends HttpServlet {
@@ -31,15 +33,33 @@ public class MerchantOrderServlet extends HttpServlet {
         String statusFilter = request.getParameter("status");
         String fromDateTime = request.getParameter("from");
         String toDateTime = request.getParameter("to");
+        int page = 1;
+        try {
+            String pageRaw = request.getParameter("page");
+            if (pageRaw != null) {
+                page = Integer.parseInt(pageRaw);
+            }
+        } catch (NumberFormatException ignored) {
+            page = 1;
+        }
+        int pageSize = 10;
 
         OrderDAO orderDAO = new OrderDAO();
-        List<Order> orders = orderDAO.getOrdersByMerchantAndStatus(account.getId(), tab, statusFilter, fromDateTime, toDateTime);
+        int totalOrders = orderDAO.countOrdersByMerchantAndStatus(account.getId(), tab, statusFilter, fromDateTime, toDateTime);
+        int totalPages = Math.max(1, (int) Math.ceil(totalOrders / (double) pageSize));
+        if (page > totalPages) {
+            page = totalPages;
+        }
+        List<Order> orders = orderDAO.getOrdersByMerchantAndStatus(account.getId(), tab, statusFilter, fromDateTime, toDateTime, page, pageSize);
 
         request.setAttribute("orders", orders);
         request.setAttribute("currentTab", tab);
         request.setAttribute("statusFilter", statusFilter);
         request.setAttribute("fromDateTime", fromDateTime);
         request.setAttribute("toDateTime", toDateTime);
+        request.setAttribute("currentPageNum", page);
+        request.setAttribute("totalPages", totalPages);
+        request.setAttribute("totalOrders", totalOrders);
         request.setAttribute("currentPage", "orders");
 
         request.setAttribute("successMsg", request.getSession().getAttribute("merchantOrderSuccess"));

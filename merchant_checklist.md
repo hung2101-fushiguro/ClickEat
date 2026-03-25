@@ -62,3 +62,51 @@
 - [ ] Dùng full_demo_seed_1week.sql để kiểm thử các màn merchant (đơn, review, voucher, wallet)
 - [ ] Test flow đầy đủ: Login (theo role) → Dashboard → Orders → Catalog → Settings → Logout
 - [ ] Viết một kịch bản demo ngắn (script) cho merchant để trình bày sản phẩm
+
+---
+
+## Audit Senior (2026-03-25) – Backend → Frontend → UX/UI
+
+### 1) Checklist theo từng luồng chức năng
+
+| Luồng | Backend | Frontend/UX | So với web tương tự | Trạng thái |
+|---|---|---|---|---|
+| Dashboard | Có đủ số liệu cơ bản, có đồng bộ session shop | Giao diện ổn, chưa có loading/empty chuẩn hóa | Đạt mức MVP; thiếu filter theo khoảng thời gian linh hoạt | ⚠️ Cần tối ưu |
+| Orders | Xử lý nhận/hủy/chuyển trạng thái có kiểm quyền merchant | UI rõ, thao tác nhanh | Thiếu phân trang + lọc nâng cao | ⚠️ Cần tối ưu |
+| Order Detail | Luồng trạng thái chi tiết đầy đủ | UX tốt, dễ thao tác | Tương đương mức chuẩn MVP | ✅ Ổn |
+| Catalog | CRUD + bulk toggle + lý do tạm ngưng + add category | Toggle mượt, đã fix cancel/rollback | Gần chuẩn web food merchant | ✅ Ổn |
+| Promotions | Create/edit/toggle status/publish + bảo vệ null/schema | UI 2 nút thao tác rõ ràng | Đạt chuẩn vận hành cơ bản | ✅ Ổn |
+| Settings | Lưu store/hours/notify/security + fallback schema | Đã có banner lỗi/success rõ | Thiếu xác thực mật khẩu chuẩn hash | ⚠️ Cần tối ưu bảo mật |
+| Wallet | Có số dư/rút tiền/lịch sử | UX rõ nhưng chưa có cảnh báo realtime giao dịch đồng thời | Thiếu cơ chế atomic chặt hơn | ⚠️ Cần tối ưu |
+| Chat | Có trang/DAO cơ bản | UI có nhưng notification endpoint còn mock | Thấp hơn web tương tự (chưa realtime đúng nghĩa) | ❌ Thiếu |
+| Reviews | Xem/đánh giá cơ bản ổn | UX ổn | Đạt mức cơ bản | ✅ Ổn |
+| Refund | Luồng yêu cầu xử lý có sẵn | UX đủ dùng | Cần thông báo lý do lỗi chi tiết hơn | ⚠️ Cần tối ưu |
+
+### 2) Các tối ưu đã triển khai ngay trong nhánh
+- [x] Chuẩn hóa quản lý voucher thành 2 nút chính, tách rõ trạng thái hoạt động/hiển thị.
+- [x] Fix NPE ở MerchantPromotionServlet khi thiếu param (`type`, `action`, dữ liệu số/ngày).
+- [x] Fix toggle catalog: bấm Cancel không đổi trạng thái + switch trượt đúng + rollback UI khi request lỗi.
+- [x] Thêm validate đầu vào Catalog (name/price/category) và response HTTP rõ cho AJAX toggle.
+- [x] Thêm validate số liệu và ngày trong Promotions (không âm, maxUses > 0, start <= end).
+- [x] Ổn định Settings (open/notify/hours) với fallback schema, hiển thị lỗi toàn trang.
+- [x] Chuẩn hóa image URL từ DB để tránh 404 khi DB chỉ lưu tên file.
+
+### 3) Gap so với web merchant tương tự (ưu tiên theo mức độ)
+
+#### P0/P1 (nên làm sớm)
+- [ ] Notification thật cho merchant (không trả mock JSON ở `/merchant/notifications`).
+- [ ] Đổi mật khẩu dùng hash verify/rehash (không so sánh plain text).
+- [ ] Gia cố atomic cho wallet withdrawal/balance sync khi concurrent.
+
+#### P2 (nên làm trong sprint kế)
+- [ ] Thêm pagination/filter đồng bộ cho Orders/Dashboard/Reviews.
+- [ ] Chuẩn hóa error message theo mã lỗi nghiệp vụ để UX rõ nguyên nhân.
+- [ ] Bổ sung logging/audit trail cho hành động quan trọng (toggle publish, withdraw, refund).
+
+#### P3 (nâng chất lượng)
+- [ ] Chuẩn hóa loading/empty/error state toàn bộ merchant views.
+- [ ] Chuyển Tailwind CDN sang build static CSS cho production.
+
+### 4) Kết luận
+- Nhánh merchant hiện đã đạt mức vận hành demo tốt cho hầu hết luồng chính.
+- Các điểm rủi ro còn lại tập trung vào **notification thật**, **bảo mật đổi mật khẩu**, và **độ an toàn giao dịch ví**.

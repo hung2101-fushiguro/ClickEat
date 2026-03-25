@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<jsp:useBean id="now" class="java.util.Date" />
 <% request.setAttribute("currentPage", "promotions");%>
 <!DOCTYPE html>
 <html lang="vi" class="h-full">
@@ -32,10 +33,10 @@
         <jsp:include page="_nav.jsp" />
 
         <main class="flex-1 flex flex-col h-screen overflow-y-auto">
-            <header class="bg-white border-b border-gray-100 px-8 py-5 sticky top-0 z-10 flex justify-between items-center shadow-sm">
+            <header class="bg-white border-b border-gray-100 px-4 md:px-8 py-5 sticky top-0 z-10 flex justify-between items-center shadow-sm">
                 <div>
                     <h1 class="text-2xl font-black text-gray-900 tracking-tight">Khuyến mãi</h1>
-                    <p class="text-sm text-gray-500 font-medium mt-1">Quản lý mã code, thời gian hiệu lực và trạng thái publish</p>
+                    <p class="text-sm text-gray-500 font-medium mt-1">Quản lý mã code, trạng thái hoạt động, hiển thị và lưu trữ voucher</p>
                 </div>
                 <button onclick="openCreate()" class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-md flex items-center gap-2">
                     <span class="material-symbols-outlined text-[20px]">add</span>Tạo voucher
@@ -58,8 +59,8 @@
                                 <th class="py-4 px-5 text-xs font-bold text-gray-400 uppercase tracking-wider">Hiệu lực</th>
                                 <th class="py-4 px-5 text-xs font-bold text-gray-400 uppercase tracking-wider">Đơn tối thiểu</th>
                                 <th class="py-4 px-5 text-xs font-bold text-gray-400 uppercase tracking-wider">Đã dùng</th>
-                                <th class="py-4 px-5 text-xs font-bold text-gray-400 uppercase tracking-wider">Status</th>
-                                <th class="py-4 px-5 text-xs font-bold text-gray-400 uppercase tracking-wider">Publish</th>
+                                <th class="py-4 px-5 text-xs font-bold text-gray-400 uppercase tracking-wider">Trạng thái</th>
+                                <th class="py-4 px-5 text-xs font-bold text-gray-400 uppercase tracking-wider">Hiển thị</th>
                                 <th class="py-4 px-5 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">Thao tác</th>
                             </tr>
                         </thead>
@@ -80,23 +81,49 @@
                                         ${empty v.usedOrderCount ? 0 : v.usedOrderCount} đơn
                                     </td>
                                     <td class="py-4 px-5">
-                                        <span class="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase ${v.status == 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}">${v.status}</span>
+                                        <c:choose>
+                                            <c:when test="${v.status ne 'ACTIVE'}">
+                                                <span class="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase bg-gray-100 text-gray-600">Tạm dừng</span>
+                                            </c:when>
+                                            <c:when test="${not v.published}">
+                                                <span class="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase bg-slate-100 text-slate-600">Nháp</span>
+                                            </c:when>
+                                            <c:when test="${not empty v.startAt and v.startAt.time > now.time}">
+                                                <span class="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase bg-amber-100 text-amber-700">Sắp diễn ra</span>
+                                            </c:when>
+                                            <c:when test="${not empty v.endAt and v.endAt.time < now.time}">
+                                                <span class="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase bg-red-100 text-red-700">Hết hạn</span>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <span class="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase bg-green-100 text-green-700">Đang chạy</span>
+                                            </c:otherwise>
+                                        </c:choose>
                                     </td>
                                     <td class="py-4 px-5">
+                                        <c:choose>
+                                            <c:when test="${v.published}">
+                                                <span class="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase bg-blue-100 text-blue-700">Hiển thị</span>
+                                            </c:when>
+                                            <c:otherwise>
+                                                <span class="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase bg-gray-100 text-gray-600">Ẩn</span>
+                                            </c:otherwise>
+                                        </c:choose>
+                                    </td>
+                                    <td class="py-4 px-5 text-right">
+                                        <form method="POST" action="${pageContext.request.contextPath}/merchant/promotions" class="inline">
+                                            <input type="hidden" name="action" value="toggleStatus"/>
+                                            <input type="hidden" name="voucherId" value="${v.id}"/>
+                                            <button type="submit" class="px-3 py-1.5 rounded-lg text-xs font-bold ${v.status == 'ACTIVE' ? 'bg-amber-50 text-amber-700 hover:bg-amber-100' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'} mr-2">
+                                                ${v.status == 'ACTIVE' ? 'Tạm dừng' : 'Kích hoạt'}
+                                            </button>
+                                        </form>
+
                                         <form method="POST" action="${pageContext.request.contextPath}/merchant/promotions" class="inline">
                                             <input type="hidden" name="action" value="togglePublish"/>
                                             <input type="hidden" name="voucherId" value="${v.id}"/>
-                                            <input type="hidden" name="publish" value="${not v.published}"/>
-                                            <button type="submit" class="px-3 py-1.5 rounded-lg text-xs font-bold ${v.published ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}">
-                                                ${v.published ? 'Đang publish' : 'Chưa publish'}
+                                            <button type="submit" class="px-3 py-1.5 rounded-lg text-xs font-bold ${v.published ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}">
+                                                ${v.published ? 'Ẩn' : 'Hiển thị'}
                                             </button>
-                                        </form>
-                                    </td>
-                                    <td class="py-4 px-5 text-right">
-                                        <form method="POST" action="${pageContext.request.contextPath}/merchant/promotions" class="inline" onsubmit="return confirm('Ẩn voucher này khỏi hoạt động?')">
-                                            <input type="hidden" name="action" value="delete"/>
-                                            <input type="hidden" name="voucherId" value="${v.id}"/>
-                                            <button type="submit" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-50 text-red-600 hover:bg-red-100">Ẩn</button>
                                         </form>
                                     </td>
                                 </tr>
@@ -125,7 +152,7 @@
 
         <div id="createModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <div class="bg-white w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden relative">
-                <div class="flex items-center justify-between px-8 py-6 border-b border-gray-50">
+                <div class="flex items-center justify-between px-4 md:px-8 py-6 border-b border-gray-50">
                     <h2 class="text-xl font-black text-gray-900 tracking-tight">Tạo Voucher Mới</h2>
                     <button onclick="closeCreate()" class="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full transition-colors">
                         <span class="material-symbols-outlined">close</span>
@@ -133,6 +160,7 @@
                 </div>
 
                 <form method="POST" action="${pageContext.request.contextPath}/merchant/promotions" class="p-8 space-y-5">
+                    <input type="hidden" name="action" value="create"/>
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-2">Tên chương trình *</label>
                         <input type="text" name="title" required class="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 outline-none focus:bg-white focus:border-primary font-medium transition-all shadow-sm"/>
@@ -194,6 +222,7 @@
             function closeCreate() {
                 document.getElementById('createModal').classList.add('hidden');
             }
+
             document.getElementById('createModal').addEventListener('click', function (e) {
                 if (e.target === this)
                 closeCreate();

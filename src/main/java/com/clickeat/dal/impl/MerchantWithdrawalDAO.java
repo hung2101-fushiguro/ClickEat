@@ -4,12 +4,14 @@
  */
 package com.clickeat.dal.impl;
 
-import com.clickeat.model.MerchantWithdrawal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
+
+import com.clickeat.model.MerchantWithdrawal;
 
 public class MerchantWithdrawalDAO extends AbstractDAO<MerchantWithdrawal> {
 
@@ -34,17 +36,29 @@ public class MerchantWithdrawalDAO extends AbstractDAO<MerchantWithdrawal> {
     }
 
     public List<MerchantWithdrawal> getHistoryByMerchantId(int merchantId) {
+        if (!tableExists("MerchantWithdrawals")) {
+            return new ArrayList<>();
+        }
+
         String sql = "SELECT * FROM MerchantWithdrawals WHERE merchant_user_id = ? ORDER BY created_at DESC";
         return query(sql, merchantId);
     }
 
     public int insertRequest(MerchantWithdrawal w) {
+        if (!tableExists("MerchantWithdrawals")) {
+            return 0;
+        }
+
         String sql = "INSERT INTO MerchantWithdrawals (merchant_user_id, amount, bank_name, bank_account_number, status) "
                 + "VALUES (?, ?, ?, ?, 'PENDING')";
         return update(sql, w.getMerchantUserId(), w.getAmount(), w.getBankName(), w.getBankAccountNumber());
     }
 
     public boolean createRequestWithBalanceCheck(int merchantUserId, double amount, String bankName, String bankAccountNumber) {
+        if (!tableExists("MerchantWithdrawals") || !tableExists("MerchantWallets")) {
+            return false;
+        }
+
         if (amount <= 0) {
             return false;
         }
@@ -55,14 +69,33 @@ public class MerchantWithdrawalDAO extends AbstractDAO<MerchantWithdrawal> {
             conn.setAutoCommit(false);
 
             String checkWalletSql = "SELECT balance FROM MerchantWallets WITH (UPDLOCK, ROWLOCK) WHERE merchant_user_id = ?";
+            double walletBalance;
             try (PreparedStatement checkWallet = conn.prepareStatement(checkWalletSql)) {
                 checkWallet.setInt(1, merchantUserId);
                 try (ResultSet rs = checkWallet.executeQuery()) {
-                    if (!rs.next() || rs.getDouble("balance") < amount) {
+                    if (!rs.next()) {
                         conn.rollback();
                         return false;
                     }
+                    walletBalance = rs.getDouble("balance");
                 }
+            }
+
+            double pendingAmount = 0;
+            String pendingSql = "SELECT ISNULL(SUM(amount), 0) AS pending_total FROM MerchantWithdrawals WITH (UPDLOCK, ROWLOCK) WHERE merchant_user_id = ? AND status = 'PENDING'";
+            try (PreparedStatement psPending = conn.prepareStatement(pendingSql)) {
+                psPending.setInt(1, merchantUserId);
+                try (ResultSet rs = psPending.executeQuery()) {
+                    if (rs.next()) {
+                        pendingAmount = rs.getDouble("pending_total");
+                    }
+                }
+            }
+
+            double availableForNewRequest = walletBalance - pendingAmount;
+            if (availableForNewRequest < amount) {
+                conn.rollback();
+                return false;
             }
 
             String insertSql = "INSERT INTO MerchantWithdrawals (merchant_user_id, amount, bank_name, bank_account_number, status) "
@@ -100,6 +133,10 @@ public class MerchantWithdrawalDAO extends AbstractDAO<MerchantWithdrawal> {
     }
 
     public List<MerchantWithdrawal> getPendingRequests() {
+        if (!tableExists("MerchantWithdrawals")) {
+            return new ArrayList<>();
+        }
+
         String sql = "SELECT w.*, u.full_name AS merchant_name, u.phone AS merchant_phone, mp.shop_name "
                 + "FROM MerchantWithdrawals w "
                 + "JOIN Users u ON w.merchant_user_id = u.id "
@@ -110,6 +147,10 @@ public class MerchantWithdrawalDAO extends AbstractDAO<MerchantWithdrawal> {
     }
 
     public boolean approveRequest(long requestId, int merchantUserId, double amount) {
+        if (!tableExists("MerchantWithdrawals") || !tableExists("MerchantWallets")) {
+            return false;
+        }
+
         Connection conn = null;
         try {
             conn = getConnection();
@@ -162,6 +203,10 @@ public class MerchantWithdrawalDAO extends AbstractDAO<MerchantWithdrawal> {
     }
 
     public boolean rejectRequest(long requestId) {
+        if (!tableExists("MerchantWithdrawals")) {
+            return false;
+        }
+
         String sql = "UPDATE MerchantWithdrawals "
                 + "SET status = 'REJECTED', processed_at = SYSUTCDATETIME() "
                 + "WHERE id = ? AND status = 'PENDING'";

@@ -36,7 +36,7 @@
         <%@ include file="_nav.jsp" %>
 
         <main class="flex-1 flex flex-col h-screen overflow-y-auto">
-            <header class="bg-white border-b border-gray-100 px-8 py-5 sticky top-0 z-10 flex justify-between items-center shadow-sm">
+            <header class="bg-white border-b border-gray-100 px-4 md:px-8 py-5 sticky top-0 z-10 flex justify-between items-center shadow-sm">
                 <div>
                     <h1 class="text-2xl font-black text-gray-900 tracking-tight">Phân tích kinh doanh</h1>
                     <p class="text-sm text-gray-500 font-medium mt-1">Dữ liệu thống kê hiệu quả bán hàng của bạn</p>

@@ -37,13 +37,13 @@
 
         <main class="flex-1 flex flex-col h-screen overflow-hidden relative">
 
-            <header class="bg-white border-b border-gray-100 px-8 py-5 sticky top-0 z-20 flex justify-between items-center shadow-sm">
+            <header class="bg-white border-b border-gray-100 px-4 md:px-8 py-4 md:py-5 sticky top-0 z-20 flex flex-col md:flex-row justify-between md:items-center gap-3 md:gap-0 shadow-sm">
                 <div>
                     <h1 class="text-2xl font-black text-gray-900 tracking-tight">Đơn hàng</h1>
                     <p class="text-sm text-gray-500 font-medium mt-1">Quản lý và xử lý đơn hàng theo thời gian thực</p>
                 </div>
-                <div class="flex items-center gap-4">
-                    <span id="refreshTimer" class="text-sm font-bold text-gray-400 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
+                <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+                    <span id="refreshTimer" class="text-xs md:text-sm font-bold text-gray-400 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
                         Tự động làm mới sau 30s
                     </span>
                     <button onclick="location.reload()" class="w-10 h-10 bg-orange-50 text-primary hover:bg-primary hover:text-white rounded-xl flex items-center justify-center transition-colors shadow-sm">
@@ -52,8 +52,8 @@
                 </div>
             </header>
 
-            <div class="bg-white border-b border-gray-100 px-8 pt-4 sticky top-[81px] z-10">
-                <div class="flex gap-8">
+            <div class="bg-white border-b border-gray-100 px-4 md:px-8 pt-4 sticky top-[81px] z-10">
+                <div class="flex gap-6 overflow-x-auto no-scrollbar whitespace-nowrap">
                     <a href="?tab=pending" class="pb-4 text-sm font-bold border-b-2 transition-all ${currentTab == 'pending' || empty currentTab ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-800'}">
                         Mới (Chờ xác nhận)
                         <c:if test="${(currentTab == 'pending' || empty currentTab) && not empty orders}">
@@ -99,7 +99,7 @@
                 </form>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-8">
+            <div class="flex-1 overflow-y-auto p-4 md:p-8">
                 <div class="max-w-4xl mx-auto space-y-4">
 
                     <c:if test="${not empty successMsg}">
@@ -203,6 +203,44 @@
                                         </div>
                                     </div>
                                 </c:forEach>
+
+                                <c:if test="${totalPages > 1}">
+                                    <div class="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
+                                        <p class="text-xs text-gray-500 font-medium">Tổng ${totalOrders} đơn • Trang ${currentPageNum}/${totalPages}</p>
+                                        <div class="flex items-center gap-2">
+                                            <c:url var="prevPageUrl" value="/merchant/orders">
+                                                <c:param name="tab" value="${currentTab}"/>
+                                                <c:if test="${not empty statusFilter}"><c:param name="status" value="${statusFilter}"/></c:if>
+                                                <c:if test="${not empty fromDateTime}"><c:param name="from" value="${fromDateTime}"/></c:if>
+                                                <c:if test="${not empty toDateTime}"><c:param name="to" value="${toDateTime}"/></c:if>
+                                                <c:param name="page" value="${currentPageNum - 1}"/>
+                                            </c:url>
+                                            <a href="${currentPageNum > 1 ? prevPageUrl : '#'}" class="px-3 py-2 rounded-lg border text-sm font-bold ${currentPageNum > 1 ? 'border-gray-200 text-gray-700 hover:bg-gray-50' : 'border-gray-100 text-gray-300 pointer-events-none'}">Trước</a>
+
+                                            <c:forEach begin="1" end="${totalPages}" var="p">
+                                                <c:if test="${p >= currentPageNum - 1 && p <= currentPageNum + 1}">
+                                                    <c:url var="pageUrl" value="/merchant/orders">
+                                                        <c:param name="tab" value="${currentTab}"/>
+                                                        <c:if test="${not empty statusFilter}"><c:param name="status" value="${statusFilter}"/></c:if>
+                                                        <c:if test="${not empty fromDateTime}"><c:param name="from" value="${fromDateTime}"/></c:if>
+                                                        <c:if test="${not empty toDateTime}"><c:param name="to" value="${toDateTime}"/></c:if>
+                                                        <c:param name="page" value="${p}"/>
+                                                    </c:url>
+                                                    <a href="${pageUrl}" class="w-9 h-9 rounded-lg text-sm font-bold flex items-center justify-center ${p == currentPageNum ? 'bg-primary text-white' : 'border border-gray-200 text-gray-700 hover:bg-gray-50'}">${p}</a>
+                                                </c:if>
+                                            </c:forEach>
+
+                                            <c:url var="nextPageUrl" value="/merchant/orders">
+                                                <c:param name="tab" value="${currentTab}"/>
+                                                <c:if test="${not empty statusFilter}"><c:param name="status" value="${statusFilter}"/></c:if>
+                                                <c:if test="${not empty fromDateTime}"><c:param name="from" value="${fromDateTime}"/></c:if>
+                                                <c:if test="${not empty toDateTime}"><c:param name="to" value="${toDateTime}"/></c:if>
+                                                <c:param name="page" value="${currentPageNum + 1}"/>
+                                            </c:url>
+                                            <a href="${currentPageNum < totalPages ? nextPageUrl : '#'}" class="px-3 py-2 rounded-lg border text-sm font-bold ${currentPageNum < totalPages ? 'border-gray-200 text-gray-700 hover:bg-gray-50' : 'border-gray-100 text-gray-300 pointer-events-none'}">Sau</a>
+                                        </div>
+                                    </div>
+                                </c:if>
 
                             </div>
                         </div>

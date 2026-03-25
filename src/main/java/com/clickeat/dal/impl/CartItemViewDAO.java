@@ -1,9 +1,10 @@
 package com.clickeat.dal.impl;
 
-import com.clickeat.model.CartItemView;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+
+import com.clickeat.model.CartItemView;
 
 public class CartItemViewDAO extends AbstractDAO<CartItemView> {
 
@@ -27,10 +28,29 @@ public class CartItemViewDAO extends AbstractDAO<CartItemView> {
         v.setCartId(rs.getInt("cart_id"));
         v.setFoodItemId(rs.getInt("food_item_id"));
         v.setName(rs.getString("food_name"));
-        v.setImageUrl(rs.getString("image_url"));
+        v.setImageUrl(normalizeImageUrl(rs.getString("image_url")));
         v.setUnitPrice(rs.getDouble("unit_price"));
         v.setQuantity(rs.getInt("quantity"));
         return v;
+    }
+
+    private String normalizeImageUrl(String rawImage) {
+        if (rawImage == null) {
+            return null;
+        }
+
+        String normalized = rawImage.trim();
+        if (normalized.isEmpty()) {
+            return normalized;
+        }
+
+        if (normalized.startsWith("http://")
+                || normalized.startsWith("https://")
+                || normalized.startsWith("data:")
+                || normalized.startsWith("/")) {
+            return normalized;
+        }
+        return "/assets/images/" + normalized;
     }
 
     public List<CartItemView> getByCartId(int cartId) {

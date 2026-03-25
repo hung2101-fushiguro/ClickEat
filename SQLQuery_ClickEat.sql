@@ -719,6 +719,7 @@ CREATE TABLE dbo.Ratings (
     target_user_id   BIGINT           NOT NULL,
     stars            INT              NOT NULL,
     comment          NVARCHAR(500)    NULL,
+    reply_comment    NVARCHAR(1000)   NULL,
     created_at       DATETIME2        NOT NULL CONSTRAINT DF_Ratings_Created DEFAULT SYSUTCDATETIME(),
 
     CONSTRAINT FK_Ratings_Order FOREIGN KEY (order_id) REFERENCES dbo.Orders(id) ON DELETE CASCADE,
@@ -734,6 +735,8 @@ CREATE TABLE dbo.Ratings (
 );
 
 CREATE UNIQUE INDEX UX_Ratings_OrderTarget ON dbo.Ratings(order_id, target_type);
+CREATE INDEX IX_Ratings_TargetCreated ON dbo.Ratings(target_type, target_user_id, created_at DESC) INCLUDE (stars, reply_comment, order_id, rater_customer_id, comment);
+CREATE INDEX IX_Ratings_MerchantUnansweredCreated ON dbo.Ratings(target_user_id, created_at DESC) INCLUDE (stars, order_id, rater_customer_id, comment) WHERE target_type = N'MERCHANT' AND reply_comment IS NULL;
 GO
 
 /* =========================

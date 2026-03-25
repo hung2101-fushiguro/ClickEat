@@ -86,6 +86,8 @@
 
                     <h1 class="text-3xl font-bold text-gray-900 tracking-tight mb-6">Cài đặt</h1>
 
+                    <c:set var="effectiveIsOpen" value="${dbIsOpen == null ? (sessionScope.merchantIsOpen == null ? true : sessionScope.merchantIsOpen) : dbIsOpen}"/>
+
                     <c:if test="${not empty dbMerchantStatus}">
                         <div class="mb-5 px-4 py-3 rounded-xl border ${dbMerchantStatus == 'APPROVED' ? 'bg-green-50 border-green-200 text-green-700' : (dbMerchantStatus == 'PENDING' ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-red-50 border-red-200 text-red-700')} text-sm font-semibold">
                             Trạng thái cửa hàng: ${dbMerchantStatus}
@@ -110,6 +112,13 @@
                                 </div>
                             </c:if>
 
+                            <c:if test="${not empty errorMsg}">
+                                <div class="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-red-600 text-[18px]">error</span>
+                                    ${errorMsg}
+                                </div>
+                            </c:if>
+
                             <div class="bg-white border border-gray-200 rounded-2xl p-6 md:p-8 shadow-sm">
                                 <!-- ===== Store Tab ===== -->
                                 <div id="tab-store" class="tab-content space-y-6">
@@ -130,7 +139,7 @@
                                         <div class="text-center md:text-left">
                                             <h3 class="font-semibold text-lg">${not empty dbShopName ? dbShopName : 'Cửa hàng'}</h3>
                                             <p class="text-sm text-gray-500">Shop Email</p>
-                                            <p class="text-xs mt-1 font-semibold text-green-600">● Đang hoạt động</p>
+                                            <p class="text-xs mt-1 font-semibold ${effectiveIsOpen ? 'text-green-600' : 'text-red-600'}">● ${effectiveIsOpen ? 'Đang nhận đơn' : 'Đã tạm đóng'}</p>
                                             <p class="text-[11px] text-gray-400 mt-1">Nhấn vào ảnh để thay đổi (tối đa 5MB)</p>
                                         </div>
                                     </div>
@@ -165,7 +174,7 @@
                                             </div>
                                             <div class="flex items-end pb-1">
                                                 <label class="tog">
-                                                    <input type="checkbox" name="isOpen" ${dbIsOpen == null || dbIsOpen ? 'checked' : ''}/>
+                                                    <input type="checkbox" name="isOpen" ${effectiveIsOpen ? 'checked' : ''}/>
                                                     <span class="tog-track"></span>
                                                     <span class="tog-thumb"></span>
                                                 </label>
@@ -203,6 +212,11 @@
                                 <!-- ===== Notifications Tab ===== -->
                                 <div id="tab-notify" class="tab-content hidden space-y-6">
                                     <div id="notifyRows"></div>
+                                    <div class="flex justify-end pt-2">
+                                        <button type="button" onclick="saveNotify()" class="bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-orange-600 shadow-md min-w-[180px] flex justify-center">
+                                            Lưu cài đặt thông báo
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <!-- ===== Security Tab ===== -->
@@ -262,10 +276,16 @@
 
                 <%-- Must be BEFORE main script so getElementById('dbInitHours') resolves --%>
                 <script type="application/json" id="dbInitHours"><c:out value="${dbBusinessHours}" default="" escapeXml="false"/></script>
+                <script type="application/json" id="dbInitNotify"><c:out value="${dbNotifySettings}" default="" escapeXml="false"/></script>
                 <%-- Hidden form for business hours POST --%>
                 <form method="POST" id="hoursForm" action="${pageContext.request.contextPath}/merchant/settings">
                     <input type="hidden" name="tab" value="hours"/>
                     <input type="hidden" name="businessHours" id="businessHoursInput"/>
+                </form>
+                <%-- Hidden form for notification settings POST --%>
+                <form method="POST" id="notifyForm" action="${pageContext.request.contextPath}/merchant/settings">
+                    <input type="hidden" name="tab" value="notify"/>
+                    <input type="hidden" name="notifyData" id="notifyDataInput"/>
                 </form>
 
                 <script>
@@ -406,7 +426,25 @@
                         {key: 'new_review', label: 'Đánh giá mới', desc: 'Nhận thông báo khi có đánh giá mới.', checked: false},
                         {key: 'payment', label: 'Thanh toán thành công', desc: 'Nhận thông báo khi có tiền vào ví.', checked: true},
                         ];
+
+                        try {
+                            const notifyInitEl = document.getElementById('dbInitNotify');
+                            const savedNotifyRaw = notifyInitEl ? notifyInitEl.textContent : '';
+                            if (savedNotifyRaw && savedNotifyRaw.trim().length > 0) {
+                                const savedNotify = JSON.parse(savedNotifyRaw);
+                                if (savedNotify && typeof savedNotify === 'object') {
+                                    notifItems.forEach(item => {
+                                        if (Object.prototype.hasOwnProperty.call(savedNotify, item.key)) {
+                                            item.checked = !!savedNotify[item.key];
+                                        }
+                                    });
+                                }
+                            }
+                        } catch (e) {
+                        }
+
                         const notifyContainer = document.getElementById('notifyRows');
+                        notifyContainer.innerHTML = '';
                         notifItems.forEach((item, i) => {
                             const checked = item.checked ? 'checked' : '';
                             notifyContainer.innerHTML += `
@@ -422,6 +460,16 @@
                             </label>
                             </div>`;
                         });
+
+                        function saveNotify() {
+                            const payload = {};
+                            notifItems.forEach(item => {
+                                const cb = document.getElementById('notif-' + item.key);
+                                payload[item.key] = !!(cb && cb.checked);
+                            });
+                            document.getElementById('notifyDataInput').value = JSON.stringify(payload);
+                            document.getElementById('notifyForm').submit();
+                        }
                         
                         // ---- Security ----
                         function togglePw(id, btn) {

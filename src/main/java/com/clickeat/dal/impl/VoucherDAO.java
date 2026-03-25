@@ -37,6 +37,7 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
 
         v.setStartAt(rs.getTimestamp("start_at"));
         v.setEndAt(rs.getTimestamp("end_at"));
+        v.setStatus(rs.getString("status"));
 
         Object maxUsesTotal = rs.getObject("max_uses_total");
         if (maxUsesTotal != null) {
@@ -51,6 +52,8 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
         } else {
             v.setMaxUsesPerUser(null);
         }
+
+        v.setPublished(rs.getBoolean("is_published"));
 
         try {
             v.setCreatedAt(rs.getTimestamp("created_at"));
@@ -87,6 +90,7 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
         }
 
         v.setDisplayDiscount(buildDiscountLabel(v.getDiscountType(), v.getDiscountValue()));
+        applyMerchantRuntimeStatus(v);
 
         return v;
     }
@@ -308,8 +312,14 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
     }
 
     public boolean togglePublishByMerchant(int voucherId, int merchantId, boolean publish) {
-        String sql = "UPDATE Vouchers SET is_published = ?, updated_at = SYSUTCDATETIME() WHERE id = ? AND merchant_user_id = ?";
-        return update(sql, publish, voucherId, merchantId) > 0;
+        String sql = "UPDATE Vouchers SET is_published = ? WHERE id = ? AND merchant_user_id = ?";
+        int rows = update(sql, publish ? 1 : 0, voucherId, merchantId);
+        if (rows <= 0) {
+            return false;
+        }
+
+        Voucher refreshed = queryOne("SELECT * FROM Vouchers WHERE id = ? AND merchant_user_id = ?", voucherId, merchantId);
+        return refreshed != null && refreshed.isPublished() == publish;
     }
 
     public boolean updateByMerchant(Voucher voucher, int merchantId) {
@@ -338,6 +348,24 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
                 voucher.getId(),
                 merchantId
         ) > 0;
+    }
+
+    public boolean updateStatusByMerchant(int voucherId, int merchantId, String nextStatus) {
+        String normalized = nextStatus == null ? "INACTIVE" : nextStatus.trim().toUpperCase();
+        if (!"ACTIVE".equals(normalized) && !"INACTIVE".equals(normalized)) {
+            return false;
+        }
+
+        if (columnExists("Vouchers", "updated_at")) {
+            String sql = "UPDATE Vouchers SET status = ?, is_published = CASE WHEN ? = 'INACTIVE' THEN 0 ELSE is_published END, updated_at = SYSUTCDATETIME() WHERE id = ? AND merchant_user_id = ?";
+            int rows = update(sql, normalized, normalized, voucherId, merchantId);
+            if (rows > 0) {
+                return true;
+            }
+        }
+
+        String fallbackSql = "UPDATE Vouchers SET status = ?, is_published = CASE WHEN ? = 'INACTIVE' THEN 0 ELSE is_published END WHERE id = ? AND merchant_user_id = ?";
+        return update(fallbackSql, normalized, normalized, voucherId, merchantId) > 0;
     }
 
     public Voucher findByMerchantAndCode(int merchantUserId, String code) {
@@ -398,9 +426,35 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
         return "Giảm " + ((int) discountValue / 1000) + "k";
     }
 
-    public boolean togglePublishByMerchant(int voucherId, int merchantId, boolean publish) {
-        String sql = "UPDATE Vouchers SET is_published = ?, updated_at = SYSUTCDATETIME() WHERE id = ? AND merchant_user_id = ?";
-        return update(sql, publish, voucherId, merchantId) > 0;
+    private void applyMerchantRuntimeStatus(Voucher voucher) {
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+
+        if (!"ACTIVE".equalsIgnoreCase(voucher.getStatus())) {
+            voucher.setMerchantStatusLabel("Tạm dừng");
+            voucher.setMerchantStatusClass("bg-gray-100 text-gray-600");
+            return;
+        }
+
+        if (!voucher.isPublished()) {
+            voucher.setMerchantStatusLabel("Nháp");
+            voucher.setMerchantStatusClass("bg-slate-100 text-slate-600");
+            return;
+        }
+
+        if (voucher.getStartAt() != null && now.before(voucher.getStartAt())) {
+            voucher.setMerchantStatusLabel("Sắp diễn ra");
+            voucher.setMerchantStatusClass("bg-amber-100 text-amber-700");
+            return;
+        }
+
+        if (voucher.getEndAt() != null && now.after(voucher.getEndAt())) {
+            voucher.setMerchantStatusLabel("Hết hạn");
+            voucher.setMerchantStatusClass("bg-red-100 text-red-700");
+            return;
+        }
+
+        voucher.setMerchantStatusLabel("Đang chạy");
+        voucher.setMerchantStatusClass("bg-green-100 text-green-700");
     }
 
 }

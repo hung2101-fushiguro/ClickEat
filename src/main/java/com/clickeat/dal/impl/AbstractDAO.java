@@ -1,6 +1,7 @@
 package com.clickeat.dal.impl;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -66,11 +67,16 @@ public abstract class AbstractDAO<T> extends DBContext implements IGenericDAO<T>
 
     // Hàm INSERT/UPDATE/DELETE chung
     public int update(String sql, Object... params) {
-        try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        String normalizedSql = sql == null ? "" : sql.trim().toUpperCase();
+        boolean isInsert = normalizedSql.startsWith("INSERT");
+
+        try (Connection conn = getConnection(); PreparedStatement ps = isInsert
+                ? conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)
+                : conn.prepareStatement(sql)) {
             ps.setQueryTimeout(DEFAULT_QUERY_TIMEOUT_SECONDS);
             setParameter(ps, params);
             int rows = ps.executeUpdate();
-            if (rows > 0 && sql.trim().toUpperCase().startsWith("INSERT")) {
+            if (rows > 0 && isInsert) {
                 try (ResultSet rs = ps.getGeneratedKeys()) {
                     if (rs.next()) {
                         return rs.getInt(1);
@@ -87,6 +93,59 @@ public abstract class AbstractDAO<T> extends DBContext implements IGenericDAO<T>
     private void setParameter(PreparedStatement ps, Object... params) throws SQLException {
         for (int i = 0; i < params.length; i++) {
             ps.setObject(i + 1, params[i]);
+        }
+    }
+
+    protected boolean tableExists(String tableName) {
+        if (tableName == null || tableName.trim().isEmpty()) {
+            return false;
+        }
+
+        try (Connection conn = getConnection()) {
+            DatabaseMetaData meta = conn.getMetaData();
+            String catalog = conn.getCatalog();
+            if (existsTable(meta, catalog, tableName)) {
+                return true;
+            }
+            if (existsTable(meta, catalog, tableName.toLowerCase())) {
+                return true;
+            }
+            return existsTable(meta, catalog, tableName.toUpperCase());
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+    protected boolean columnExists(String tableName, String columnName) {
+        if (tableName == null || columnName == null
+                || tableName.trim().isEmpty() || columnName.trim().isEmpty()) {
+            return false;
+        }
+
+        try (Connection conn = getConnection()) {
+            DatabaseMetaData meta = conn.getMetaData();
+            String catalog = conn.getCatalog();
+            if (existsColumn(meta, catalog, tableName, columnName)) {
+                return true;
+            }
+            if (existsColumn(meta, catalog, tableName.toLowerCase(), columnName.toLowerCase())) {
+                return true;
+            }
+            return existsColumn(meta, catalog, tableName.toUpperCase(), columnName.toUpperCase());
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+    private boolean existsTable(DatabaseMetaData meta, String catalog, String tableName) throws SQLException {
+        try (ResultSet rs = meta.getTables(catalog, null, tableName, new String[]{"TABLE"})) {
+            return rs.next();
+        }
+    }
+
+    private boolean existsColumn(DatabaseMetaData meta, String catalog, String tableName, String columnName) throws SQLException {
+        try (ResultSet rs = meta.getColumns(catalog, null, tableName, columnName)) {
+            return rs.next();
         }
     }
 }
