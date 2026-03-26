@@ -16,7 +16,7 @@ public class DBContext {
           + "loginTimeout=10;";
 
     private static final String USER = "sa";
-    private static final String PASS = "0983446237Bao";
+    private static final String PASS = "hungsatoru";
 
     public static Connection getConnection() throws SQLException {
         try {

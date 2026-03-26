@@ -49,7 +49,6 @@ public class CheckoutServlet extends HttpServlet {
 
         CartDAO cartDAO = new CartDAO();
         CartItemDAO cartItemDAO = new CartItemDAO();
-        FoodItemDAO foodDAO = new FoodItemDAO();
         AddressDAO addressDAO = new AddressDAO();
         VoucherDAO voucherDAO = new VoucherDAO();
 
@@ -179,7 +178,6 @@ public class CheckoutServlet extends HttpServlet {
             request.setAttribute("guestAddress", session.getAttribute("guest_address"));
         }
 
-        request.setAttribute("foodDAO", foodDAO);
         request.getRequestDispatcher("/views/web/checkout.jsp").forward(request, response);
     }
 
@@ -214,12 +212,19 @@ public class CheckoutServlet extends HttpServlet {
         String receiverPhone;
         String deliveryAddressLine = addressLineInput;
 
-        String provinceCode = "NA";
-        String provinceName = "NA";
-        String districtCode = "NA";
-        String districtName = "NA";
-        String wardCode = "NA";
-        String wardName = "NA";
+        String provinceCode = request.getParameter("provinceCode");
+        String provinceName = request.getParameter("provinceName");
+        String districtCode = request.getParameter("districtCode");
+        String districtName = request.getParameter("districtName");
+        String wardCode = request.getParameter("wardCode");
+        String wardName = request.getParameter("wardName");
+
+        if (provinceCode == null || provinceCode.isBlank()) provinceCode = "NA";
+        if (provinceName == null || provinceName.isBlank()) provinceName = "NA";
+        if (districtCode == null || districtCode.isBlank()) districtCode = "NA";
+        if (districtName == null || districtName.isBlank()) districtName = "NA";
+        if (wardCode == null || wardCode.isBlank()) wardCode = "NA";
+        if (wardName == null || wardName.isBlank()) wardName = "NA";
 
         Double latitude = null;
         Double longitude = null;
@@ -237,34 +242,21 @@ public class CheckoutServlet extends HttpServlet {
                     receiverPhone = defaultAddress.getReceiverPhone();
                 }
 
-                if (defaultAddress.getAddressLine() != null && !defaultAddress.getAddressLine().isBlank()) {
-                    deliveryAddressLine = defaultAddress.getAddressLine();
-                }
-
-                if (addressLineInput != null && !addressLineInput.isBlank()) {
-                    String fullDefaultAddress = buildFullAddress(defaultAddress);
-                    if (!addressLineInput.equals(fullDefaultAddress)) {
-                        deliveryAddressLine = addressLineInput.trim();
-                    }
-                }
-
-                if (defaultAddress.getProvinceCode() != null && !defaultAddress.getProvinceCode().isBlank()) {
+                if (provinceCode.equals("NA") && defaultAddress.getProvinceCode() != null && !defaultAddress.getProvinceCode().isBlank()) {
                     provinceCode = defaultAddress.getProvinceCode();
-                }
-                if (defaultAddress.getProvinceName() != null && !defaultAddress.getProvinceName().isBlank()) {
                     provinceName = defaultAddress.getProvinceName();
-                }
-                if (defaultAddress.getDistrictCode() != null && !defaultAddress.getDistrictCode().isBlank()) {
                     districtCode = defaultAddress.getDistrictCode();
-                }
-                if (defaultAddress.getDistrictName() != null && !defaultAddress.getDistrictName().isBlank()) {
                     districtName = defaultAddress.getDistrictName();
-                }
-                if (defaultAddress.getWardCode() != null && !defaultAddress.getWardCode().isBlank()) {
                     wardCode = defaultAddress.getWardCode();
-                }
-                if (defaultAddress.getWardName() != null && !defaultAddress.getWardName().isBlank()) {
                     wardName = defaultAddress.getWardName();
+                    
+                    if (addressLineInput == null || addressLineInput.isBlank() || addressLineInput.equals(buildFullAddress(defaultAddress))) {
+                        deliveryAddressLine = defaultAddress.getAddressLine();
+                    } else {
+                        deliveryAddressLine = addressLineInput.trim() + ", " + wardName + ", " + districtName + ", " + provinceName;
+                    }
+                } else {
+                    deliveryAddressLine = addressLineInput.trim() + ", " + wardName + ", " + districtName + ", " + provinceName;
                 }
 
                 if (defaultAddress.getLatitude() != 0) {
@@ -273,14 +265,22 @@ public class CheckoutServlet extends HttpServlet {
                 if (defaultAddress.getLongitude() != 0) {
                     longitude = defaultAddress.getLongitude();
                 }
+            } else {
+                 if (!provinceCode.equals("NA")) {
+                     deliveryAddressLine = addressLineInput.trim() + ", " + wardName + ", " + districtName + ", " + provinceName;
+                 }
             }
         } else {
             receiverName = stringSession(session, "guest_fullName");
             receiverPhone = stringSession(session, "guest_phone");
 
-            Object guestAddress = session.getAttribute("guest_address");
-            if ((deliveryAddressLine == null || deliveryAddressLine.isBlank()) && guestAddress != null) {
-                deliveryAddressLine = guestAddress.toString();
+            if (!provinceCode.equals("NA")) {
+                 deliveryAddressLine = addressLineInput.trim() + ", " + wardName + ", " + districtName + ", " + provinceName;
+            } else {
+                Object guestAddress = session.getAttribute("guest_address");
+                if ((deliveryAddressLine == null || deliveryAddressLine.isBlank()) && guestAddress != null) {
+                    deliveryAddressLine = guestAddress.toString();
+                }
             }
         }
 

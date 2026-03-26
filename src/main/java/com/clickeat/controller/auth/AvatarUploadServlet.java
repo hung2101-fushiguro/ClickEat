@@ -63,9 +63,13 @@ public class AvatarUploadServlet extends HttpServlet {
 
                 // 3.1. Copy file lưu vĩnh viễn vào source code
                 try {
-                    String projectSourcePath = "e:" + File.separator + "Tải xuống" + File.separator + "ClickEat-main" 
-                            + File.separator + "src" + File.separator + "main" + File.separator + "webapp" 
-                            + File.separator + UPLOAD_DIR;
+                    String realPath = request.getServletContext().getRealPath("");
+                    // Đổi từ thư mục target (tạm thời) về src (gốc)
+                    String dynamicSourcePath = realPath.replace("target\\ClickEat2-1.0-SNAPSHOT", "src\\main\\webapp")
+                                                       .replace("target/ClickEat2-1.0-SNAPSHOT", "src/main/webapp");
+                    
+                    String projectSourcePath = dynamicSourcePath + File.separator + UPLOAD_DIR;
+                    
                     File sourceUploadFolder = new File(projectSourcePath);
                     if (!sourceUploadFolder.exists()) {
                         sourceUploadFolder.mkdirs();
@@ -74,8 +78,9 @@ public class AvatarUploadServlet extends HttpServlet {
                     Path sourceFile = Paths.get(projectSourcePath, newFileName);
                     Path tempFile = Paths.get(tempFilePath);
                     Files.copy(tempFile, sourceFile, StandardCopyOption.REPLACE_EXISTING);
+                    System.out.println("Đã lưu Avatar an toàn vào: " + sourceFile.toString());
                 } catch(Exception ex) {
-                    System.out.println("Could not copy file to source directory: " + ex.getMessage());
+                    System.out.println("Lỗi copy file sang source: " + ex.getMessage());
                 }
 
                 // 4. Lưu đường dẫn vào Database

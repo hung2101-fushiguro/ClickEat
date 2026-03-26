@@ -12,7 +12,7 @@ import java.util.Base64;
 public class GoogleLoginServlet extends HttpServlet {
 
     private static final String CLIENT_ID = "";
-    private static final String REDIRECT_URI = "http://localhost:8080/ClickEat2/google-callback";
+    private static final String REDIRECT_URI = "http://localhost:9999/ClickEat2/google-callback";
     private static final String SCOPE = "openid email profile";
 
     @Override

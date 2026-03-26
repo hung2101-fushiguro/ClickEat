@@ -8,6 +8,9 @@ public class CartItem {
     private int quantity;
     private double unitPriceSnapshot;
     private String note;
+    // Display fields - populated by JOIN queries
+    private String name;
+    private String imageUrl;
     public CartItem() {
     }
     public CartItem(int id, int cartId, int foodItemId, int quantity, double unitPriceSnapshot, String note) {
@@ -53,5 +56,21 @@ public class CartItem {
     }
     public void setNote(String note) {
         this.note = note;
+    }
+    // cartItemId is an alias for id (used in JSP)
+    public int getCartItemId() {
+        return id;
+    }
+    public String getName() {
+        return name;
+    }
+    public void setName(String name) {
+        this.name = name;
+    }
+    public String getImageUrl() {
+        return imageUrl;
+    }
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 }

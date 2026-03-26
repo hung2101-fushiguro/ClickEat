@@ -39,8 +39,23 @@ public class OrderItemDAO extends AbstractDAO<OrderItem> {
                 t.getNote());
     }
 
-    @Override public List<OrderItem> findAll() { return null; }
-    @Override public OrderItem findById(int id) { return null; }
-    @Override public boolean update(OrderItem t) { return false; }
-    @Override public boolean delete(int id) { return false; }
+    @Override
+    public List<OrderItem> findAll() {
+        return null;
+    }
+
+    @Override
+    public OrderItem findById(int id) {
+        return null;
+    }
+
+    @Override
+    public boolean update(OrderItem t) {
+        return false;
+    }
+
+    @Override
+    public boolean delete(int id) {
+        return false;
+    }
 }

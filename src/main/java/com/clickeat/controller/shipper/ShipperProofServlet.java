@@ -24,9 +24,9 @@ import jakarta.servlet.http.Part;
 
 @WebServlet(name = "ShipperProofServlet", urlPatterns = {"/shipper/proof"})
 @MultipartConfig(
-    fileSizeThreshold = 1024 * 1024 * 2,  // 2MB
-    maxFileSize = 1024 * 1024 * 10,       // 10MB
-    maxRequestSize = 1024 * 1024 * 50     // 50MB
+        fileSizeThreshold = 1024 * 1024 * 2, // 2MB
+        maxFileSize = 1024 * 1024 * 10, // 10MB
+        maxRequestSize = 1024 * 1024 * 50 // 50MB
 )
 public class ShipperProofServlet extends HttpServlet {
 
@@ -39,53 +39,55 @@ public class ShipperProofServlet extends HttpServlet {
         request.getRequestDispatcher("/views/shipper/proof-of-delivery.jsp").forward(request, response);
     }
 
-    
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
+
         User account = (User) request.getSession().getAttribute("account");
         int orderId = Integer.parseInt(request.getParameter("orderId"));
-        
+
         try {
             Part filePart = request.getPart("proofImage");
             String fileName = Paths.get(filePart.getSubmittedFileName()).getFileName().toString();
-            
-            
+
             String savedFileName = "";
             if (fileName != null && !fileName.isEmpty()) {
-                
+
                 savedFileName = "proof_ord" + orderId + "_" + System.currentTimeMillis() + ".jpg";
                 String uploadPath = getServletContext().getRealPath("") + File.separator + "uploads";
                 File uploadDir = new File(uploadPath);
-                if (!uploadDir.exists()) uploadDir.mkdir();
-                
+                if (!uploadDir.exists()) {
+                    uploadDir.mkdir();
+                }
+
                 String tempFilePath = uploadPath + File.separator + savedFileName;
                 filePart.write(tempFilePath);
-                
+
                 // Copy file lưu vĩnh viễn vào source code
                 try {
-                    String projectSourcePath = "e:" + File.separator + "Tải xuống" + File.separator + "ClickEat-main" 
-                            + File.separator + "src" + File.separator + "main" + File.separator + "webapp" 
-                            + File.separator + "uploads";
+                    String realPath = getServletContext().getRealPath("");
+                    String dynamicSourcePath = realPath.replace("target\\ClickEat2-1.0-SNAPSHOT", "src\\main\\webapp")
+                            .replace("target/ClickEat2-1.0-SNAPSHOT", "src/main/webapp");
+
+                    String projectSourcePath = dynamicSourcePath + File.separator + "uploads";
+
                     File sourceUploadFolder = new File(projectSourcePath);
                     if (!sourceUploadFolder.exists()) {
                         sourceUploadFolder.mkdirs();
                     }
-                    
+
                     Path sourceFile = Paths.get(projectSourcePath, savedFileName);
                     Path tempFile = Paths.get(tempFilePath);
                     Files.copy(tempFile, sourceFile, StandardCopyOption.REPLACE_EXISTING);
-                } catch(Exception ex) {
-                    System.out.println("Could not copy file to source directory: " + ex.getMessage());
+                    System.out.println("Đã lưu bằng chứng giao hàng an toàn vào: " + sourceFile.toString());
+                } catch (Exception ex) {
+                    System.out.println("Lỗi copy file sang source: " + ex.getMessage());
                 }
             }
 
             OrderDAO orderDAO = new OrderDAO();
             orderDAO.updateOrderStatus(orderId, "DELIVERED");
-            
-            
-         
+
             String sqlUpdateImage = "UPDATE Orders SET proof_image_url = ? WHERE id = ?";
             orderDAO.update(sqlUpdateImage, "uploads/" + savedFileName, orderId);
             Order completedOrder = orderDAO.findById(orderId);
@@ -94,7 +96,7 @@ public class ShipperProofServlet extends HttpServlet {
                 walletDAO.addBalance(account.getId(), completedOrder.getDeliveryFee());
             }
 
-            request.getSession().setAttribute("toastMsg", "Đã giao hàng, lưu ảnh và cộng tiền vào ví thành công!");            
+            request.getSession().setAttribute("toastMsg", "Đã giao hàng, lưu ảnh và cộng tiền vào ví thành công!");
         } catch (Exception e) {
             System.out.println("Lỗi upload ảnh: " + e.getMessage());
             request.getSession().setAttribute("toastError", "Có lỗi xảy ra khi tải ảnh lên!");

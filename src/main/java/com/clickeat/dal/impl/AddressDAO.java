@@ -60,8 +60,8 @@ public class AddressDAO extends AbstractDAO<Address> {
     }
 
     @Override
-public int insert(Address a) {
-    String sql = """
+    public int insert(Address a) {
+        String sql = """
         INSERT INTO Addresses(
             user_id, receiver_name, receiver_phone, address_line,
             province_code, province_name,
@@ -73,50 +73,49 @@ public int insert(Address a) {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, SYSUTCDATETIME(), SYSUTCDATETIME())
     """;
 
-    try (java.sql.Connection conn = getConnection();
-         java.sql.PreparedStatement ps = conn.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
+        try (java.sql.Connection conn = getConnection(); java.sql.PreparedStatement ps = conn.prepareStatement(sql, java.sql.Statement.RETURN_GENERATED_KEYS)) {
 
-        ps.setInt(1, a.getUserId());
-        ps.setString(2, a.getReceiverName());
-        ps.setString(3, a.getReceiverPhone());
-        ps.setString(4, a.getAddressLine());
-        ps.setString(5, a.getProvinceCode());
-        ps.setString(6, a.getProvinceName());
-        ps.setString(7, a.getDistrictCode());
-        ps.setString(8, a.getDistrictName());
-        ps.setString(9, a.getWardCode());
-        ps.setString(10, a.getWardName());
+            ps.setInt(1, a.getUserId());
+            ps.setString(2, a.getReceiverName());
+            ps.setString(3, a.getReceiverPhone());
+            ps.setString(4, a.getAddressLine());
+            ps.setString(5, a.getProvinceCode());
+            ps.setString(6, a.getProvinceName());
+            ps.setString(7, a.getDistrictCode());
+            ps.setString(8, a.getDistrictName());
+            ps.setString(9, a.getWardCode());
+            ps.setString(10, a.getWardName());
 
-        if (a.getLatitude() == 0) {
-            ps.setNull(11, java.sql.Types.DECIMAL);
-        } else {
-            ps.setDouble(11, a.getLatitude());
-        }
+            if (a.getLatitude() == 0) {
+                ps.setNull(11, java.sql.Types.DECIMAL);
+            } else {
+                ps.setDouble(11, a.getLatitude());
+            }
 
-        if (a.getLongitude() == 0) {
-            ps.setNull(12, java.sql.Types.DECIMAL);
-        } else {
-            ps.setDouble(12, a.getLongitude());
-        }
+            if (a.getLongitude() == 0) {
+                ps.setNull(12, java.sql.Types.DECIMAL);
+            } else {
+                ps.setDouble(12, a.getLongitude());
+            }
 
-        ps.setBoolean(13, a.getIsDefault() != null ? a.getIsDefault() : false);
-        ps.setString(14, a.getNote());
+            ps.setBoolean(13, a.getIsDefault() != null ? a.getIsDefault() : false);
+            ps.setString(14, a.getNote());
 
-        int affectedRows = ps.executeUpdate();
+            int affectedRows = ps.executeUpdate();
 
-        if (affectedRows > 0) {
-            try (java.sql.ResultSet rs = ps.getGeneratedKeys()) {
-                if (rs.next()) {
-                    return rs.getInt(1);
+            if (affectedRows > 0) {
+                try (java.sql.ResultSet rs = ps.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        return rs.getInt(1);
+                    }
                 }
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-    } catch (Exception e) {
-        e.printStackTrace();
-    }
 
-    return 0;
-}
+        return 0;
+    }
 
     public boolean setAllNonDefault(int userId) {
         String sql = """

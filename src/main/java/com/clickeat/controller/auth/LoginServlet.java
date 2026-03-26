@@ -80,7 +80,6 @@ public class LoginServlet extends HttpServlet {
         }
 
         HttpSession oldSession = request.getSession(false);
-
         String guestId = null;
         if (oldSession != null) {
             Object guestIdSnake = oldSession.getAttribute("guest_id");
@@ -98,7 +97,6 @@ public class LoginServlet extends HttpServlet {
         HttpSession newSession = request.getSession(true);
         newSession.setAttribute("account", user);
         newSession.setMaxInactiveInterval(60 * 60 * 24);
-
         if (redirect != null && !redirect.isBlank()) {
             newSession.setAttribute("postLoginRedirect", redirect);
         }

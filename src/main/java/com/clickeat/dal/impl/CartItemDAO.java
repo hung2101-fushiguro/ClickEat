@@ -17,13 +17,21 @@ public class CartItemDAO extends AbstractDAO<CartItem> implements ICartItemDAO {
         item.setQuantity(rs.getInt("quantity"));
         item.setUnitPriceSnapshot(rs.getDouble("unit_price_snapshot"));
         item.setNote(rs.getString("note"));
+        // Optional display fields from JOIN
+        try { item.setName(rs.getString("food_name")); } catch (SQLException ignored) {}
+        try { item.setImageUrl(rs.getString("image_url")); } catch (SQLException ignored) {}
         return item;
     }
 
     // --- CÁC HÀM TỪ ICARTITEMDAO ---
     @Override
     public List<CartItem> getItemsByCartId(int cartId) {
-        String sql = "SELECT * FROM CartItems WHERE cart_id = ?";
+        String sql = """
+            SELECT ci.*, fi.name AS food_name, fi.image_url
+            FROM CartItems ci
+            LEFT JOIN FoodItems fi ON fi.id = ci.food_item_id
+            WHERE ci.cart_id = ?
+        """;
         return query(sql, cartId);
     }
 
