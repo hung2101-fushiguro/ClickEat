@@ -1,0 +1,44 @@
+CÁC THAY ĐỔI TRONG MỤC THỰC ĐƠN (MENU)
+
+1. DAL (Data Access Layer):
+   - File: FoodItemDAO.java
+   - Thay đổi: 
+     + Thêm phương thức getAllAvailableFoods(): Lấy tất cả món ăn đang kinh doanh của các nhà hàng đã được duyệt, sắp xếp theo tên danh mục.
+     + Thêm phương thức getFoodsByCategoryName(String categoryName): Lấy các món ăn theo tên danh mục hoặc tên món ăn khớp với từ khóa, hỗ trợ lọc từ trang chủ.
+     + Các món ăn bao gồm thông tin: Tên món, hình ảnh, giá (có tính toán giảm giá và giá gốc ảo), tên cửa hàng và tên danh mục.
+
+2. Controller (Servlet):
+   - File: MenuServlet.java (Mới)
+   - Chức năng: 
+     + Xử lý URL mẫu /menu.
+     + Nhận tham số 'category' để lọc món ăn.
+     + Tự động nhóm (Group) các món ăn theo tên danh mục để hiển thị phân cấp trên giao diện.
+     + Cập nhật số lượng giỏ hàng để hiển thị trên Header.
+
+3. View (JSP):
+   - File: menu.jsp (Mới)
+   - Thiết kế: 
+     + Giao diện hiện đại, tông màu cam (Orange) đồng bộ với hệ thống.
+     + Có thanh điều hướng danh mục nhanh (Horizontal Category Navigation) với các icon (Cơm trưa, Bún/Phở, Pizza, v.v.).
+     + Hiển thị món ăn theo từng nhóm danh mục (Category Headers).
+     + Mỗi thẻ món ăn (Food Card) hiển thị: Ảnh món, tên nhà hàng (cam), tên món, mô tả, giá hiện tại, giá gốc (nếu có) và nút thêm vào giỏ hàng.
+   
+   - File: home.jsp (Cập nhật)
+     + Cập nhật các liên kết trong mục "DANH MỤC PHỔ BIẾN" để dẫn trực tiếp tới trang thực đơn đã được lọc theo danh mục tương ứng (ví dụ: /menu?category=Pizza).
+     + Fix lỗi CSS line-clamp để hiển thị văn bản gọn gàng hơn.
+
+4. Model & Khác:
+   - Các Model FoodItem và Category đã có sẵn các trường cần thiết (merchantName, categoryName) nên không cần thay đổi cấu trúc bảng.
+
+--------------------------------------------------
+GIẢI ĐÁP THẮC MẮC:
+
+1. Việc phân loại danh mục dựa trên yếu tố nào?
+   - Hệ thống phân loại dựa trên "Tên danh mục" (Category Name) được lưu trong bảng Categories. 
+   - Trong MenuServlet, các món ăn được lấy lên và nhóm (group) lại theo thuộc tính name của Category. 
+   - Khi bạn nhấn vào các icon "Danh mục phổ biến" ở trang chủ, hệ thống sẽ gửi một tham số ?category=... sang MenuServlet. Servlet này sẽ tìm kiếm các món ăn có tên danh mục khớp hoàn toàn với tham số đó, hoặc tên món ăn có chứa từ khóa đó (LIKE %keyword%).
+
+2. Tại sao khi nhấn vào một số mục lại không tìm thấy món nào?
+   - Nguyên nhân chính là do Dữ liệu mẫu (Seed data) trong cơ sở dữ liệu hiện tại chưa khớp hoàn toàn với các nhãn ở mục "Danh mục phổ biến".
+   - Ví dụ: Ở trang chủ hiển thị "Pizza" hoặc "Trà sữa", nhưng trong DB các nhà hàng hiện tại chỉ đang khai báo danh mục là "Gà rán", "Combo", "Burger", "Món nước", "Món chính", v.v. Do đó khi lọc theo đúng từ "Pizza", hệ thống không tìm thấy kết quả nào tương ứng.
+   - Để khắc phục, bạn có thể thêm các món ăn mới hoặc cập nhật lại tên danh mục trong DB sao cho khớp với các nhãn ở trang chủ ("Cơm trưa", "Bún/Phở", "Pizza", "Trà sữa", v.v.).

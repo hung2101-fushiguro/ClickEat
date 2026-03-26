@@ -26,6 +26,7 @@ com\clickeat\controller\merchant\MerchantRefundServlet.class
 com\clickeat\controller\merchant\MerchantToggleOpenServlet.class
 com\clickeat\dal\impl\AddressDAO.class
 com\clickeat\config\DBContext.class
+com\clickeat\controller\web\MenuServlet.class
 com\clickeat\controller\web\CheckoutServlet.class
 com\clickeat\controller\web\VerifyOtpServlet.class
 com\clickeat\model\CartItemView.class

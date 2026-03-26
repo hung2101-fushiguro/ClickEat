@@ -86,6 +86,7 @@
                 display:-webkit-box;
                 -webkit-line-clamp:1;
                 -webkit-box-orient:vertical;
+                line-clamp: 1;
                 overflow:hidden;
             }
 
@@ -93,6 +94,7 @@
                 display:-webkit-box;
                 -webkit-line-clamp:2;
                 -webkit-box-orient:vertical;
+                line-clamp: 2;
                 overflow:hidden;
             }
 
@@ -917,42 +919,42 @@
                     <h2 class="section-title text-center md:text-left mb-12">DANH MỤC PHỔ BIẾN</h2>
 
                     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-y-10 gap-x-6">
-                        <a href="${ctx}/menu" class="text-center group">
+                        <a href="${ctx}/menu?category=Cơm%20trưa" class="text-center group">
                             <div class="soft-icon-box bg-orange-50 text-orange-500 group-hover:-translate-y-1 transition">
                                 <i class="fa-solid fa-bowl-rice text-[42px]"></i>
                             </div>
                             <div class="text-[17px] font-extrabold text-slate-600">Cơm trưa</div>
                         </a>
 
-                        <a href="${ctx}/menu" class="text-center group">
+                        <a href="${ctx}/menu?category=Bún/Phở" class="text-center group">
                             <div class="soft-icon-box bg-blue-50 text-blue-500 group-hover:-translate-y-1 transition">
                                 <i class="fa-solid fa-bowl-food text-[42px]"></i>
                             </div>
                             <div class="text-[17px] font-extrabold text-slate-600">Bún/Phở</div>
                         </a>
 
-                        <a href="${ctx}/menu" class="text-center group">
+                        <a href="${ctx}/menu?category=Pizza" class="text-center group">
                             <div class="soft-icon-box bg-red-50 text-red-400 group-hover:-translate-y-1 transition">
                                 <i class="fa-solid fa-pizza-slice text-[42px]"></i>
                             </div>
                             <div class="text-[17px] font-extrabold text-slate-600">Pizza</div>
                         </a>
 
-                        <a href="${ctx}/menu" class="text-center group">
+                        <a href="${ctx}/menu?category=Trà%20sữa" class="text-center group">
                             <div class="soft-icon-box bg-pink-50 text-pink-500 group-hover:-translate-y-1 transition">
                                 <i class="fa-solid fa-mug-hot text-[42px]"></i>
                             </div>
                             <div class="text-[17px] font-extrabold text-slate-600">Trà sữa</div>
                         </a>
 
-                        <a href="${ctx}/menu" class="text-center group">
+                        <a href="${ctx}/menu?category=Burger" class="text-center group">
                             <div class="soft-icon-box bg-amber-50 text-amber-500 group-hover:-translate-y-1 transition">
                                 <i class="fa-solid fa-burger text-[42px]"></i>
                             </div>
                             <div class="text-[17px] font-extrabold text-slate-600">Burger</div>
                         </a>
 
-                        <a href="${ctx}/menu" class="text-center group">
+                        <a href="${ctx}/menu?category=Đồ%20ngọt" class="text-center group">
                             <div class="soft-icon-box bg-purple-50 text-purple-500 group-hover:-translate-y-1 transition">
                                 <i class="fa-solid fa-ice-cream text-[42px]"></i>
                             </div>

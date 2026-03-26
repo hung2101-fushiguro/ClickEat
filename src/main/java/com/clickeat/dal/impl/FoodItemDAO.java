@@ -343,4 +343,59 @@ public class FoodItemDAO extends AbstractDAO<FoodItem> implements IFoodItemDAO {
         return affected;
     }
 
+    public List<FoodItem> getAllAvailableFoods() {
+        String sql = """
+            SELECT fi.*,
+                   mp.shop_name AS merchant_name,
+                   c.name AS category_name,
+                   CASE
+                       WHEN fi.id % 4 = 1 THEN 27
+                       WHEN fi.id % 4 = 2 THEN 16
+                       WHEN fi.id % 4 = 3 THEN 24
+                       ELSE 19
+                   END AS discount_percent,
+                   CASE
+                       WHEN fi.id % 4 = 1 THEN ROUND(fi.price / 0.73, 0)
+                       WHEN fi.id % 4 = 2 THEN ROUND(fi.price / 0.84, 0)
+                       WHEN fi.id % 4 = 3 THEN ROUND(fi.price / 0.76, 0)
+                       ELSE ROUND(fi.price / 0.81, 0)
+                   END AS original_price
+            FROM FoodItems fi
+            INNER JOIN MerchantProfiles mp ON mp.user_id = fi.merchant_user_id
+            INNER JOIN Categories c ON c.id = fi.category_id
+            WHERE fi.is_available = 1
+              AND mp.status = 'APPROVED'
+            ORDER BY c.name, fi.id DESC
+        """;
+        return query(sql);
+    }
+
+    public List<FoodItem> getFoodsByCategoryName(String categoryName) {
+        String sql = """
+            SELECT fi.*,
+                   mp.shop_name AS merchant_name,
+                   c.name AS category_name,
+                   CASE
+                       WHEN fi.id % 4 = 1 THEN 27
+                       WHEN fi.id % 4 = 2 THEN 16
+                       WHEN fi.id % 4 = 3 THEN 24
+                       ELSE 19
+                   END AS discount_percent,
+                   CASE
+                       WHEN fi.id % 4 = 1 THEN ROUND(fi.price / 0.73, 0)
+                       WHEN fi.id % 4 = 2 THEN ROUND(fi.price / 0.84, 0)
+                       WHEN fi.id % 4 = 3 THEN ROUND(fi.price / 0.76, 0)
+                       ELSE ROUND(fi.price / 0.81, 0)
+                   END AS original_price
+            FROM FoodItems fi
+            INNER JOIN MerchantProfiles mp ON mp.user_id = fi.merchant_user_id
+            INNER JOIN Categories c ON c.id = fi.category_id
+            WHERE fi.is_available = 1
+              AND mp.status = 'APPROVED'
+              AND (UPPER(c.name) = UPPER(?) OR UPPER(fi.name) LIKE UPPER(?))
+            ORDER BY fi.id DESC
+        """;
+        return query(sql, categoryName, "%" + categoryName + "%");
+    }
+
 }
