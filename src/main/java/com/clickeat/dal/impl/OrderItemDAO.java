@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.clickeat.dal.impl;
 
 import com.clickeat.model.OrderItem;
@@ -23,14 +19,28 @@ public class OrderItemDAO extends AbstractDAO<OrderItem> {
         item.setNote(rs.getString("note"));
         return item;
     }
-   
+
     public List<OrderItem> getItemsByOrderId(int orderId) {
         return query("SELECT * FROM OrderItems WHERE order_id = ?", orderId);
     }
-    
+
+    @Override
+    public int insert(OrderItem t) {
+        String sql = """
+            INSERT INTO OrderItems(order_id, food_item_id, item_name_snapshot, unit_price_snapshot, quantity, note)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """;
+        return update(sql,
+                t.getOrderId(),
+                t.getFoodItemId(),
+                t.getItemNameSnapshot(),
+                t.getUnitPriceSnapshot(),
+                t.getQuantity(),
+                t.getNote());
+    }
+
     @Override public List<OrderItem> findAll() { return null; }
     @Override public OrderItem findById(int id) { return null; }
-    @Override public int insert(OrderItem t) { return 0; }
     @Override public boolean update(OrderItem t) { return false; }
     @Override public boolean delete(int id) { return false; }
 }

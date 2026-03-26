@@ -7,21 +7,15 @@
 
 <c:choose>
 
-    <%-- =========================
-         MODE 1: POPUP DÙNG TRONG HEADER
-       ========================= --%>
     <c:when test="${cartMode == 'popup'}">
 
-        <!-- Overlay -->
         <div id="cartOverlay" class="fixed inset-0 bg-black/35 hidden z-50"></div>
 
-        <!-- Modal wrapper -->
         <div id="cartModalWrap" class="fixed inset-0 hidden z-50">
             <div class="w-full h-full flex items-center justify-center p-4">
                 <div id="cartModal"
                      class="w-full max-w-[860px] bg-white rounded-2xl shadow-2xl overflow-hidden">
 
-                    <!-- Modal header -->
                     <div class="flex items-center justify-between px-6 h-16 border-b">
                         <div class="flex items-center gap-3">
                             <h3 class="text-2xl font-extrabold text-gray-900">Giỏ hàng của bạn</h3>
@@ -37,7 +31,6 @@
                         </button>
                     </div>
 
-                    <!-- Modal body -->
                     <div class="p-6 overflow-auto" style="max-height: calc(100vh - 64px - 170px);">
                         <c:choose>
                             <c:when test="${empty cartItems}">
@@ -60,7 +53,7 @@
                                             <div class="flex gap-4 border-b pb-5">
                                                 <c:choose>
                                                     <c:when test="${not empty it.imageUrl}">
-                                                        <img src="${it.imageUrl}"
+                                                        <img src="${ctx}${it.imageUrl}"
                                                              onerror="this.onerror=null;this.src='${ctx}/assets/images/food-placeholder.png';"
                                                              class="w-20 h-20 rounded-full object-cover shadow"
                                                              alt="${it.name}" />
@@ -129,7 +122,6 @@
                         </c:choose>
                     </div>
 
-                    <!-- Modal footer -->
                     <div class="px-6 py-5 border-t bg-white">
                         <div class="flex items-center justify-between mb-4">
                             <span class="text-gray-700 font-semibold">Tổng</span>
@@ -153,10 +145,24 @@
                                     Cập nhật giỏ hàng
                                 </button>
 
-                                <a href="${ctx}/checkout"
-                                   class="h-12 px-7 rounded-full font-extrabold text-white bg-orange-500 hover:bg-orange-600 shadow flex-1 sm:flex-none flex items-center justify-center whitespace-nowrap leading-none">
-                                    Thanh toán
-                                </a>
+                                <c:choose>
+                                    <c:when test="${not empty sessionScope.account}">
+                                        <a href="${ctx}/checkout"
+                                           class="h-12 px-7 rounded-full font-extrabold text-white bg-orange-500 hover:bg-orange-600 shadow flex-1 sm:flex-none flex items-center justify-center whitespace-nowrap leading-none">
+                                            Thanh toán
+                                        </a>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <button type="button"
+                                                onclick="closeCart();
+                                                        setTimeout(function () {
+                                                            openCheckoutChoiceModal();
+                                                        }, 120);"
+                                                class="h-12 px-7 rounded-full font-extrabold text-white bg-orange-500 hover:bg-orange-600 shadow flex-1 sm:flex-none flex items-center justify-center whitespace-nowrap leading-none">
+                                            Thanh toán
+                                        </button>
+                                    </c:otherwise>
+                                </c:choose>
                             </div>
                         </div>
                     </div>
@@ -263,13 +269,11 @@
                 window.submitCartUpdate = submitCartUpdate;
                 window.removeItem = removeItem;
                 window.markDirty = markDirty;
+                window.closeCart = closeCart;
             })();
         </script>
     </c:when>
 
-    <%-- =========================
-         MODE 2: TRANG CART RIÊNG
-       ========================= --%>
     <c:otherwise>
         <!DOCTYPE html>
         <html lang="vi">
@@ -357,10 +361,21 @@
                                         </div>
                                     </div>
 
-                                    <a href="${ctx}/checkout"
-                                       class="block w-full text-center bg-gray-900 text-white py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors">
-                                        Tiến hành Thanh toán
-                                    </a>
+                                    <c:choose>
+                                        <c:when test="${not empty sessionScope.account}">
+                                            <a href="${ctx}/checkout"
+                                               class="block w-full text-center bg-gray-900 text-white py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors">
+                                                Tiến hành Thanh toán
+                                            </a>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <button type="button"
+                                                    onclick="openCheckoutChoiceModal()"
+                                                    class="block w-full text-center bg-gray-900 text-white py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors">
+                                                Tiến hành Thanh toán
+                                            </button>
+                                        </c:otherwise>
+                                    </c:choose>
                                 </div>
                             </div>
                         </c:otherwise>

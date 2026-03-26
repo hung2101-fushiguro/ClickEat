@@ -27,8 +27,6 @@ public class Voucher {
     private String merchantName;
     private String displayDiscount;
     private String themeClass;
-    private String merchantStatusLabel;
-    private String merchantStatusClass;
 
     public Voucher() {
     }
@@ -191,22 +189,6 @@ public class Voucher {
 
     public void setThemeClass(String themeClass) {
         this.themeClass = themeClass;
-    }
-
-    public String getMerchantStatusLabel() {
-        return merchantStatusLabel;
-    }
-
-    public void setMerchantStatusLabel(String merchantStatusLabel) {
-        this.merchantStatusLabel = merchantStatusLabel;
-    }
-
-    public String getMerchantStatusClass() {
-        return merchantStatusClass;
-    }
-
-    public void setMerchantStatusClass(String merchantStatusClass) {
-        this.merchantStatusClass = merchantStatusClass;
     }
 
     public int getUsedOrderCount() {

@@ -56,28 +56,28 @@
                 display:block;
             }
 
-            .food-add-btn{
+            .store-add-cart-btn{
                 position:absolute;
                 right:16px;
                 bottom:16px;
-                width:58px;
-                height:58px;
-                border:none;
+                width:52px;
+                height:52px;
                 border-radius:999px;
-                background:#ff7a1a;
-                color:#fff;
-                font-size:34px;
-                line-height:1;
+                border:none;
+                background:#fff3eb;
+                color:#ff7a1a;
                 display:flex;
                 align-items:center;
                 justify-content:center;
+                font-size:18px;
+                box-shadow:0 14px 26px rgba(255,122,26,.16);
                 cursor:pointer;
-                box-shadow:0 14px 26px rgba(255,122,26,.24);
-                transition:.2s ease;
+                transition:.18s ease;
             }
 
-            .food-add-btn:hover{
-                background:#f26c00;
+            .store-add-cart-btn:hover{
+                background:#ff7a1a;
+                color:#fff;
                 transform:translateY(-1px);
             }
 
@@ -199,48 +199,6 @@
                 color:#b68618;
             }
 
-            .cart-voucher-row{
-                display:flex;
-                align-items:center;
-                gap:10px;
-                width:100%;
-            }
-
-            .cart-voucher-input{
-                flex:1;
-                min-width:0;
-                height:44px;
-                border:1px solid #eadfd7;
-                border-radius:999px;
-                padding:0 14px;
-                outline:none;
-                font-size:15px;
-                background:#fff;
-            }
-
-            .cart-voucher-btn{
-                flex:0 0 92px;
-                width:92px;
-                height:44px;
-                border:none;
-                border-radius:999px;
-                background:#111827;
-                color:#fff;
-                font-size:15px;
-                font-weight:900;
-                display:flex;
-                align-items:center;
-                justify-content:center;
-                line-height:1;
-                white-space:nowrap;
-                cursor:pointer;
-                transition:.2s ease;
-            }
-
-            .cart-voucher-btn:hover{
-                background:#000;
-            }
-
             @media (max-width: 1280px){
                 .store-food-grid{
                     grid-template-columns:repeat(2, minmax(0, 1fr));
@@ -250,16 +208,6 @@
             @media (max-width: 768px){
                 .store-food-grid{
                     grid-template-columns:1fr;
-                }
-
-                .cart-voucher-row{
-                    flex-direction:column;
-                    align-items:stretch;
-                }
-
-                .cart-voucher-btn{
-                    width:100%;
-                    flex:unset;
                 }
             }
         </style>
@@ -415,8 +363,9 @@
 
                                                 <button type="button"
                                                         onclick="addToCart('${f.id}')"
-                                                        class="food-add-btn">
-                                                    +
+                                                        class="add-cart-btn store-add-cart-btn"
+                                                        title="Thêm vào giỏ hàng">
+                                                    <i class="fa-solid fa-cart-plus"></i>
                                                 </button>
                                             </div>
 
@@ -499,59 +448,48 @@
                                 </div>
                             </c:if>
 
-                            <div class="mt-8 pt-6 border-t border-[#f1e9e3]">
-                                <div class="text-xs font-black text-[#a68872] uppercase tracking-[.08em] mb-3">Mã giảm giá</div>
-
-                                <div class="cart-voucher-row">
-                                    <input type="text" placeholder="Nhập mã..." class="cart-voucher-input">
-                                    <button type="button" class="cart-voucher-btn">
-                                        Áp dụng
-                                    </button>
-                                </div>
-
-                                <div class="mt-7 space-y-3 text-[15px]">
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-[#9d7d68]">Tạm tính</span>
-                                        <span class="font-bold">
-                                            <fmt:formatNumber value="${cartTotal}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ
-                                        </span>
-                                    </div>
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-[#9d7d68]">Phí giao hàng</span>
-                                        <span class="font-bold text-green-600">Miễn phí</span>
-                                    </div>
-                                </div>
-
-                                <div class="mt-6 pt-5 border-t border-[#f1e9e3] flex items-center justify-between">
-                                    <span class="text-[26px] font-black">Tổng cộng</span>
-                                    <span class="text-[40px] font-black text-orange-500 leading-none">
+                            <div class="mt-7 space-y-3 text-[15px]">
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="text-[#9d7d68]">Tạm tính</span>
+                                    <span class="font-bold text-right shrink-0">
                                         <fmt:formatNumber value="${cartTotal}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ
                                     </span>
                                 </div>
-
-                                <c:choose>
-                                    <c:when test="${not empty storeCartItems && not empty sessionScope.account}">
-                                        <a href="${ctx}/checkout-pending"
-                                           class="mt-6 h-14 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-black flex items-center justify-center gap-3">
-                                            Thanh toán <i class="fa-solid fa-arrow-right"></i>
-                                        </a>
-                                    </c:when>
-                                    <c:when test="${not empty storeCartItems}">
-                                        <button type="button"
-                                                onclick="openCheckoutChoice()"
-                                                class="mt-6 w-full h-14 rounded-full bg-gray-900 hover:bg-black text-white font-black flex items-center justify-center gap-3">
-                                            Thanh toán <i class="fa-solid fa-arrow-right"></i>
-                                        </button>
-                                    </c:when>
-                                    <c:otherwise>
-                                        <button type="button"
-                                                disabled
-                                                class="mt-6 w-full h-14 rounded-full bg-gray-200 text-gray-500 font-black flex items-center justify-center gap-3 cursor-not-allowed">
-                                            Chưa có món để thanh toán
-                                        </button>
-                                    </c:otherwise>
-                                </c:choose>
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="text-[#9d7d68]">Phí giao hàng</span>
+                                    <span class="font-bold text-green-600 text-right shrink-0">Miễn phí</span>
+                                </div>
                             </div>
+
+                            <div class="mt-6 pt-5 border-t border-[#f1e9e3] flex items-center justify-between gap-4">
+                                <span class="text-[20px] font-black leading-none whitespace-nowrap">Tổng cộng</span>
+                                <span class="text-[32px] font-black text-orange-500 leading-none text-right shrink-0 whitespace-nowrap">
+                                    <fmt:formatNumber value="${cartTotal}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ
+                                </span>
+                            </div>
+
+                            <c:choose>
+                                <c:when test="${not empty storeCartItems && not empty sessionScope.account}">
+                                    <a href="${ctx}/checkout"
+                                       class="mt-6 h-14 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-black flex items-center justify-center gap-3">
+                                        Thanh toán <i class="fa-solid fa-arrow-right"></i>
+                                    </a>
+                                </c:when>
+                                <c:when test="${not empty storeCartItems}">
+                                    <button type="button"
+                                            onclick="openCheckoutChoiceModal()"
+                                            class="mt-6 w-full h-14 rounded-full bg-gray-900 hover:bg-black text-white font-black flex items-center justify-center gap-3">
+                                        Thanh toán <i class="fa-solid fa-arrow-right"></i>
+                                    </button>
+                                </c:when>
+                                <c:otherwise>
+                                    <button type="button"
+                                            disabled
+                                            class="mt-6 w-full h-14 rounded-full bg-gray-200 text-gray-500 font-black flex items-center justify-center gap-3 cursor-not-allowed">
+                                        Chưa có món để thanh toán
+                                    </button>
+                                </c:otherwise>
+                            </c:choose>
                         </div>
 
                         <div class="bg-[#fff5ef] rounded-[24px] border border-[#f2dfd0] p-5">
@@ -573,101 +511,13 @@
 
         </main>
 
-        <c:if test="${empty sessionScope.account}">
-            <div id="checkoutChoiceOverlay" class="fixed inset-0 bg-black/40 hidden z-[90]"></div>
-
-            <div id="checkoutChoiceModal" class="fixed inset-0 hidden z-[91]">
-                <div class="w-full h-full flex items-center justify-center p-4">
-                    <div class="w-full max-w-[520px] bg-white rounded-[28px] shadow-2xl p-8 relative">
-                        <button type="button"
-                                onclick="closeCheckoutChoice()"
-                                class="absolute right-6 top-6 text-gray-500 hover:text-black text-2xl leading-none">
-                            ×
-                        </button>
-
-                        <h3 class="text-[42px] leading-none tracking-[-0.04em] font-black text-center mb-8">
-                            Tiếp tục đặt hàng
-                        </h3>
-
-                        <div class="space-y-5">
-                            <a href="${ctx}/guest-checkout"
-                               class="border border-[#f2c7a8] rounded-[22px] p-5 flex items-center justify-between hover:bg-orange-50 transition">
-                                <div>
-                                    <div class="font-black text-[22px]">
-                                        <i class="fa-solid fa-bolt text-orange-500 mr-2"></i>
-                                        Đặt nhanh (không cần đăng nhập)
-                                    </div>
-                                    <div class="text-[#9d7d68] mt-2">
-                                        Xác thực số điện thoại để đặt hàng ngay.
-                                    </div>
-                                </div>
-
-                                <span class="w-12 h-12 rounded-full bg-orange-500 text-white flex items-center justify-center text-xl shrink-0">
-                                    <i class="fa-solid fa-arrow-right"></i>
-                                </span>
-                            </a>
-
-                            <a href="${ctx}/login?redirect=${ctx}/checkout-pending"
-                               class="border border-[#e8e8e8] rounded-[22px] p-5 flex items-center justify-between hover:bg-gray-50 transition">
-                                <div>
-                                    <div class="font-black text-[22px]">
-                                        <i class="fa-regular fa-user text-gray-500 mr-2"></i>
-                                        Đăng nhập để đặt hàng
-                                    </div>
-                                    <div class="text-[#9d7d68] mt-2">
-                                        Lưu lịch sử đơn & theo dõi trong hồ sơ cá nhân.
-                                    </div>
-                                </div>
-
-                                <span class="w-12 h-12 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-xl shrink-0">
-                                    <i class="fa-solid fa-right-to-bracket"></i>
-                                </span>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </c:if>
-
+        <jsp:include page="checkout-choice-modal.jsp" />
         <jsp:include page="footer.jsp" />
 
         <script>
             function addToCart(foodId) {
                 window.location.href = '${pageContext.request.contextPath}/cart?action=add&id=' + foodId;
             }
-
-            function openCheckoutChoice() {
-                const overlay = document.getElementById('checkoutChoiceOverlay');
-                const modal = document.getElementById('checkoutChoiceModal');
-                if (overlay)
-                    overlay.classList.remove('hidden');
-                if (modal)
-                    modal.classList.remove('hidden');
-                document.body.style.overflow = 'hidden';
-            }
-
-            function closeCheckoutChoice() {
-                const overlay = document.getElementById('checkoutChoiceOverlay');
-                const modal = document.getElementById('checkoutChoiceModal');
-                if (overlay)
-                    overlay.classList.add('hidden');
-                if (modal)
-                    modal.classList.add('hidden');
-                document.body.style.overflow = '';
-            }
-
-            document.addEventListener('DOMContentLoaded', function () {
-                const overlay = document.getElementById('checkoutChoiceOverlay');
-                if (overlay) {
-                    overlay.addEventListener('click', closeCheckoutChoice);
-                }
-
-                document.addEventListener('keydown', function (e) {
-                    if (e.key === 'Escape') {
-                        closeCheckoutChoice();
-                    }
-                });
-            });
         </script>
     </body>
 </html>

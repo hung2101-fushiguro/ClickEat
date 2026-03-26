@@ -12,13 +12,11 @@ public class MerchantWithdrawal {
     private String status;
     private Timestamp createdAt;
     private Timestamp processedAt;
-    private String merchantName;
-    private String merchantPhone;
-    private String shopName;
 
     public MerchantWithdrawal() {
     }
 
+    
     public long getId() {
         return id;
     }
@@ -81,29 +79,5 @@ public class MerchantWithdrawal {
 
     public void setProcessedAt(Timestamp processedAt) {
         this.processedAt = processedAt;
-    }
-
-    public String getMerchantName() {
-        return merchantName;
-    }
-
-    public void setMerchantName(String merchantName) {
-        this.merchantName = merchantName;
-    }
-
-    public String getMerchantPhone() {
-        return merchantPhone;
-    }
-
-    public void setMerchantPhone(String merchantPhone) {
-        this.merchantPhone = merchantPhone;
-    }
-
-    public String getShopName() {
-        return shopName;
-    }
-
-    public void setShopName(String shopName) {
-        this.shopName = shopName;
     }
 }

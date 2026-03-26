@@ -18,7 +18,7 @@ public class GoogleCallbackServlet extends HttpServlet {
 
     private static final String CLIENT_ID = "";
     private static final String CLIENT_SECRET = "";
-    private static final String REDIRECT_URI = "http://localhost:9999/ClickEat2/google-callback";
+    private static final String REDIRECT_URI = "http://localhost:8080/ClickEat2/google-callback";
 
     private static final String TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
     private static final String USERINFO_ENDPOINT = "https://www.googleapis.com/oauth2/v3/userinfo";

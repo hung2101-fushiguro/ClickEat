@@ -1,13 +1,12 @@
 package com.clickeat.dal.impl;
 
+import com.clickeat.model.MerchantProfile;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-
-import com.clickeat.model.MerchantProfile;
 
 public class MerchantProfileDAO extends AbstractDAO<MerchantProfile> {
 
@@ -92,31 +91,9 @@ public class MerchantProfileDAO extends AbstractDAO<MerchantProfile> {
             m.setNotificationSettings(null);
         }
 
-        try {
-            double minOrder = rs.getDouble("min_order_amount");
-            m.setMinOrderAmount(rs.wasNull() ? null : minOrder);
-        } catch (Exception e) {
-            m.setMinOrderAmount(null);
-        }
-
-        try {
-            m.setIsOpen(rs.getBoolean("is_open"));
-            if (rs.wasNull()) {
-                m.setIsOpen(null);
-            }
-        } catch (Exception e) {
-            m.setIsOpen(null);
-        }
-
-        try {
-            m.setRejectionReason(rs.getString("rejection_reason"));
-        } catch (Exception e) {
-            m.setRejectionReason(null);
-        }
-
         // ảnh đọc từ DB
         try {
-            m.setImageUrl(normalizeImageUrl(rs.getString("image_url")));
+            m.setImageUrl(rs.getString("image_url"));
         } catch (Exception e) {
             m.setImageUrl(null);
         }
@@ -194,30 +171,13 @@ public class MerchantProfileDAO extends AbstractDAO<MerchantProfile> {
             m.setDistance("1.8km");
         }
 
-        if (m.getIsOpen() == null) {
+        try {
             m.setOpen("APPROVED".equalsIgnoreCase(m.getStatus()));
+        } catch (Exception e) {
+            m.setOpen(true);
         }
 
         return m;
-    }
-
-    private String normalizeImageUrl(String rawImage) {
-        if (rawImage == null) {
-            return null;
-        }
-
-        String normalized = rawImage.trim();
-        if (normalized.isEmpty()) {
-            return normalized;
-        }
-
-        if (normalized.startsWith("http://")
-                || normalized.startsWith("https://")
-                || normalized.startsWith("data:")
-                || normalized.startsWith("/")) {
-            return normalized;
-        }
-        return "/assets/images/" + normalized;
     }
 
     // =========================
@@ -541,7 +501,10 @@ public class MerchantProfileDAO extends AbstractDAO<MerchantProfile> {
         String sql = """
         SELECT TOP (?)
                mp.*,
-               COALESCE(rt.avg_rating, 4.5) AS rating,
+               COALESCE(
+                   AVG(CASE WHEN r.target_type = N'MERCHANT' THEN CAST(r.stars AS DECIMAL(10,2)) END),
+                   4.5
+               ) AS rating,
                (
                    SELECT TOP 1 c.name
                    FROM Categories c
@@ -559,13 +522,27 @@ public class MerchantProfileDAO extends AbstractDAO<MerchantProfile> {
                    ORDER BY v.id DESC
                ) AS voucher_title
         FROM MerchantProfiles mp
-         OUTER APPLY (
-             SELECT AVG(CAST(r.stars AS DECIMAL(10,2))) AS avg_rating
-             FROM Ratings r
-             WHERE r.target_type = N'MERCHANT'
-            AND r.target_user_id = mp.user_id
-         ) rt
+        LEFT JOIN Ratings r
+               ON r.target_type = N'MERCHANT'
+              AND r.target_user_id = mp.user_id
         WHERE mp.status = N'APPROVED'
+        GROUP BY
+               mp.user_id,
+               mp.shop_name,
+               mp.shop_phone,
+               mp.shop_address_line,
+               mp.province_code,
+               mp.province_name,
+               mp.district_code,
+               mp.district_name,
+               mp.ward_code,
+               mp.ward_name,
+               mp.latitude,
+               mp.longitude,
+               mp.status,
+               mp.created_at,
+               mp.updated_at,
+               mp.image_url
         ORDER BY rating DESC, mp.user_id ASC
     """;
 
@@ -667,68 +644,23 @@ public class MerchantProfileDAO extends AbstractDAO<MerchantProfile> {
     }
 
     public boolean updateStoreInfo(long userId, String name, String phone, String address, String avatar) {
-        if (columnExists("MerchantProfiles", "updated_at")) {
-            String sql = "UPDATE MerchantProfiles SET shop_name = ?, shop_phone = ?, shop_address_line = ?, shop_avatar = ?, updated_at = SYSUTCDATETIME() WHERE user_id = ?";
-            int rows = update(sql, name, phone, address, avatar, userId);
-            if (rows > 0) {
-                return true;
-            }
-        }
-
-        String fallbackSql = "UPDATE MerchantProfiles SET shop_name = ?, shop_phone = ?, shop_address_line = ?, shop_avatar = ? WHERE user_id = ?";
-        return update(fallbackSql, name, phone, address, avatar, userId) > 0;
+        String sql = "UPDATE MerchantProfiles SET shop_name = ?, shop_phone = ?, shop_address_line = ?, shop_avatar = ?, updated_at = SYSUTCDATETIME() WHERE user_id = ?";
+        return update(sql, name, phone, address, avatar, userId) > 0;
     }
 
     public boolean updateBusinessHours(long userId, String hoursJson) {
-        if (columnExists("MerchantProfiles", "updated_at")) {
-            String sql = "UPDATE MerchantProfiles SET business_hours = ?, updated_at = SYSUTCDATETIME() WHERE user_id = ?";
-            int rows = update(sql, hoursJson, userId);
-            if (rows > 0) {
-                return true;
-            }
-        }
-
-        String fallbackSql = "UPDATE MerchantProfiles SET business_hours = ? WHERE user_id = ?";
-        return update(fallbackSql, hoursJson, userId) > 0;
+        String sql = "UPDATE MerchantProfiles SET business_hours = ?, updated_at = SYSUTCDATETIME() WHERE user_id = ?";
+        return update(sql, hoursJson, userId) > 0;
     }
 
     public boolean updateNotificationSettings(long userId, String settingsJson) {
-        if (columnExists("MerchantProfiles", "updated_at")) {
-            String sql = "UPDATE MerchantProfiles SET notification_settings = ?, updated_at = SYSUTCDATETIME() WHERE user_id = ?";
-            int rows = update(sql, settingsJson, userId);
-            if (rows > 0) {
-                return true;
-            }
-        }
-
-        String fallbackSql = "UPDATE MerchantProfiles SET notification_settings = ? WHERE user_id = ?";
-        return update(fallbackSql, settingsJson, userId) > 0;
+        String sql = "UPDATE MerchantProfiles SET notification_settings = ?, updated_at = SYSUTCDATETIME() WHERE user_id = ?";
+        return update(sql, settingsJson, userId) > 0;
     }
 
     public boolean updateOpenState(long userId, boolean isOpen) {
-        if (columnExists("MerchantProfiles", "updated_at")) {
-            String sql = "UPDATE MerchantProfiles SET is_open = ?, updated_at = SYSUTCDATETIME() WHERE user_id = ?";
-            int rows = update(sql, isOpen, userId);
-            if (rows > 0) {
-                return true;
-            }
-        }
-
-        String fallbackSql = "UPDATE MerchantProfiles SET is_open = ? WHERE user_id = ?";
-        return update(fallbackSql, isOpen, userId) > 0;
-    }
-
-    public boolean updateMinOrderAmount(long userId, Double minOrderAmount) {
-        if (columnExists("MerchantProfiles", "updated_at")) {
-            String sql = "UPDATE MerchantProfiles SET min_order_amount = ?, updated_at = SYSUTCDATETIME() WHERE user_id = ?";
-            int rows = update(sql, minOrderAmount, userId);
-            if (rows > 0) {
-                return true;
-            }
-        }
-
-        String fallbackSql = "UPDATE MerchantProfiles SET min_order_amount = ? WHERE user_id = ?";
-        return update(fallbackSql, minOrderAmount, userId) > 0;
+        String sql = "UPDATE MerchantProfiles SET is_open = ?, updated_at = SYSUTCDATETIME() WHERE user_id = ?";
+        return update(sql, isOpen, userId) > 0;
     }
 
 }

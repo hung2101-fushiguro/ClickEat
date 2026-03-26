@@ -126,12 +126,13 @@ public class CartServlet extends HttpServlet {
                 if (cartIsEmpty) {
                     try {
                         Integer currentMerchant = cart.getMerchantUserId();
-                        if (currentMerchant == null || currentMerchant <= 0) {
+                        if (currentMerchant == null || currentMerchant.intValue() != food.getMerchantUserId()) {
                             cart.setMerchantUserId(food.getMerchantUserId());
                             cartDAO.update(cart);
                         }
                     } catch (Exception e) {
                         System.out.println("Không thể cập nhật merchant cho cart: " + e.getMessage());
+                        e.printStackTrace();
                     }
                 } else {
                     // Rule: single merchant
@@ -206,6 +207,10 @@ public class CartServlet extends HttpServlet {
                     boolean isSuccess = cartItemDAO.delete(itemId);
 
                     if (isSuccess) {
+                        List<CartItem> remainItems = cartItemDAO.getItemsByCartId(cart.getId());
+                        if (remainItems == null || remainItems.isEmpty()) {
+                            cartDAO.clearMerchant(cart.getId());
+                        }
                         session.setAttribute("toastMsg", "Đã xóa món ăn khỏi giỏ!");
                     } else {
                         session.setAttribute("toastError", "Lỗi CSDL: Không thể xóa dòng này!");
@@ -292,6 +297,12 @@ public class CartServlet extends HttpServlet {
                 CartItem target = cartItemDAO.findById(cartItemId);
                 if (target != null && target.getCartId() == cart.getId()) {
                     cartItemDAO.delete(cartItemId);
+
+                    List<CartItem> remainItems = cartItemDAO.getItemsByCartId(cart.getId());
+                    if (remainItems == null || remainItems.isEmpty()) {
+                        cartDAO.clearMerchant(cart.getId());
+                    }
+
                     session.setAttribute("toastMsg", "Đã xóa món khỏi giỏ!");
                 } else {
                     session.setAttribute("toastError", "Không thể xóa món không thuộc giỏ hiện tại.");

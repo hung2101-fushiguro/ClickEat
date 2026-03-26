@@ -456,6 +456,10 @@
                     </c:if>
 
                     <form id="registerForm" action="${pageContext.request.contextPath}/register" method="post" accept-charset="UTF-8" novalidate>
+                        <input type="hidden" name="provinceNameText" id="provinceNameText">
+                        <input type="hidden" name="districtNameText" id="districtNameText">
+                        <input type="hidden" name="wardNameText" id="wardNameText">
+
                         <div class="section">
                             <h2 class="section-title">Thông tin cá nhân</h2>
 
@@ -627,6 +631,10 @@
             const districtSelect = document.getElementById('districtName');
             const wardSelect = document.getElementById('wardName');
 
+            const provinceNameTextInput = document.getElementById('provinceNameText');
+            const districtNameTextInput = document.getElementById('districtNameText');
+            const wardNameTextInput = document.getElementById('wardNameText');
+
             let provincesData = [];
             const provinceMap = new Map();
             let provincesDepth3Data = null;
@@ -643,6 +651,29 @@
                 } else {
                     input.type = 'password';
                     icon.className = 'fa-regular fa-eye';
+                }
+            }
+
+            function updateAddressTextFields() {
+                if (provinceSelect && provinceNameTextInput) {
+                    provinceNameTextInput.value =
+                            provinceSelect.selectedIndex > 0
+                            ? provinceSelect.options[provinceSelect.selectedIndex].text
+                            : '';
+                }
+
+                if (districtSelect && districtNameTextInput) {
+                    districtNameTextInput.value =
+                            districtSelect.selectedIndex > 0
+                            ? districtSelect.options[districtSelect.selectedIndex].text
+                            : '';
+                }
+
+                if (wardSelect && wardNameTextInput) {
+                    wardNameTextInput.value =
+                            wardSelect.selectedIndex > 0
+                            ? wardSelect.options[wardSelect.selectedIndex].text
+                            : '';
                 }
             }
 
@@ -710,9 +741,7 @@
                     resetSelect(districtSelect, 'Chọn quận/huyện', true);
                     resetSelect(wardSelect, 'Chọn phường/xã', true);
 
-                    // Dùng endpoint chuẩn theo ví dụ tài liệu: /api/v1/?depth=2
                     provincesData = await fetchJson('https://provinces.open-api.vn/api/v1/?depth=2');
-                    console.log('Provinces data:', provincesData);
 
                     provinceMap.clear();
                     provincesData.forEach(province => {
@@ -721,6 +750,7 @@
 
                     fillSelect(provinceSelect, provincesData, 'Chọn tỉnh/thành');
                     clearAddressErrors();
+                    updateAddressTextFields();
                 } catch (e) {
                     console.error('Lỗi load provinces:', e);
                     resetSelect(provinceSelect, 'Không tải được tỉnh/thành', true);
@@ -730,10 +760,10 @@
 
             function loadDistrictsFromLoadedProvince(provinceCode) {
                 const province = provinceMap.get(String(provinceCode));
-                console.log('Selected province object:', province);
 
                 resetSelect(districtSelect, 'Chọn quận/huyện', true);
                 resetSelect(wardSelect, 'Chọn phường/xã', true);
+                updateAddressTextFields();
 
                 if (!province) {
                     setError('districtName', 'Không tìm thấy dữ liệu tỉnh/thành đã chọn.');
@@ -752,7 +782,6 @@
             async function findDistrictWithWardsFromProvince(provinceCode, districtCode) {
                 if (!provincesDepth3Data) {
                     provincesDepth3Data = await fetchJson('https://provinces.open-api.vn/api/v1/?depth=3');
-                    console.log('provincesDepth3Data =', provincesDepth3Data);
                 }
 
                 if (!Array.isArray(provincesDepth3Data)) {
@@ -763,24 +792,19 @@
                         p => String(p.code) === String(provinceCode)
                 );
 
-                console.log('province from depth=3 data =', province);
-
                 if (!province || !Array.isArray(province.districts)) {
                     return null;
                 }
 
-                const district = province.districts.find(
+                return province.districts.find(
                         d => String(d.code) === String(districtCode)
                 ) || null;
-
-                console.log('district from depth=3 data =', district);
-
-                return district;
             }
 
             async function loadWardsByDistrictCode(districtCode) {
                 try {
                     resetSelect(wardSelect, 'Đang tải phường/xã...', true);
+                    updateAddressTextFields();
 
                     const provinceCode = provinceSelect.value;
                     if (!provinceCode) {
@@ -790,7 +814,6 @@
                     }
 
                     const districtDetail = await findDistrictWithWardsFromProvince(provinceCode, districtCode);
-                    console.log('District detail for wards:', districtDetail);
 
                     if (districtDetail && Array.isArray(districtDetail.wards) && districtDetail.wards.length > 0) {
                         fillSelect(wardSelect, districtDetail.wards, 'Chọn phường/xã');
@@ -814,6 +837,7 @@
                 setError('provinceName', '');
                 setError('districtName', '');
                 setError('wardName', '');
+                updateAddressTextFields();
 
                 if (!provinceCode)
                     return;
@@ -827,6 +851,7 @@
                 resetSelect(wardSelect, 'Chọn phường/xã', true);
                 setError('districtName', '');
                 setError('wardName', '');
+                updateAddressTextFields();
 
                 if (!districtCode)
                     return;
@@ -836,6 +861,7 @@
 
             wardSelect.addEventListener('change', function () {
                 setError('wardName', '');
+                updateAddressTextFields();
             });
 
             function validateFullName() {
@@ -1032,6 +1058,8 @@
             document.getElementById('agreeTerms').addEventListener('change', validateAgreeTerms);
 
             document.getElementById('registerForm').addEventListener('submit', function (e) {
+                updateAddressTextFields();
+
                 const results = [
                     validateFullName(),
                     validatePhone(),

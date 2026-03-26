@@ -6,7 +6,6 @@
     <head>
         <meta charset="UTF-8">
         <title>Chi tiết Đơn hàng - ClickEat</title>
-        <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/assets/images/shipperlogo.png">
         <script src="https://cdn.tailwindcss.com"></script>
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

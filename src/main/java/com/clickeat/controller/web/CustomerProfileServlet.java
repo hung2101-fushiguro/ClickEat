@@ -1,7 +1,9 @@
 package com.clickeat.controller.web;
 
+import com.clickeat.dal.impl.AddressDAO;
 import com.clickeat.dal.impl.CustomerProfileDAO;
 import com.clickeat.dal.impl.UserDAO;
+import com.clickeat.model.Address;
 import com.clickeat.model.CustomerProfile;
 import com.clickeat.model.User;
 import java.io.IOException;
@@ -16,8 +18,8 @@ import jakarta.servlet.http.HttpSession;
 @WebServlet(name = "CustomerProfileServlet", urlPatterns = {"/customer/profile"})
 public class CustomerProfileServlet extends HttpServlet {
 
-    private static final Pattern EMAIL_PATTERN =
-            Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");
+    private static final Pattern EMAIL_PATTERN
+            = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$");
 
     private boolean isBlank(String s) {
         return s == null || s.trim().isEmpty();
@@ -53,15 +55,21 @@ public class CustomerProfileServlet extends HttpServlet {
             throws ServletException, IOException {
 
         User account = getLoggedCustomer(request, response);
-        if (account == null) return;
+        if (account == null) {
+            return;
+        }
 
         CustomerProfileDAO customerProfileDAO = new CustomerProfileDAO();
         customerProfileDAO.ensureExists(account.getId());
 
         CustomerProfile profile = customerProfileDAO.findByUserId(account.getId());
 
+        AddressDAO addressDAO = new AddressDAO();
+        Address defaultAddress = addressDAO.findDefaultByUserId(account.getId());
+
         request.setAttribute("profileUser", account);
         request.setAttribute("customerProfile", profile);
+        request.setAttribute("defaultAddress", defaultAddress);
         request.getRequestDispatcher("/views/web/profile.jsp").forward(request, response);
     }
 
@@ -72,7 +80,9 @@ public class CustomerProfileServlet extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
 
         User account = getLoggedCustomer(request, response);
-        if (account == null) return;
+        if (account == null) {
+            return;
+        }
 
         String fullName = trim(request.getParameter("fullName"));
         String email = trim(request.getParameter("email"));
@@ -81,6 +91,14 @@ public class CustomerProfileServlet extends HttpServlet {
         String allergies = trim(request.getParameter("allergies"));
         String healthGoal = trim(request.getParameter("healthGoal"));
         String dailyCalorieTargetRaw = trim(request.getParameter("dailyCalorieTarget"));
+
+        String receiverName = trim(request.getParameter("receiverName"));
+        String receiverPhone = trim(request.getParameter("receiverPhone"));
+        String addressLine = trim(request.getParameter("addressLine"));
+        String provinceName = trim(request.getParameter("provinceName"));
+        String districtName = trim(request.getParameter("districtName"));
+        String wardName = trim(request.getParameter("wardName"));
+        String addressNote = trim(request.getParameter("addressNote"));
 
         String error = null;
 
@@ -115,6 +133,31 @@ public class CustomerProfileServlet extends HttpServlet {
             }
         }
 
+        boolean hasAnyAddressField
+                = !isBlank(receiverName)
+                || !isBlank(receiverPhone)
+                || !isBlank(addressLine)
+                || !isBlank(provinceName)
+                || !isBlank(districtName)
+                || !isBlank(wardName)
+                || !isBlank(addressNote);
+
+        if (error == null && hasAnyAddressField) {
+            if (isBlank(receiverName) || receiverName.length() < 2 || receiverName.length() > 100) {
+                error = "Tên người nhận phải từ 2 đến 100 ký tự.";
+            } else if (!receiverName.matches("^[\\p{L}0-9\\s'.-]+$")) {
+                error = "Tên người nhận không hợp lệ.";
+            } else if (isBlank(receiverPhone) || !receiverPhone.matches("^[0-9]{8,11}$")) {
+                error = "Số điện thoại nhận hàng phải gồm 8 đến 11 chữ số.";
+            } else if (isBlank(addressLine) || addressLine.length() < 5 || addressLine.length() > 255) {
+                error = "Địa chỉ chi tiết phải từ 5 đến 255 ký tự.";
+            } else if (isBlank(provinceName) || isBlank(districtName) || isBlank(wardName)) {
+                error = "Vui lòng nhập đầy đủ tỉnh/thành, quận/huyện và phường/xã.";
+            } else if (!isBlank(addressNote) && addressNote.length() > 255) {
+                error = "Ghi chú giao hàng không được vượt quá 255 ký tự.";
+            }
+        }
+
         UserDAO userDAO = new UserDAO();
         if (error == null && userDAO.isEmailUsedByAnother(email, account.getId())) {
             error = "Email này đã được sử dụng bởi tài khoản khác.";
@@ -122,6 +165,9 @@ public class CustomerProfileServlet extends HttpServlet {
 
         CustomerProfileDAO customerProfileDAO = new CustomerProfileDAO();
         customerProfileDAO.ensureExists(account.getId());
+
+        AddressDAO addressDAO = new AddressDAO();
+        Address defaultAddress = addressDAO.findDefaultByUserId(account.getId());
 
         if (error != null) {
             CustomerProfile profile = new CustomerProfile();
@@ -135,9 +181,20 @@ public class CustomerProfileServlet extends HttpServlet {
             account.setEmail(email);
             account.setAvatarUrl(avatarUrl);
 
+            Address addressView = defaultAddress != null ? defaultAddress : new Address();
+            addressView.setUserId(account.getId());
+            addressView.setReceiverName(receiverName);
+            addressView.setReceiverPhone(receiverPhone);
+            addressView.setAddressLine(addressLine);
+            addressView.setProvinceName(provinceName);
+            addressView.setDistrictName(districtName);
+            addressView.setWardName(wardName);
+            addressView.setNote(addressNote);
+
             request.setAttribute("error", error);
             request.setAttribute("profileUser", account);
             request.setAttribute("customerProfile", profile);
+            request.setAttribute("defaultAddress", addressView);
             request.getRequestDispatcher("/views/web/profile.jsp").forward(request, response);
             return;
         }
@@ -153,7 +210,43 @@ public class CustomerProfileServlet extends HttpServlet {
 
         boolean updatedProfile = customerProfileDAO.updateProfile(profile);
 
-        if (updatedUser || updatedProfile) {
+        boolean updatedAddress = false;
+        if (hasAnyAddressField) {
+            if (defaultAddress == null) {
+                Address newAddress = new Address();
+                newAddress.setUserId(account.getId());
+                newAddress.setReceiverName(receiverName);
+                newAddress.setReceiverPhone(receiverPhone);
+                newAddress.setAddressLine(addressLine);
+                newAddress.setProvinceCode("");
+                newAddress.setProvinceName(provinceName);
+                newAddress.setDistrictCode("");
+                newAddress.setDistrictName(districtName);
+                newAddress.setWardCode("");
+                newAddress.setWardName(wardName);
+                newAddress.setIsDefault(true);
+                newAddress.setNote(addressNote);
+
+                int newAddressId = addressDAO.insert(newAddress);
+                if (newAddressId > 0) {
+                    updatedAddress = true;
+                    customerProfileDAO.setDefaultAddressId(account.getId(), newAddressId);
+                    addressDAO.setDefaultAddress(account.getId(), newAddressId);
+                }
+            } else {
+                defaultAddress.setReceiverName(receiverName);
+                defaultAddress.setReceiverPhone(receiverPhone);
+                defaultAddress.setAddressLine(addressLine);
+                defaultAddress.setProvinceName(provinceName);
+                defaultAddress.setDistrictName(districtName);
+                defaultAddress.setWardName(wardName);
+                defaultAddress.setNote(addressNote);
+
+                updatedAddress = addressDAO.updateAddress(defaultAddress);
+            }
+        }
+
+        if (updatedUser || updatedProfile || updatedAddress) {
             account.setFullName(fullName);
             account.setEmail(email);
             account.setAvatarUrl(avatarUrl);

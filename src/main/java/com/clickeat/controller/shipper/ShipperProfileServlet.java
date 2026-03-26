@@ -43,7 +43,6 @@ public class ShipperProfileServlet extends HttpServlet {
         }
 
         // Lấy dữ liệu từ form
-        String fullName = request.getParameter("fullName");
         String phone = request.getParameter("phone");
         String email = request.getParameter("email");
         String vehicleType = request.getParameter("vehicleType");
@@ -62,15 +61,14 @@ public class ShipperProfileServlet extends HttpServlet {
         // 2. Tiến hành cập nhật
         try {
             // Update thông tin User chung
-            String sqlUser = "UPDATE Users SET full_name = ?, phone = ?, email = ?, updated_at = GETDATE() WHERE id = ?";
-            userDAO.update(sqlUser, fullName, phone, email, account.getId());
+            String sqlUser = "UPDATE Users SET phone = ?, email = ?, updated_at = GETDATE() WHERE id = ?";
+            userDAO.update(sqlUser, phone, email, account.getId());
 
             // Update thông tin xe của Shipper
             String sqlShipper = "UPDATE ShipperProfiles SET vehicle_type = ?, vehicle_name = ?, license_plate = ? WHERE user_id = ?";
             userDAO.update(sqlShipper, vehicleType, vehicleName, licensePlate, account.getId());
 
             // 3. Cập nhật thành công -> Đổi lại Session
-            account.setFullName(fullName);
             account.setPhone(phone);
             account.setEmail(email);
             request.getSession().setAttribute("account", account);

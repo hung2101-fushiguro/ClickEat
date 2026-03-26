@@ -87,6 +87,8 @@ public class StoreDetailServlet extends HttpServlet {
         CartDAO cartDAO = new CartDAO();
         CartItemViewDAO cartItemViewDAO = new CartItemViewDAO();
 
+        Integer cartMerchantUserId = null;
+
         try {
             Cart cart = null;
             User account = (User) session.getAttribute("account");
@@ -110,8 +112,9 @@ public class StoreDetailServlet extends HttpServlet {
                     cartTotal += item.getLineTotal();
                 }
 
-                Integer cartMerchantUserId = cart.getMerchantUserId();
-                if (cartMerchantUserId != null && cartMerchantUserId == merchantId) {
+                cartMerchantUserId = cart.getMerchantUserId();
+
+                if (cartMerchantUserId != null && cartMerchantUserId.equals(merchantId)) {
                     storeCartItems = popupCartItems;
                 }
             }
@@ -126,11 +129,12 @@ public class StoreDetailServlet extends HttpServlet {
         request.setAttribute("cartTotal", cartTotal);
         request.setAttribute("storeCartItems", storeCartItems);
 
-        String queryString = request.getQueryString();
-        String currentUrl = request.getRequestURI();
-        if (queryString != null && !queryString.isBlank()) {
-            currentUrl += "?" + queryString;
+        String ctx = request.getContextPath();
+
+        if (cartMerchantUserId != null && !popupCartItems.isEmpty()) {
+            request.setAttribute("lastStoreUrl", ctx + "/store-detail?id=" + cartMerchantUserId);
+        } else {
+            request.setAttribute("lastStoreUrl", ctx + "/store-detail?id=" + merchantId);
         }
-        request.setAttribute("lastStoreUrl", currentUrl);
     }
 }

@@ -46,7 +46,7 @@ public class ShipperDashboardServlet extends HttpServlet {
 
         // 3. Quản lý Đơn hàng
         request.setAttribute("currentOrders", orderDAO.getCurrentOrdersForShipper(account.getId()));
-        request.setAttribute("availableOrders", orderDAO.getAvailableOrdersForShipper((int) account.getId()));
+        request.setAttribute("availableOrders", orderDAO.getAvailableOrdersForShipper());
         request.setAttribute("merchantDAO", new MerchantProfileDAO());
 
         // 4. Sự cố

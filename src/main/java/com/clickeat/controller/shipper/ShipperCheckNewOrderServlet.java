@@ -1,7 +1,10 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
 package com.clickeat.controller.shipper;
 
 import com.clickeat.dal.impl.OrderDAO;
-import com.clickeat.model.User; 
 import java.io.IOException;
 import java.io.PrintWriter;
 import jakarta.servlet.ServletException;
@@ -9,7 +12,6 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 
 @WebServlet(name = "ShipperCheckNewOrderServlet", urlPatterns = {"/shipper/check-new-orders"})
 public class ShipperCheckNewOrderServlet extends HttpServlet {
@@ -18,14 +20,11 @@ public class ShipperCheckNewOrderServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        int currentAvailableCount = 0;
-        HttpSession session = request.getSession();
-        User account = (User) session.getAttribute("account");
+        OrderDAO orderDAO = new OrderDAO();
+        // Đếm số lượng đơn hàng đang ở trạng thái "Chờ Shipper nhận"
+        int currentAvailableCount = orderDAO.getAvailableOrdersForShipper().size();
 
-        if (account != null) {
-            OrderDAO orderDAO = new OrderDAO();
-            currentAvailableCount = orderDAO.getAvailableOrdersForShipper((int) account.getId()).size();
-        }
+        // Trả về dữ liệu dạng JSON cho Javascript đọc
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         try (PrintWriter out = response.getWriter()) {

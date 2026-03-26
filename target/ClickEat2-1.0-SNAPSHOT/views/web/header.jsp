@@ -54,14 +54,30 @@
             </nav>
 
             <div class="flex items-center gap-3 shrink-0">
-                <button type="button" id="cartBtn"
-                        class="relative w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center transition"
-                        aria-label="Giỏ hàng">
-                    <i class="fa-solid fa-bag-shopping text-gray-800 text-lg"></i>
-                    <span class="absolute -top-1 -right-1 bg-orange-500 text-white text-[11px] font-extrabold rounded-full h-5 min-w-[20px] px-1 flex items-center justify-center shadow">
-                        <c:out value="${cartCount != null ? cartCount : 0}" />
-                    </span>
-                </button>
+
+                <c:choose>
+                    <c:when test="${not empty sessionScope.account}">
+                        <button type="button" id="cartBtn"
+                                class="relative w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center transition"
+                                aria-label="Giỏ hàng">
+                            <i class="fa-solid fa-bag-shopping text-gray-800 text-lg"></i>
+                            <span class="absolute -top-1 -right-1 bg-orange-500 text-white text-[11px] font-extrabold rounded-full h-5 min-w-[20px] px-1 flex items-center justify-center shadow">
+                                <c:out value="${cartCount != null ? cartCount : 0}" />
+                            </span>
+                        </button>
+                    </c:when>
+
+                    <c:otherwise>
+                        <button type="button" id="cartBtn"
+                                class="relative w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center transition"
+                                aria-label="Giỏ hàng">
+                            <i class="fa-solid fa-bag-shopping text-gray-800 text-lg"></i>
+                            <span class="absolute -top-1 -right-1 bg-orange-500 text-white text-[11px] font-extrabold rounded-full h-5 min-w-[20px] px-1 flex items-center justify-center shadow">
+                                <c:out value="${cartCount != null ? cartCount : 0}" />
+                            </span>
+                        </button>
+                    </c:otherwise>
+                </c:choose>
 
                 <c:choose>
                     <c:when test="${not empty sessionScope.account}">
@@ -183,6 +199,8 @@
 <jsp:include page="cart.jsp">
     <jsp:param name="cartMode" value="popup" />
 </jsp:include>
+
+<jsp:include page="checkout-choice-modal.jsp" />
 
 <script>
     (() => {

@@ -33,58 +33,31 @@
         <jsp:include page="_nav.jsp" />
 
         <main class="flex-1 flex flex-col h-screen overflow-y-auto">
-            <header class="bg-white border-b border-gray-100 px-4 md:px-8 py-5 sticky top-0 z-10 shadow-sm">
+            <header class="bg-white border-b border-gray-100 px-8 py-5 sticky top-0 z-10 shadow-sm">
                 <h1 class="text-2xl font-black text-gray-900 tracking-tight">Tổng quan kinh doanh</h1>
                 <p class="text-sm text-gray-500 font-medium mt-1">Doanh thu, đơn hàng, tỉ lệ hủy và hiệu quả voucher</p>
             </header>
 
             <div class="p-8 max-w-7xl mx-auto w-full space-y-6">
-                <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                    <form method="get" action="${pageContext.request.contextPath}/merchant/dashboard" class="flex flex-col md:flex-row md:items-end gap-3">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Từ ngày</label>
-                            <input type="date" name="fromDate" value="${fromDate}" class="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25"/>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Đến ngày</label>
-                            <input type="date" name="toDate" value="${toDate}" class="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25"/>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <button type="submit" class="px-4 py-2 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary-dark">Lọc</button>
-                            <a href="${pageContext.request.contextPath}/merchant/dashboard" class="px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50">Mặc định</a>
-                        </div>
-                    </form>
-                    <c:if test="${not empty dashboardError}">
-                        <p class="mt-3 text-sm text-red-600 font-semibold">${dashboardError}</p>
-                    </c:if>
-                </div>
-
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                        <p class="text-xs font-bold text-gray-400 uppercase">${isRangeMode ? 'Doanh thu trong khoảng' : 'Doanh thu hôm nay'}</p>
+                        <p class="text-xs font-bold text-gray-400 uppercase">Doanh thu hôm nay</p>
                         <p class="text-2xl font-black text-gray-900 mt-1"><fmt:formatNumber value="${todayRevenue}" type="currency" currencySymbol="đ" maxFractionDigits="0"/></p>
                     </div>
                     <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                        <p class="text-xs font-bold text-gray-400 uppercase">${isRangeMode ? 'Đơn trong khoảng' : 'Doanh thu hôm qua'}</p>
-                        <c:choose>
-                            <c:when test="${isRangeMode}">
-                                <p class="text-2xl font-black text-gray-900 mt-1">${todayOrders}</p>
-                            </c:when>
-                            <c:otherwise>
-                                <p class="text-2xl font-black text-gray-900 mt-1"><fmt:formatNumber value="${yesterdayRevenue}" type="currency" currencySymbol="đ" maxFractionDigits="0"/></p>
-                            </c:otherwise>
-                        </c:choose>
+                        <p class="text-xs font-bold text-gray-400 uppercase">Doanh thu hôm qua</p>
+                        <p class="text-2xl font-black text-gray-900 mt-1"><fmt:formatNumber value="${yesterdayRevenue}" type="currency" currencySymbol="đ" maxFractionDigits="0"/></p>
                     </div>
                     <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                        <p class="text-xs font-bold text-gray-400 uppercase">${isRangeMode ? 'Doanh thu tham chiếu' : 'Doanh thu 7 ngày'}</p>
+                        <p class="text-xs font-bold text-gray-400 uppercase">Doanh thu 7 ngày</p>
                         <p class="text-2xl font-black text-gray-900 mt-1"><fmt:formatNumber value="${revenue7d}" type="currency" currencySymbol="đ" maxFractionDigits="0"/></p>
                     </div>
                     <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                        <p class="text-xs font-bold text-gray-400 uppercase">${isRangeMode ? 'Tổng đơn (khoảng)' : 'Đơn hôm nay'}</p>
+                        <p class="text-xs font-bold text-gray-400 uppercase">Đơn hôm nay</p>
                         <p class="text-2xl font-black text-gray-900 mt-1">${todayOrders}</p>
                     </div>
                     <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                        <p class="text-xs font-bold text-gray-400 uppercase">${isRangeMode ? 'Đơn hủy (khoảng)' : 'Đơn hủy hôm nay'}</p>
+                        <p class="text-xs font-bold text-gray-400 uppercase">Đơn hủy hôm nay</p>
                         <p class="text-2xl font-black text-red-600 mt-1">${canceledToday}</p>
                     </div>
                     <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
@@ -95,18 +68,18 @@
 
                 <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
                     <div class="xl:col-span-2 bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-                        <h3 class="text-lg font-bold text-gray-900 mb-4">${isRangeMode ? 'Số đơn theo giờ trong khoảng đã lọc' : 'Số đơn theo giờ trong ngày'}</h3>
+                        <h3 class="text-lg font-bold text-gray-900 mb-4">Số đơn theo giờ trong ngày</h3>
                         <div class="h-72"><canvas id="hourlyOrdersChart"></canvas></div>
                     </div>
                     <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-                        <h3 class="text-lg font-bold text-gray-900 mb-4">${isRangeMode ? 'Tỉ lệ đơn dùng voucher (khoảng lọc)' : 'Tỉ lệ đơn dùng voucher (7 ngày)'}</h3>
+                        <h3 class="text-lg font-bold text-gray-900 mb-4">Tỉ lệ đơn dùng voucher (7 ngày)</h3>
                         <div class="h-72"><canvas id="voucherRatioChart"></canvas></div>
                     </div>
                 </div>
 
                 <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
                     <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-bold text-gray-900">${isRangeMode ? 'Top 5 món bán chạy (khoảng lọc)' : 'Top 5 món bán chạy'}</h3>
+                        <h3 class="text-lg font-bold text-gray-900">Top 5 món bán chạy</h3>
                         <a href="${pageContext.request.contextPath}/merchant/catalog" class="text-sm font-bold text-primary hover:underline">Xem Catalog</a>
                     </div>
                     <div class="space-y-2">
@@ -134,16 +107,16 @@
             const hourlyData = [
             <c:forEach var="entry" items="${hourlyOrders}" varStatus="st">${entry.value}${not st.last ? ',' : ''}</c:forEach>
             ];
-
+            
             new Chart(document.getElementById('hourlyOrdersChart').getContext('2d'), {
                 type: 'bar',
                 data: {
                     labels: hourlyLabels,
                     datasets: [{
-                            data: hourlyData,
-                            backgroundColor: '#c86601',
-                            borderRadius: 8
-                        }]
+                        data: hourlyData,
+                        backgroundColor: '#c86601',
+                        borderRadius: 8
+                    }]
                 },
                 options: {
                     responsive: true,
@@ -155,7 +128,7 @@
                     }
                 }
             });
-
+            
             const usedVoucher = ${voucherUsed7d};
             const noVoucher = ${voucherNotUsed7d};
             new Chart(document.getElementById('voucherRatioChart').getContext('2d'), {
@@ -163,10 +136,10 @@
                 data: {
                     labels: ['Có voucher', 'Không voucher'],
                     datasets: [{
-                            data: [usedVoucher, noVoucher],
-                            backgroundColor: ['#c86601', '#e5e7eb'],
-                            borderWidth: 0
-                        }]
+                        data: [usedVoucher, noVoucher],
+                        backgroundColor: ['#c86601', '#e5e7eb'],
+                        borderWidth: 0
+                    }]
                 },
                 options: {
                     responsive: true,
