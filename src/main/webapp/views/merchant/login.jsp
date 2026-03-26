@@ -136,10 +136,13 @@
         <div id="googleBtnContainer" class="flex justify-center"></div>
 
         <!-- Register link -->
-        <div class="text-center border-t border-gray-100 pt-6">
+        <div class="text-center border-t border-gray-100 pt-6 space-y-2">
             <p class="text-gray-500">Mới dùng ClickEat?
                 <a href="${pageContext.request.contextPath}/merchant/register"
                 class="text-[#c86601] font-semibold hover:underline">Đăng ký cửa hàng</a>
+            </p>
+            <p class="text-sm text-gray-400">
+                Bạn muốn <a href="${pageContext.request.contextPath}/shipper/register" class="text-[#c86601] font-semibold hover:underline">Trở thành shipper</a>?
             </p>
         </div>
 

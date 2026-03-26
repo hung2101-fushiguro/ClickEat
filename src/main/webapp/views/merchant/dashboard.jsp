@@ -134,16 +134,16 @@
             const hourlyData = [
             <c:forEach var="entry" items="${hourlyOrders}" varStatus="st">${entry.value}${not st.last ? ',' : ''}</c:forEach>
             ];
-            
+
             new Chart(document.getElementById('hourlyOrdersChart').getContext('2d'), {
                 type: 'bar',
                 data: {
                     labels: hourlyLabels,
                     datasets: [{
-                        data: hourlyData,
-                        backgroundColor: '#c86601',
-                        borderRadius: 8
-                    }]
+                            data: hourlyData,
+                            backgroundColor: '#c86601',
+                            borderRadius: 8
+                        }]
                 },
                 options: {
                     responsive: true,
@@ -155,7 +155,7 @@
                     }
                 }
             });
-            
+
             const usedVoucher = ${voucherUsed7d};
             const noVoucher = ${voucherNotUsed7d};
             new Chart(document.getElementById('voucherRatioChart').getContext('2d'), {
@@ -163,10 +163,10 @@
                 data: {
                     labels: ['Có voucher', 'Không voucher'],
                     datasets: [{
-                        data: [usedVoucher, noVoucher],
-                        backgroundColor: ['#c86601', '#e5e7eb'],
-                        borderWidth: 0
-                    }]
+                            data: [usedVoucher, noVoucher],
+                            backgroundColor: ['#c86601', '#e5e7eb'],
+                            borderWidth: 0
+                        }]
                 },
                 options: {
                     responsive: true,

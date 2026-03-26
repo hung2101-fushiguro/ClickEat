@@ -57,8 +57,8 @@
     </div>
 
     <script>
-    (function(){
-        var ctx = '<%= request.getContextPath() %>';
+        (function () {
+            var ctx = '<%= request.getContextPath()%>';
 
         function fetchNotifs() {
             fetch(ctx + '/merchant/notifications', {credentials:'same-origin'})
@@ -79,20 +79,29 @@
                 list.innerHTML = '<p class="text-xs text-gray-400 text-center py-6">Không có thông báo</p>';
                 return;
             }
-            var html = '';
-            for (var i = 0; i < items.length; i++) {
-                var n = items[i];
-                var bg = n.isRead ? '' : 'bg-orange-50';
-                var dot = n.isRead ? '' : '<span class="w-2 h-2 rounded-full bg-primary shrink-0 mt-1"></span>';
-                html += '<div class="flex items-start gap-2.5 px-4 py-3 hover:bg-gray-50 transition-all ' + bg + '">'
-                      + dot
-                      + '<div class="min-w-0 flex-1">'
-                      + '<p class="text-xs text-gray-800 leading-snug">' + escHtml(n.content) + '</p>'
-                      + '<p class="text-[10px] text-gray-400 mt-0.5">' + escHtml(n.time) + '</p>'
-                      + '</div></div>';
+
+            function renderList(items, listId) {
+                var list = document.getElementById(listId);
+                if (!list)
+                    return;
+                if (!items || items.length === 0) {
+                    list.innerHTML = '<p class="text-xs text-gray-400 text-center py-6">Không có thông báo</p>';
+                    return;
+                }
+                var html = '';
+                for (var i = 0; i < items.length; i++) {
+                    var n = items[i];
+                    var bg = n.isRead ? '' : 'bg-orange-50';
+                    var dot = n.isRead ? '' : '<span class="w-2 h-2 rounded-full bg-primary shrink-0 mt-1"></span>';
+                    html += '<div class="flex items-start gap-2.5 px-4 py-3 hover:bg-gray-50 transition-all ' + bg + '">'
+                            + dot
+                            + '<div class="min-w-0 flex-1">'
+                            + '<p class="text-xs text-gray-800 leading-snug">' + escHtml(n.content) + '</p>'
+                            + '<p class="text-[10px] text-gray-400 mt-0.5">' + escHtml(n.time) + '</p>'
+                            + '</div></div>';
+                }
+                list.innerHTML = html;
             }
-            list.innerHTML = html;
-        }
 
         function updateBadge(id, unread) {
             var badge = document.getElementById(id);
@@ -109,11 +118,9 @@
             return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         }
 
-        window.toggleNotifDropdown = function() {
-            var dd = document.getElementById('notifDropdown');
-            if (!dd) return;
-            dd.classList.toggle('hidden');
-        };
+            function escHtml(s) {
+                return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            }
 
         window.markAllRead = function() {
             fetch(ctx + '/merchant/notifications', {method:'POST', credentials:'same-origin'})
@@ -160,22 +167,71 @@
             }
         });
 
-        // Initial fetch + poll every 60 seconds
-        fetchNotifs();
-        setInterval(fetchNotifs, 60000);
-    })();
+            window.markAllRead = function () {
+                fetch(ctx + '/merchant/notifications', {method: 'POST', credentials: 'same-origin'})
+                        .then(function () {
+                            fetchNotifs();
+                        })
+                        .catch(function () {});
+            };
+
+            window.toggleMobileMenu = function (forceOpen) {
+                var overlay = document.getElementById('mobileMenuOverlay');
+                var sheet = document.getElementById('mobileMenuSheet');
+                if (!overlay || !sheet)
+                    return;
+
+                var shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : overlay.classList.contains('hidden');
+                if (shouldOpen) {
+                    overlay.classList.remove('hidden');
+                    sheet.classList.remove('translate-y-full');
+                    document.body.classList.add('overflow-hidden');
+                } else {
+                    sheet.classList.add('translate-y-full');
+                    document.body.classList.remove('overflow-hidden');
+                    setTimeout(function () {
+                        overlay.classList.add('hidden');
+                    }, 180);
+                }
+            };
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function (e) {
+                var container = document.getElementById('notifContainer');
+                if (container && !container.contains(e.target)) {
+                    var dd = document.getElementById('notifDropdown');
+                    if (dd)
+                        dd.classList.add('hidden');
+                }
+
+                var overlay = document.getElementById('mobileMenuOverlay');
+                if (overlay && e.target === overlay) {
+                    window.toggleMobileMenu(false);
+                }
+            });
+
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    window.toggleMobileMenu(false);
+                }
+            });
+
+            // Initial fetch + poll every 60 seconds
+            fetchNotifs();
+            setInterval(fetchNotifs, 60000);
+        })();
     </script>
 
     <!-- Nav items -->
     <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
         <% for (String[] item : navItems) {
-            boolean active = item[0].equals(currentPage); %>
-        <a href="<%= request.getContextPath() %>/merchant/<%= item[0] %>"
+                boolean active = item[0].equals(currentPage);%>
+        <a href="<%= request.getContextPath()%>/merchant/<%= item[0]%>"
            class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-medium <%= active
-               ? "bg-primary text-white shadow-sm shadow-primary/20"
-               : "text-gray-600 hover:bg-gray-50 hover:text-gray-900" %>">
-            <span class="material-symbols-outlined text-[20px]"><%= item[2] %></span>
-            <span><%= item[1] %></span>
+                   ? "bg-primary text-white shadow-sm shadow-primary/20"
+                   : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"%>">
+            <span class="material-symbols-outlined text-[20px]"><%= item[2]%></span>
+            <span><%= item[1]%></span>
         </a>
         <% } %>
     </nav>
@@ -187,17 +243,17 @@
             Boolean isOpenAttr = (Boolean) session.getAttribute("merchantIsOpen");
             boolean isShopOpen = isOpenAttr == null || isOpenAttr;
         %>
-        <form method="POST" action="<%= request.getContextPath() %>/merchant/toggle-open">
+        <form method="POST" action="<%= request.getContextPath()%>/merchant/toggle-open">
             <button type="submit"
                     class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all
-                    <%= isShopOpen ? "bg-green-50 text-green-700 hover:bg-green-100" : "bg-red-50 text-red-600 hover:bg-red-100" %>">
+                    <%= isShopOpen ? "bg-green-50 text-green-700 hover:bg-green-100" : "bg-red-50 text-red-600 hover:bg-red-100"%>">
                 <span class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-[20px]"><%= isShopOpen ? "store" : "store_mall_directory" %></span>
-                    <%= isShopOpen ? "Đang nhận đơn" : "Đã tạm đóng" %>
+                    <span class="material-symbols-outlined text-[20px]"><%= isShopOpen ? "store" : "store_mall_directory"%></span>
+                    <%= isShopOpen ? "Đang nhận đơn" : "Đã tạm đóng"%>
                 </span>
                 <span class="relative inline-flex w-10 h-5 shrink-0">
-                    <span class="absolute inset-0 rounded-full transition-colors duration-200 <%= isShopOpen ? "bg-green-500" : "bg-gray-300" %>"></span>
-                    <span class="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 <%= isShopOpen ? "translate-x-5" : "translate-x-0.5" %>"></span>
+                    <span class="absolute inset-0 rounded-full transition-colors duration-200 <%= isShopOpen ? "bg-green-500" : "bg-gray-300"%>"></span>
+                    <span class="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 <%= isShopOpen ? "translate-x-5" : "translate-x-0.5"%>"></span>
                 </span>
             </button>
         </form>

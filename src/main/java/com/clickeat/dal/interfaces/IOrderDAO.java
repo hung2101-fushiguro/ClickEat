@@ -14,7 +14,7 @@ import java.util.Map;
  */
 public interface IOrderDAO extends IGenericDAO<Order> {
 
-    List<Order> getAvailableOrdersForShipper();
+    List<Order> getAvailableOrdersForShipper(int shipperId);
 
     boolean claimOrder(int orderId, int shipperId);
 

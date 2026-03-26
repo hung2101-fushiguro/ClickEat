@@ -10,6 +10,7 @@ Author     : DELL
     <head>
         <meta charset="UTF-8">
         <title>Báo cáo sự cố - ClickEat Shipper</title>
+        <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/assets/images/shipperlogo.png">
         <script src="https://cdn.tailwindcss.com"></script>
         <script>
             tailwind.config = {

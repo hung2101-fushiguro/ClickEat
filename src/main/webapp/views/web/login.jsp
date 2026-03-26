@@ -450,6 +450,7 @@
 
                         <div class="footer">
                             Chưa có tài khoản? <a class="link" href="${pageContext.request.contextPath}/register">Đăng ký</a><br/>
+                            <span class="small">Hoặc <a class="link" href="${pageContext.request.contextPath}/shipper/register">Trở thành shipper</a> ngay!</span><br/>
                             <span class="small">Bạn là đối tác? <a class="link" href="${pageContext.request.contextPath}/merchant-login">Đăng nhập Merchant</a> · <a class="link" href="${pageContext.request.contextPath}/merchant-register">Đi tới Merchant</a></span>
                         </div>
                     </form>

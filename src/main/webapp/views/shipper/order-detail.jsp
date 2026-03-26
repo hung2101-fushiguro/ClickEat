@@ -6,6 +6,7 @@
     <head>
         <meta charset="UTF-8">
         <title>Chi tiết Đơn hàng - ClickEat</title>
+        <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/assets/images/shipperlogo.png">
         <script src="https://cdn.tailwindcss.com"></script>
         <script>
             tailwind.config = {

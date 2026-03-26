@@ -11,6 +11,7 @@ Author     : DELL
     <head>
         <meta charset="UTF-8">
         <title>Theo dõi Đơn hàng - ClickEat Shipper</title>
+        <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/assets/images/shipperlogo.png">
         <script src="https://cdn.tailwindcss.com"></script>
         <script>
             tailwind.config = {
@@ -58,7 +59,18 @@ Author     : DELL
                         </div>
                     </c:when>
                 </c:choose>
-
+                <div class="bg-white p-4 z-10 shadow-sm border-b border-gray-200 mb-2 rounded-2xl">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Vị trí hiện tại của bạn</label>
+                    <div class="flex gap-2">
+                        <button onclick="getGPSLocation()" class="bg-blue-500 text-white px-4 py-2 rounded-xl hover:bg-blue-600 transition shadow-sm flex items-center justify-center shrink-0" title="Dùng GPS hiện tại">
+                            <i class="fa-solid fa-location-crosshairs"></i>
+                        </button>
+                        <input type="text" id="custom-address" placeholder="Hoặc nhập địa chỉ..." class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-orange-500 shadow-sm">
+                        <button onclick="searchAddress()" class="bg-orange-500 text-white px-4 py-2 rounded-xl hover:bg-orange-600 transition shadow-sm flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </button>
+                    </div>
+                </div>
                 <div class="bg-white rounded-2xl p-2 shadow-sm border border-gray-100 relative z-0 mb-2">
                     <div id="map" class="w-full h-64 rounded-xl z-0 relative"></div>
 
@@ -127,10 +139,14 @@ Author     : DELL
 
                 </form>
             </div>
+<script>
+            let map, shipperMarker, targetMarker, routeLine;
 
-        </div>
+            // ĐÃ FIX CHỐNG SẬP: Bọc dấu nháy và dùng parseFloat, dự phòng tọa độ mặc định
+            let targetLat = parseFloat('${order.orderStatus == "DELIVERING" ? merchant.latitude : order.latitude}') || 16.0736;
+            let targetLng = parseFloat('${order.orderStatus == "DELIVERING" ? merchant.longitude : order.longitude}') || 108.2240;
+            const targetName = "${order.orderStatus == 'DELIVERING' ? 'Quán ăn' : 'Khách hàng'}";
 
-        <script>
             document.addEventListener('DOMContentLoaded', function () {
                 // 1. Lấy tọa độ
                 const shopLat = ${not empty merchant.latitude ? merchant.latitude : 10.7769};
@@ -144,8 +160,7 @@ Author     : DELL
                 
                 // 3. Load lớp bản đồ (OpenStreetMap)
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap',
-                    maxZoom: 19
+                    attribution: '© OpenStreetMap contributors'
                 }).addTo(map);
                 
                 // 4. Tạo icon Tùy chỉnh
@@ -195,6 +210,78 @@ Author     : DELL
                     document.getElementById('distance-text').innerHTML = "Không thể tính khoảng cách";
                 });
             });
+
+            // Hàm 1: Lấy GPS từ điện thoại/trình duyệt
+            function getGPSLocation() {
+                document.getElementById('distance-text').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang định vị...';
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                            (position) => {
+                        updateShipperLocation(position.coords.latitude, position.coords.longitude);
+                    },
+                            (error) => {
+                        alert("Vui lòng bật GPS hoặc tự nhập địa chỉ ở thanh phía trên!");
+                        document.getElementById('distance-text').innerHTML = 'Chưa có vị trí';
+                    }
+                    );
+                } else {
+                    alert("Trình duyệt không hỗ trợ GPS.");
+                }
+            }
+
+            // Hàm 2: Lấy tọa độ từ địa chỉ gõ tay
+            function searchAddress() {
+                const address = document.getElementById('custom-address').value.trim();
+                if (!address)
+                    return alert("Vui lòng nhập địa chỉ!");
+
+                document.getElementById('distance-text').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tìm...';
+                
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=\${encodeURIComponent(address + ", Vietnam")}&limit=1`;
+
+                fetch(url).then(res => res.json()).then(data => {
+                    if (data.length > 0)
+                        updateShipperLocation(data[0].lat, data[0].lon);
+                    else {
+                        alert("Không tìm thấy địa chỉ này!");
+                        document.getElementById('distance-text').innerHTML = 'Không tìm thấy';
+                    }
+                }).catch(err => alert("Lỗi mạng!"));
+            }
+
+            // Hàm 3: Cập nhật vị trí Shipper và Vẽ lại đường đi
+            function updateShipperLocation(lat, lng) {
+                // Cập nhật Marker Shipper
+                if (shipperMarker) {
+                    shipperMarker.setLatLng([lat, lng]);
+                } else {
+                    const shipperIcon = L.divIcon({
+                        html: `<div class="w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center border-2 border-white shadow-lg text-lg"><i class="fa-solid fa-motorcycle"></i></div>`,
+                        className: '', iconSize: [40, 40], iconAnchor: [20, 40]
+                    });
+                    shipperMarker = L.marker([lat, lng], {icon: shipperIcon}).addTo(map).bindPopup("<b>Vị trí của bạn</b>");
+                }
+
+                // Vẽ đường đi bằng OSRM API
+                if (routeLine)
+                    map.removeLayer(routeLine); // Xóa đường cũ
+
+                const osrmUrl = `https://router.project-osrm.org/route/v1/driving/\${lng},\${lat};\${targetLng},\${targetLat}?overview=full&geometries=geojson`;
+
+                fetch(osrmUrl).then(res => res.json()).then(data => {
+                    if (data.routes && data.routes.length > 0) {
+                        const route = data.routes[0];
+                        
+                        document.getElementById('distance-text').innerHTML = `\${(route.distance / 1000).toFixed(1)} km • \${Math.round(route.duration / 60)} phút`;
+
+                        const coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                        routeLine = L.polyline(coordinates, {color: '#3B82F6', weight: 5, dashArray: '10, 10'}).addTo(map);
+
+                        // Zoom bản đồ để thấy rõ cả Shipper và Đích
+                        map.fitBounds(L.latLngBounds([lat, lng], [targetLat, targetLng]), {padding: [50, 50]});
+                    }
+                });
+            }
         </script>
 
     </body>

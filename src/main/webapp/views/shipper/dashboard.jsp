@@ -7,6 +7,7 @@
     <head>
         <meta charset="UTF-8">
         <title>ClickEat Shipper - Bảng điều khiển</title>
+        <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/assets/images/shipperlogo.png">
         <script src="https://cdn.tailwindcss.com"></script>
         <script>
             tailwind.config = {
@@ -59,9 +60,14 @@
             <div class="p-6 border-t border-gray-100 bg-white">
                 <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Vị trí hiện tại của bạn</label>
                 <div class="flex gap-2">
-                    <input type="text" id="shipper-address" placeholder="VD: Phường Diên Hồng, Pleiku..." class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-orange-500 shadow-sm">
-                    <button type="button" onclick="updateLocationFromAddress()" class="bg-blue-500 text-white px-4 py-2 rounded-xl hover:bg-blue-600 transition shadow-sm flex items-center justify-center shrink-0">
+                    <button type="button" onclick="getGPSLocation()" class="bg-blue-500 text-white px-4 py-2 rounded-xl hover:bg-blue-600 transition shadow-sm flex items-center justify-center shrink-0" title="Dùng GPS hiện tại">
                         <i class="fa-solid fa-location-crosshairs"></i>
+                    </button>
+
+                    <input type="text" id="shipper-address" placeholder="Nhập địa chỉ (VD: 12 Nguyễn Văn Linh)..." class="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-orange-500 shadow-sm">
+
+                    <button type="button" onclick="updateLocationFromAddress()" class="bg-orange-500 text-white px-4 py-2 rounded-xl hover:bg-orange-600 transition shadow-sm flex items-center justify-center shrink-0" title="Tìm tọa độ">
+                        <i class="fa-solid fa-magnifying-glass"></i>
                     </button>
                 </div>
                 <p id="location-status" class="text-xs text-gray-400 mt-2 font-medium"></p>
@@ -78,7 +84,8 @@
                         </span>
                     </div>
                     <input type="checkbox" id="toggle-online" class="sr-only peer" ${isOnline ? 'checked' : ''}>
-                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[14px] after:right-[50px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+
+                    <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
                 </label>
             </div>
         </aside>

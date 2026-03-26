@@ -115,7 +115,7 @@
                                                 </c:if>
                                             </div>
                                         </div>
-                                          </td>
+                                    </td>
                                     <td class="py-4 px-6 font-bold text-gray-900">
                                         <fmt:formatNumber value="${f.price}" type="currency" currencySymbol="đ" maxFractionDigits="0"/>
                                     </td>
@@ -136,107 +136,126 @@
                                     </td>
                                     <td class="py-4 px-6 text-right">
                                         <button onclick="openEditModal(this)"
-                                        data-id="${f.id}" data-name="${f.name}" data-price="${f.price}" data-desc="${f.description}" data-cat="${f.categoryId}" data-img="${f.imageUrl}"
-                                        class="w-10 h-10 rounded-xl bg-gray-50 text-gray-500 hover:bg-orange-50 hover:text-primary transition-colors flex items-center justify-center inline-flex">
-                                        <span class="material-symbols-outlined text-[20px]">edit</span>
-                                    </button>
-                                </td>
-                            </tr>
-                        </c:forEach>
+                                                data-id="${f.id}" data-name="${f.name}" data-price="${f.price}" data-desc="${f.description}" data-cat="${f.categoryId}" data-img="${f.imageUrl}"
+                                                class="w-10 h-10 rounded-xl bg-gray-50 text-gray-500 hover:bg-orange-50 hover:text-primary transition-colors flex items-center justify-center inline-flex">
+                                            <span class="material-symbols-outlined text-[20px]">edit</span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </c:forEach>
 
-                        <c:if test="${empty foodItems}">
-                            <tr>
-                                <td colspan="6" class="py-12 text-center text-gray-400 font-medium">Bạn chưa có món ăn nào trong thực đơn.</td>
-                            </tr>
-                        </c:if>
-                    </tbody>
-                </table>
+                            <c:if test="${empty foodItems}">
+                                <tr>
+                                    <td colspan="6" class="py-12 text-center text-gray-400 font-medium">Bạn chưa có món ăn nào trong thực đơn.</td>
+                                </tr>
+                            </c:if>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <div id="addModal" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+            <div class="bg-white rounded-[2rem] p-8 w-full max-w-lg shadow-2xl relative">
+                <button onclick="document.getElementById('addModal').classList.add('hidden')" class="absolute top-6 right-6 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors">
+                    <span class="material-symbols-outlined text-[20px]">close</span>
+                </button>
+                <h2 class="text-2xl font-black text-gray-900 mb-6 tracking-tight">Thêm món mới</h2>
+                <form action="${pageContext.request.contextPath}/merchant/catalog" method="POST" class="space-y-5">
+                    <input type="hidden" name="action" value="add">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Tên món ăn <span class="text-red-500">*</span></label>
+                        <input type="text" name="name" required class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors font-medium">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1">Giá bán (VNĐ) <span class="text-red-500">*</span></label>
+                            <input type="number" name="price" required class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors font-medium">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1">Danh mục <span class="text-red-500">*</span></label>
+                            <select name="categoryId" required class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors font-medium appearance-none">
+                                <c:forEach var="cat" items="${categories}">
+                                    <option value="${cat.id}">${cat.name}</option>
+                                </c:forEach>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Mô tả ngắn</label>
+                        <textarea name="description" rows="2" class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors font-medium"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Link Ảnh minh họa (Tạm thời)</label>
+                        <input type="text" name="imageUrl" class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors font-medium">
+                    </div>
+                    <div class="pt-2">
+                        <button type="submit" class="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3.5 rounded-xl transition-all shadow-md">Thêm món ăn</button>
+                    </div>
+                </form>
             </div>
         </div>
-    </main>
 
-    <div id="addModal" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm">
-        <div class="bg-white rounded-[2rem] p-8 w-full max-w-lg shadow-2xl relative">
-            <button onclick="document.getElementById('addModal').classList.add('hidden')" class="absolute top-6 right-6 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors">
-                <span class="material-symbols-outlined text-[20px]">close</span>
-            </button>
-            <h2 class="text-2xl font-black text-gray-900 mb-6 tracking-tight">Thêm món mới</h2>
-            <form action="${pageContext.request.contextPath}/merchant/catalog" method="POST" class="space-y-5">
-                <input type="hidden" name="action" value="add">
-                <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">Tên món ăn <span class="text-red-500">*</span></label>
-                    <input type="text" name="name" required class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors font-medium">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
+        <div id="editModal" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+            <div class="bg-white rounded-[2rem] p-8 w-full max-w-lg shadow-2xl relative">
+                <button onclick="document.getElementById('editModal').classList.add('hidden')" class="absolute top-6 right-6 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors">
+                    <span class="material-symbols-outlined text-[20px]">close</span>
+                </button>
+                <h2 class="text-2xl font-black text-gray-900 mb-6 tracking-tight">Sửa thông tin món</h2>
+                <form action="${pageContext.request.contextPath}/merchant/catalog" method="POST" class="space-y-5">
+                    <input type="hidden" name="action" value="edit">
+                    <input type="hidden" name="id" id="editId">
                     <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">Giá bán (VNĐ) <span class="text-red-500">*</span></label>
-                        <input type="number" name="price" required class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors font-medium">
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Tên món ăn <span class="text-red-500">*</span></label>
+                        <input type="text" name="name" id="editName" required class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors font-medium">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1">Giá bán (VNĐ) <span class="text-red-500">*</span></label>
+                            <input type="number" name="price" id="editPrice" required class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors font-medium">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1">Danh mục <span class="text-red-500">*</span></label>
+                            <select name="categoryId" id="editCategoryId" required class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors font-medium appearance-none">
+                                <c:forEach var="cat" items="${categories}">
+                                    <option value="${cat.id}">${cat.name}</option>
+                                </c:forEach>
+                            </select>
+                        </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">Danh mục <span class="text-red-500">*</span></label>
-                        <select name="categoryId" required class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors font-medium appearance-none">
-                            <c:forEach var="cat" items="${categories}">
-                                <option value="${cat.id}">${cat.name}</option>
-                            </c:forEach>
-                        </select>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Mô tả ngắn</label>
+                        <textarea name="description" id="editDescription" rows="2" class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors font-medium"></textarea>
                     </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">Mô tả ngắn</label>
-                    <textarea name="description" rows="2" class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors font-medium"></textarea>
-                </div>
-                <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">Link Ảnh minh họa (Tạm thời)</label>
-                    <input type="text" name="imageUrl" class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors font-medium">
-                </div>
-                <div class="pt-2">
-                    <button type="submit" class="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3.5 rounded-xl transition-all shadow-md">Thêm món ăn</button>
-                </div>
-            </form>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Link Ảnh minh họa (Tạm thời)</label>
+                        <input type="text" name="imageUrl" id="editImageUrl" class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors font-medium">
+                    </div>
+                    <div class="pt-2">
+                        <button type="submit" class="w-full bg-gray-900 hover:bg-black text-white font-bold py-3.5 rounded-xl transition-all shadow-md">Lưu thay đổi</button>
+                    </div>
+                </form>
+            </div>
         </div>
-    </div>
 
-    <div id="editModal" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm">
-        <div class="bg-white rounded-[2rem] p-8 w-full max-w-lg shadow-2xl relative">
-            <button onclick="document.getElementById('editModal').classList.add('hidden')" class="absolute top-6 right-6 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors">
-                <span class="material-symbols-outlined text-[20px]">close</span>
-            </button>
-            <h2 class="text-2xl font-black text-gray-900 mb-6 tracking-tight">Sửa thông tin món</h2>
-            <form action="${pageContext.request.contextPath}/merchant/catalog" method="POST" class="space-y-5">
-                <input type="hidden" name="action" value="edit">
-                <input type="hidden" name="id" id="editId">
-                <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">Tên món ăn <span class="text-red-500">*</span></label>
-                    <input type="text" name="name" id="editName" required class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors font-medium">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
+        <div id="addCategoryModal" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+            <div class="bg-white rounded-[2rem] p-8 w-full max-w-md shadow-2xl relative">
+                <button type="button" onclick="document.getElementById('addCategoryModal').classList.add('hidden')" class="absolute top-6 right-6 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors">
+                    <span class="material-symbols-outlined text-[20px]">close</span>
+                </button>
+                <h2 class="text-2xl font-black text-gray-900 mb-6 tracking-tight">Thêm danh mục mới</h2>
+                <form action="${pageContext.request.contextPath}/merchant/catalog" method="POST" class="space-y-5">
+                    <input type="hidden" name="action" value="add-category"/>
                     <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">Giá bán (VNĐ) <span class="text-red-500">*</span></label>
-                        <input type="number" name="price" id="editPrice" required class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors font-medium">
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Tên danh mục <span class="text-red-500">*</span></label>
+                        <input type="text" name="categoryName" required class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors font-medium" placeholder="VD: Món chính"/>
                     </div>
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">Danh mục <span class="text-red-500">*</span></label>
-                        <select name="categoryId" id="editCategoryId" required class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors font-medium appearance-none">
-                            <c:forEach var="cat" items="${categories}">
-                                <option value="${cat.id}">${cat.name}</option>
-                            </c:forEach>
-                        </select>
+                    <div class="pt-2">
+                        <button type="submit" class="w-full bg-gray-900 hover:bg-black text-white font-bold py-3.5 rounded-xl transition-all shadow-md">Lưu danh mục</button>
                     </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">Mô tả ngắn</label>
-                    <textarea name="description" id="editDescription" rows="2" class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors font-medium"></textarea>
-                </div>
-                <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-1">Link Ảnh minh họa (Tạm thời)</label>
-                    <input type="text" name="imageUrl" id="editImageUrl" class="w-full border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors font-medium">
-                </div>
-                <div class="pt-2">
-                    <button type="submit" class="w-full bg-gray-900 hover:bg-black text-white font-bold py-3.5 rounded-xl transition-all shadow-md">Lưu thay đổi</button>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
-    </div>
 
     <div id="addCategoryModal" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm">
         <div class="bg-white rounded-[2rem] p-8 w-full max-w-md shadow-2xl relative">
@@ -317,23 +336,23 @@
             function toggleAllRows(master) {
                 document.querySelectorAll('.row-check').forEach(cb => cb.checked = master.checked);
             }
-            
+
             function submitBulkToggle(isAvailable) {
                 const selected = Array.from(document.querySelectorAll('.row-check:checked'));
                 if (!selected.length) {
                     alert('Vui lòng chọn ít nhất 1 món.');
                     return;
                 }
-                
+
                 let reason = '';
                 if (!isAvailable) {
                     reason = prompt('Nhập lý do hết món cho các món đã chọn (không bắt buộc):', 'Hết món hôm nay') || '';
                 }
-                
+
                 const form = document.getElementById('bulkForm');
                 document.getElementById('bulkIsAvailable').value = isAvailable;
                 document.getElementById('bulkReason').value = reason;
-                
+
                 form.querySelectorAll('input[name="itemIds"]').forEach(el => el.remove());
                 selected.forEach(cb => {
                     const input = document.createElement('input');
