@@ -1,15 +1,19 @@
 package com.clickeat.controller.web;
 
+import java.io.IOException;
+import java.util.List;
+
 import com.clickeat.dal.impl.CartDAO;
 import com.clickeat.dal.impl.CartItemDAO;
+import com.clickeat.dal.impl.CartItemViewDAO;
 import com.clickeat.dal.impl.FoodItemDAO;
 import com.clickeat.dal.impl.GuestSessionDAO;
 import com.clickeat.model.Cart;
 import com.clickeat.model.CartItem;
+import com.clickeat.model.CartItemView;
 import com.clickeat.model.FoodItem;
 import com.clickeat.model.User;
-import java.io.IOException;
-import java.util.List;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -29,10 +33,18 @@ public class CartServlet extends HttpServlet {
         String guestId = (String) session.getAttribute("guestId");
 
         if (guestId == null || guestId.isBlank()) {
+            guestId = (String) session.getAttribute("guest_id");
+        }
+
+        if (guestId == null || guestId.isBlank()) {
             guestId = guestSessionDAO.createGuestSession();
             if (guestId != null && !guestId.isBlank()) {
                 session.setAttribute("guestId", guestId);
+                session.setAttribute("guest_id", guestId);
             }
+        } else {
+            session.setAttribute("guestId", guestId);
+            session.setAttribute("guest_id", guestId);
         }
 
         return guestId;
@@ -126,12 +138,13 @@ public class CartServlet extends HttpServlet {
                 if (cartIsEmpty) {
                     try {
                         Integer currentMerchant = cart.getMerchantUserId();
-                        if (currentMerchant == null || currentMerchant <= 0) {
+                        if (currentMerchant == null || currentMerchant.intValue() != food.getMerchantUserId()) {
                             cart.setMerchantUserId(food.getMerchantUserId());
                             cartDAO.update(cart);
                         }
                     } catch (Exception e) {
                         System.out.println("Không thể cập nhật merchant cho cart: " + e.getMessage());
+                        e.printStackTrace();
                     }
                 } else {
                     // Rule: single merchant
@@ -206,6 +219,10 @@ public class CartServlet extends HttpServlet {
                     boolean isSuccess = cartItemDAO.delete(itemId);
 
                     if (isSuccess) {
+                        List<CartItem> remainItems = cartItemDAO.getItemsByCartId(cart.getId());
+                        if (remainItems == null || remainItems.isEmpty()) {
+                            cartDAO.clearMerchant(cart.getId());
+                        }
                         session.setAttribute("toastMsg", "Đã xóa món ăn khỏi giỏ!");
                     } else {
                         session.setAttribute("toastError", "Lỗi CSDL: Không thể xóa dòng này!");
@@ -254,12 +271,13 @@ public class CartServlet extends HttpServlet {
     }
 
     // --------------------------------------------------------
-    // UPDATE (POST /cart?action=update)
+    // POST: AJAX add / AJAX remove / update
     // --------------------------------------------------------
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
+        request.setCharacterEncoding("UTF-8");
         String action = request.getParameter("action");
         if (action == null) {
             action = "";
@@ -268,14 +286,117 @@ public class CartServlet extends HttpServlet {
         HttpSession session = request.getSession();
         User account = (User) session.getAttribute("account");
 
+        CartDAO cartDAO = new CartDAO();
+        CartItemDAO cartItemDAO = new CartItemDAO();
+        GuestSessionDAO guestSessionDAO = new GuestSessionDAO();
+
+        // ---- AJAX: Add item (POST /cart action=ajax-add) ----
+        if ("ajax-add".equals(action)) {
+            response.setContentType("application/json;charset=UTF-8");
+            response.setCharacterEncoding("UTF-8");
+            FoodItemDAO foodDAO = new FoodItemDAO();
+            boolean success = false;
+            String message = "";
+            Cart cart = null;
+            try {
+                int foodId = Integer.parseInt(request.getParameter("id").trim());
+                int qty = 1;
+                try {
+                    qty = Math.max(1, Integer.parseInt(request.getParameter("qty")));
+                } catch (Exception ignored) {
+                }
+
+                FoodItem food = foodDAO.findById(foodId);
+                if (food == null) {
+                    message = "Món ăn không tồn tại.";
+                } else if (!food.isAvailable()) {
+                    message = "Món ăn tạm ngừng bán.";
+                } else {
+                    cart = getOrCreateActiveCart(session, account, cartDAO, guestSessionDAO);
+                    if (cart == null) {
+                        message = "Không thể khởi tạo giỏ hàng.";
+                    } else {
+                        List<CartItem> currentItems = cartItemDAO.getItemsByCartId(cart.getId());
+                        if (currentItems == null || currentItems.isEmpty()) {
+                            Integer cm = cart.getMerchantUserId();
+                            if (cm == null || cm.intValue() != food.getMerchantUserId()) {
+                                cart.setMerchantUserId(food.getMerchantUserId());
+                                cartDAO.update(cart);
+                            }
+                        } else {
+                            FoodItem first = foodDAO.findById(currentItems.get(0).getFoodItemId());
+                            if (first != null && first.getMerchantUserId() != food.getMerchantUserId()) {
+                                message = "Giỏ hàng chỉ chứa món từ 1 nhà hàng. Xóa giỏ cũ trước khi thêm.";
+                                cart = null;
+                            }
+                        }
+                        if (cart != null) {
+                            CartItem exist = cartItemDAO.checkItemExist(cart.getId(), foodId);
+                            boolean ok;
+                            if (exist != null) {
+                                ok = cartItemDAO.updateQuantity(exist.getId(), exist.getQuantity() + qty);
+                            } else {
+                                CartItem ni = new CartItem();
+                                ni.setCartId(cart.getId());
+                                ni.setFoodItemId(foodId);
+                                ni.setQuantity(qty);
+                                ni.setUnitPriceSnapshot(food.getPrice());
+                                ni.setNote("");
+                                ok = cartItemDAO.insert(ni) > 0;
+                            }
+                            if (ok) {
+                                success = true;
+                                message = "Đã thêm vào giỏ hàng!";
+                            } else {
+                                message = "Lỗi cơ sở dữ liệu.";
+                                cart = null;
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                message = "Lỗi: " + e.getMessage();
+            }
+            writeCartJson(response, success, message, cart);
+            return;
+        }
+
+        // ---- AJAX: Remove item (POST /cart action=ajax-remove) ----
+        if ("ajax-remove".equals(action)) {
+            response.setContentType("application/json;charset=UTF-8");
+            response.setCharacterEncoding("UTF-8");
+            boolean success = false;
+            String message = "";
+            Cart cart = null;
+            try {
+                cart = getOrCreateActiveCart(session, account, cartDAO, guestSessionDAO);
+                int itemId = Integer.parseInt(request.getParameter("itemId").trim());
+                CartItem target = cartItemDAO.findById(itemId);
+                if (target != null && cart != null && target.getCartId() == cart.getId()) {
+                    if (cartItemDAO.delete(itemId)) {
+                        List<CartItem> remain = cartItemDAO.getItemsByCartId(cart.getId());
+                        if (remain == null || remain.isEmpty()) {
+                            cartDAO.clearMerchant(cart.getId());
+                        }
+                        success = true;
+                        message = "Đã xóa món.";
+                    } else {
+                        message = "Không thể xóa món.";
+                    }
+                } else {
+                    message = "Món không thuộc giỏ hàng.";
+                }
+            } catch (Exception e) {
+                message = "Lỗi: " + e.getMessage();
+            }
+            writeCartJson(response, success, message, cart);
+            return;
+        }
+
         if (!"update".equals(action)) {
             response.sendRedirect(request.getContextPath() + "/cart?action=view");
             return;
         }
-
-        CartDAO cartDAO = new CartDAO();
-        CartItemDAO cartItemDAO = new CartItemDAO();
-        GuestSessionDAO guestSessionDAO = new GuestSessionDAO();
 
         try {
             Cart cart = getOrCreateActiveCart(session, account, cartDAO, guestSessionDAO);
@@ -292,6 +413,12 @@ public class CartServlet extends HttpServlet {
                 CartItem target = cartItemDAO.findById(cartItemId);
                 if (target != null && target.getCartId() == cart.getId()) {
                     cartItemDAO.delete(cartItemId);
+
+                    List<CartItem> remainItems = cartItemDAO.getItemsByCartId(cart.getId());
+                    if (remainItems == null || remainItems.isEmpty()) {
+                        cartDAO.clearMerchant(cart.getId());
+                    }
+
                     session.setAttribute("toastMsg", "Đã xóa món khỏi giỏ!");
                 } else {
                     session.setAttribute("toastError", "Không thể xóa món không thuộc giỏ hiện tại.");
@@ -329,5 +456,48 @@ public class CartServlet extends HttpServlet {
         }
 
         response.sendRedirect(backOrDefault(request, "/home"));
+    }
+
+    // ---- Helpers ----
+    private void writeCartJson(HttpServletResponse resp, boolean success, String message, Cart cart)
+            throws IOException {
+        int cartCount = 0;
+        double cartTotal = 0;
+        StringBuilder items = new StringBuilder("[");
+        if (cart != null) {
+            CartItemViewDAO civDAO = new CartItemViewDAO();
+            List<CartItemView> list = civDAO.getByCartId(cart.getId());
+            if (list != null) {
+                boolean first = true;
+                for (CartItemView iv : list) {
+                    cartCount += iv.getQuantity();
+                    cartTotal += iv.getLineTotal();
+                    if (!first) {
+                        items.append(",");
+                    }
+                    first = false;
+                    items.append("{\"id\":").append(iv.getCartItemId())
+                            .append(",\"name\":\"").append(escJson(iv.getName())).append("\"")
+                            .append(",\"quantity\":").append(iv.getQuantity())
+                            .append(",\"unitPrice\":").append((long) iv.getUnitPrice())
+                            .append(",\"lineTotal\":").append((long) iv.getLineTotal())
+                            .append("}");
+                }
+            }
+        }
+        items.append("]");
+        resp.getWriter().print("{\"success\":" + success
+                + ",\"message\":\"" + escJson(message) + "\""
+                + ",\"cartCount\":" + cartCount
+                + ",\"cartTotal\":" + (long) cartTotal
+                + ",\"items\":" + items + "}");
+    }
+
+    private String escJson(String s) {
+        if (s == null) {
+            return "";
+        }
+        return s.replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
     }
 }
