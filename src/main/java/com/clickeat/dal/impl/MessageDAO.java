@@ -2,7 +2,6 @@ package com.clickeat.dal.impl;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,21 +23,22 @@ public class MessageDAO extends AbstractDAO<Message> {
 
     // Lấy danh sách những người đã từng nhắn tin với Merchant
     public List<Message> getConversations(long merchantId) {
-        if (!tableExists("Messages")) {
-            return new ArrayList<>();
-        }
-
-        String sql = "SELECT DISTINCT partner_id, u.full_name, u.avatar_url, u.role, "
-                + "(SELECT TOP 1 content FROM Messages WHERE (sender_id = partner_id AND receiver_id = ?) OR (sender_id = ? AND receiver_id = partner_id) ORDER BY created_at DESC) as last_content, "
-                + "(SELECT TOP 1 created_at FROM Messages WHERE (sender_id = partner_id AND receiver_id = ?) OR (sender_id = ? AND receiver_id = partner_id) ORDER BY created_at DESC) as last_time "
-                + "FROM (SELECT sender_id as partner_id FROM Messages WHERE receiver_id = ? UNION SELECT receiver_id as partner_id FROM Messages WHERE sender_id = ?) as sub "
-                + "JOIN Users u ON sub.partner_id = u.id ORDER BY last_time DESC";
+        String sql = "SELECT DISTINCT o.customer_user_id AS partner_id, u.full_name, u.avatar_url, u.role, "
+                + "(SELECT TOP 1 content FROM Messages WHERE (sender_id = o.customer_user_id AND receiver_id = ?) OR (sender_id = ? AND receiver_id = o.customer_user_id) ORDER BY created_at DESC) as last_content, "
+                + "(SELECT TOP 1 created_at FROM Messages WHERE (sender_id = o.customer_user_id AND receiver_id = ?) OR (sender_id = ? AND receiver_id = o.customer_user_id) ORDER BY created_at DESC) as last_time "
+                + "FROM Orders o "
+                + "JOIN Users u ON u.id = o.customer_user_id "
+                + "WHERE o.merchant_user_id = ? AND o.customer_user_id IS NOT NULL "
+                + "AND o.order_status IN ('READY_FOR_PICKUP', 'DELIVERING', 'PICKED_UP') "
+                + "ORDER BY last_time DESC";
 
         List<Message> list = new ArrayList<>();
         try (java.sql.Connection conn = getConnection(); java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
-            for (int i = 1; i <= 6; i++) {
-                ps.setLong(i, merchantId);
-            }
+            ps.setLong(1, merchantId);
+            ps.setLong(2, merchantId);
+            ps.setLong(3, merchantId);
+            ps.setLong(4, merchantId);
+            ps.setLong(5, merchantId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     Message m = new Message();
@@ -52,16 +52,45 @@ public class MessageDAO extends AbstractDAO<Message> {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            return list;
         }
         return list;
     }
 
-    public List<Message> getChatHistory(long u1, long u2) {
-        if (!tableExists("Messages")) {
-            return new ArrayList<>();
+    public boolean hasActiveDeliveryWindow(long merchantId, long customerId) {
+        String sql = "SELECT TOP 1 1 FROM Orders WHERE merchant_user_id = ? AND customer_user_id = ? "
+                + "AND order_status IN ('READY_FOR_PICKUP', 'DELIVERING', 'PICKED_UP')";
+        try (java.sql.Connection conn = getConnection(); java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, merchantId);
+            ps.setLong(2, customerId);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            return false;
         }
+    }
 
+    public boolean deleteConversationBetween(long u1, long u2) {
+        String sql = "DELETE FROM Messages WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)";
+        update(sql, u1, u2, u2, u1);
+        return true;
+    }
+
+    public boolean purgeExpiredConversationsForMerchant(long merchantId) {
+        String sql = "DELETE m FROM Messages m "
+                + "WHERE (m.sender_id = ? OR m.receiver_id = ?) "
+                + "AND NOT EXISTS ("
+                + "    SELECT 1 FROM Orders o "
+                + "    WHERE o.merchant_user_id = ? "
+                + "      AND o.customer_user_id = CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END "
+                + "      AND o.order_status IN ('READY_FOR_PICKUP', 'DELIVERING', 'PICKED_UP')"
+                + ")";
+        update(sql, merchantId, merchantId, merchantId, merchantId);
+        return true;
+    }
+
+    public List<Message> getChatHistory(long u1, long u2) {
         // Luôn phải có ORDER BY created_at ASC để tin mới nhất nằm cuối danh sách
         String sql = "SELECT * FROM Messages WHERE (sender_id = ? AND receiver_id = ?) "
                 + "OR (sender_id = ? AND receiver_id = ?) "
@@ -69,77 +98,66 @@ public class MessageDAO extends AbstractDAO<Message> {
         return query(sql, u1, u2, u2, u1);
     }
 
-    public boolean saveMessage(long from, long to, String content) {
-        if (!tableExists("Messages")) {
-            return false;
-        }
+    public List<Message> getChatHistorySince(long u1, long u2, long sinceId) {
+        String sql = "SELECT * FROM Messages WHERE ((sender_id = ? AND receiver_id = ?) "
+                + "OR (sender_id = ? AND receiver_id = ?)) AND id > ? ORDER BY created_at ASC";
+        return query(sql, u1, u2, u2, u1, sinceId);
+    }
 
+    public boolean saveMessage(long from, long to, String content) {
         String sql = "INSERT INTO Messages (sender_id, receiver_id, content) VALUES (?, ?, ?)";
         return update(sql, from, to, content) > 0;
     }
 
-    public int countUnreadForMerchant(long merchantId) {
-        if (!tableExists("Messages")) {
-            return 0;
-        }
+    public Message getLatestBetween(long u1, long u2) {
+        String sql = "SELECT TOP 1 * FROM Messages WHERE (sender_id = ? AND receiver_id = ?) "
+                + "OR (sender_id = ? AND receiver_id = ?) ORDER BY id DESC";
+        return queryOne(sql, u1, u2, u2, u1);
+    }
 
-        String sql = "SELECT COUNT(*) AS unread_count FROM Messages WHERE receiver_id = ? AND is_read = 0";
+    public int countUnreadForMerchant(int merchantId) {
+        String sql = "SELECT COUNT(*) FROM Messages WHERE receiver_id = ? AND is_read = 0";
         try (java.sql.Connection conn = getConnection(); java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setLong(1, merchantId);
-            try (ResultSet rs = ps.executeQuery()) {
+            ps.setInt(1, merchantId);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return rs.getInt("unread_count");
+                    return rs.getInt(1);
                 }
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
+        } catch (Exception e) {
+            return 0;
         }
         return 0;
     }
 
-    public List<Message> getRecentNotificationsForMerchant(long merchantId, int limit) {
-        if (!tableExists("Messages")) {
-            return new ArrayList<>();
-        }
-
-        int safeLimit = Math.max(1, Math.min(limit, 50));
-        String sql = "SELECT TOP (?) m.id, m.sender_id, m.receiver_id, m.content, m.is_read, m.created_at, u.full_name AS other_party_name "
-                + "FROM Messages m "
-                + "LEFT JOIN Users u ON u.id = m.sender_id "
-                + "WHERE m.receiver_id = ? "
-                + "ORDER BY m.created_at DESC";
-
-        List<Message> items = new ArrayList<>();
+    public List<Message> getRecentNotificationsForMerchant(int merchantId, int limit) {
+        String sql = "SELECT TOP (?) m.*, u.full_name FROM Messages m LEFT JOIN Users u ON m.sender_id = u.id WHERE m.receiver_id = ? ORDER BY m.created_at DESC";
+        List<Message> list = new ArrayList<>();
         try (java.sql.Connection conn = getConnection(); java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, safeLimit);
-            ps.setLong(2, merchantId);
-            try (ResultSet rs = ps.executeQuery()) {
+            ps.setInt(1, limit);
+            ps.setInt(2, merchantId);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    Message m = new Message();
-                    m.setId(rs.getLong("id"));
-                    m.setSenderId(rs.getLong("sender_id"));
-                    m.setReceiverId(rs.getLong("receiver_id"));
-                    m.setContent(rs.getString("content"));
-                    m.setIsRead(rs.getBoolean("is_read"));
-                    Timestamp createdAt = rs.getTimestamp("created_at");
-                    m.setCreatedAt(createdAt);
-                    m.setOtherPartyName(rs.getString("other_party_name"));
-                    items.add(m);
+                    Message m = mapRow(rs);
+                    m.setOtherPartyName(rs.getString("full_name"));
+                    list.add(m);
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            return list;
         }
-        return items;
+        return list;
     }
 
-    public boolean markAllReadForMerchant(long merchantId) {
-        if (!tableExists("Messages")) {
-            return false;
-        }
-
+    public boolean markAllReadForMerchant(int merchantId) {
         String sql = "UPDATE Messages SET is_read = 1 WHERE receiver_id = ? AND is_read = 0";
         update(sql, merchantId);
+        return true;
+    }
+
+    public boolean markConversationRead(long receiverId, long senderId) {
+        String sql = "UPDATE Messages SET is_read = 1 WHERE receiver_id = ? AND sender_id = ? AND is_read = 0";
+        update(sql, receiverId, senderId);
         return true;
     }
 

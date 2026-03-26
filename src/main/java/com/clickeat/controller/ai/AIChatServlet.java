@@ -1,19 +1,24 @@
 package com.clickeat.controller.ai;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import com.clickeat.dal.impl.OrderDAO;
 import com.clickeat.model.User;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 @WebServlet(name = "AIChatServlet", urlPatterns = {"/ai"})
 public class AIChatServlet extends HttpServlet {
@@ -29,7 +34,8 @@ public class AIChatServlet extends HttpServlet {
             throws ServletException, IOException {
         User account = (User) request.getSession().getAttribute("account");
         if (account == null) {
-            response.sendRedirect(request.getContextPath() + "/login?msg=Vui lòng đăng nhập để sử dụng AI");
+            String msg = URLEncoder.encode("Vui lòng đăng nhập để sử dụng AI", StandardCharsets.UTF_8);
+            response.sendRedirect(request.getContextPath() + "/login?msg=" + msg);
             return;
         }
 

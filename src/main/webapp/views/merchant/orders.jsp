@@ -1,7 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
-<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
+<%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
 <% request.setAttribute("currentPage", "orders");%>
 <!DOCTYPE html>
 <html lang="vi" class="h-full">
@@ -122,112 +122,86 @@
                     <c:forEach var="o" items="${orders}">
                         <c:set var="normalizedStatus" value="${o.orderStatus}"/>
                         <c:if test="${o.orderStatus == 'CREATED' || o.orderStatus == 'PAID'}"><c:set var="normalizedStatus" value="PENDING"/></c:if>
-                        <c:if test="${o.orderStatus == 'MERCHANT_ACCEPTED'}"><c:set var="normalizedStatus" value="CONFIRMED"/></c:if>
-                        <c:if test="${o.orderStatus == 'MERCHANT_REJECTED' || o.orderStatus == 'FAILED'}"><c:set var="normalizedStatus" value="CANCELLED"/></c:if>
+                            <c:if test="${o.orderStatus == 'MERCHANT_ACCEPTED'}"><c:set var="normalizedStatus" value="CONFIRMED"/></c:if>
+                                <c:if test="${o.orderStatus == 'MERCHANT_REJECTED' || o.orderStatus == 'FAILED'}"><c:set var="normalizedStatus" value="CANCELLED"/></c:if>
 
-                            <div class="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 p-6 flex flex-col md:flex-row gap-6 relative overflow-hidden transition-all hover:shadow-lg">
+                                    <div class="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 p-6 flex flex-col md:flex-row gap-6 relative overflow-hidden transition-all hover:shadow-lg">
 
-                                <div class="flex-1 border-b md:border-b-0 md:border-r border-gray-100 pb-4 md:pb-0 md:pr-6">
-                                    <div class="flex justify-between items-start mb-3">
-                                        <div>
-                                            <span class="bg-gray-100 text-gray-600 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider">#${o.orderCode}</span>
-                                        <span class="ml-2 px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide ${normalizedStatus == 'DELIVERED' ? 'bg-green-100 text-green-700' : (normalizedStatus == 'CANCELLED' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700')}">${normalizedStatus}</span>
-                                        <p class="text-xs font-semibold text-gray-400 mt-2 flex items-center gap-1">
-                                            <span class="material-symbols-outlined text-[14px]">schedule</span>
-                                            <fmt:formatDate value="${o.createdAt}" pattern="HH:mm - dd/MM/yyyy"/>
-                                        </p>
+                                        <div class="flex-1 border-b md:border-b-0 md:border-r border-gray-100 pb-4 md:pb-0 md:pr-6">
+                                            <div class="flex justify-between items-start mb-3">
+                                                <div>
+                                                    <span class="bg-gray-100 text-gray-600 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider">#${o.orderCode}</span>
+                                                    <span class="ml-2 px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide ${normalizedStatus == 'DELIVERED' ? 'bg-green-100 text-green-700' : (normalizedStatus == 'CANCELLED' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700')}">${normalizedStatus}</span>
+                                                    <p class="text-xs font-semibold text-gray-400 mt-2 flex items-center gap-1">
+                                                        <span class="material-symbols-outlined text-[14px]">schedule</span>
+                                                        <fmt:formatDate value="${o.createdAt}" pattern="HH:mm - dd/MM/yyyy"/>
+                                                    </p>
+                                                </div>
+                                                <div class="text-right">
+                                                    <p class="text-2xl font-black text-primary">
+                                                        <fmt:formatNumber value="${o.totalAmount}" type="currency" currencySymbol="đ" maxFractionDigits="0"/>
+                                                    </p>
+                                                    <p class="text-xs font-bold mt-1 uppercase ${o.paymentStatus == 'PAID' ? 'text-green-500' : 'text-orange-500'}">
+                                                        ${o.paymentMethod} - ${o.paymentStatus == 'PAID' ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div class="bg-gray-50 rounded-xl p-4 mt-4">
+                                                <p class="font-bold text-gray-900 flex items-center gap-2 mb-1">
+                                                    <span class="material-symbols-outlined text-[18px] text-gray-400">person</span> ${o.receiverName}
+                                                    <span class="text-gray-400 font-normal">|</span> ${o.receiverPhone}
+                                                </p>
+                                                <p class="text-sm text-gray-600 flex items-start gap-2">
+                                                    <span class="material-symbols-outlined text-[18px] text-gray-400 mt-0.5">location_on</span>
+                                                    ${o.deliveryAddressLine}
+                                                </p>
+                                                <c:if test="${not empty o.deliveryNote}">
+                                                    <p class="text-sm text-orange-600 font-medium italic mt-2 flex items-center gap-1">
+                                                        <span class="material-symbols-outlined text-[16px]">edit_note</span> Ghi chú: "${o.deliveryNote}"
+                                                    </p>
+                                                </c:if>
+                                            </div>
+                                        </div>
+
+                                        <div class="w-full md:w-56 shrink-0 flex flex-col justify-center gap-3">
+
+                                            <c:if test="${o.orderStatus == 'CREATED' || o.orderStatus == 'PAID'}">
+                                                <button onclick="openPrepModal(${o.id})" class="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-xl shadow-md transition-colors flex items-center justify-center gap-2">
+                                                    <span class="material-symbols-outlined">check_circle</span> Nhận đơn
+                                                </button>
+                                                <button onclick="openCancelModal(${o.id})" class="w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
+                                                    <span class="material-symbols-outlined">cancel</span> Từ chối
+                                                </button>
+                                            </c:if>
+
+                                            <c:if test="${o.orderStatus == 'MERCHANT_ACCEPTED' || o.orderStatus == 'PREPARING'}">
+                                                <form action="${pageContext.request.contextPath}/merchant/orders" method="POST">
+                                                    <input type="hidden" name="action" value="ready">
+                                                    <input type="hidden" name="orderId" value="${o.id}">
+                                                    <input type="hidden" name="tab" value="${currentTab}">
+                                                    <input type="hidden" name="status" value="${statusFilter}">
+                                                    <input type="hidden" name="from" value="${fromDateTime}">
+                                                    <input type="hidden" name="to" value="${toDateTime}">
+                                                    <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl shadow-md transition-colors flex items-center justify-center gap-2">
+                                                        <span class="material-symbols-outlined">done_all</span> Xong, chờ Shipper
+                                                    </button>
+                                                </form>
+                                            </c:if>
+
+                                            <c:if test="${o.orderStatus == 'READY_FOR_PICKUP' || o.orderStatus == 'DELIVERING' || o.orderStatus == 'PICKED_UP' || o.orderStatus == 'DELIVERED' || o.orderStatus == 'CANCELLED' || o.orderStatus == 'MERCHANT_REJECTED' || o.orderStatus == 'FAILED'}">
+                                                <div class="text-center p-3 rounded-xl ${o.orderStatus == 'DELIVERED' ? 'bg-green-50 text-green-700' : (o.orderStatus == 'READY_FOR_PICKUP' ? 'bg-blue-50 text-blue-700' : 'bg-red-50 text-red-700')}">
+                                                    <p class="font-bold text-sm uppercase">
+                                                        ${o.orderStatus == 'READY_FOR_PICKUP' ? 'Đang đợi Shipper' : (o.orderStatus == 'DELIVERED' ? 'Giao thành công' : (o.orderStatus == 'DELIVERING' || o.orderStatus == 'PICKED_UP' ? 'Đang giao hàng' : 'Đã hủy'))}
+                                                    </p>
+                                                </div>
+                                            </c:if>
+
+                                            <a href="${pageContext.request.contextPath}/merchant/orders/detail?id=${o.id}" class="w-full bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-700 font-bold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2">
+                                                <span class="material-symbols-outlined text-[20px]">visibility</span> Chi tiết món
+                                            </a>
+                                        </div>
                                     </div>
-                                    <div class="text-right">
-                                        <p class="text-2xl font-black text-primary">
-                                            <fmt:formatNumber value="${o.totalAmount}" type="currency" currencySymbol="đ" maxFractionDigits="0"/>
-                                        </p>
-                                        <p class="text-xs font-bold mt-1 uppercase ${o.paymentStatus == 'PAID' ? 'text-green-500' : 'text-orange-500'}">
-                                            ${o.paymentMethod} - ${o.paymentStatus == 'PAID' ? 'Đã thanh toán' : 'Chưa thanh toán'}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div class="bg-gray-50 rounded-xl p-4 mt-4">
-                                    <p class="font-bold text-gray-900 flex items-center gap-2 mb-1">
-                                        <span class="material-symbols-outlined text-[18px] text-gray-400">person</span> ${o.receiverName}
-                                        <span class="text-gray-400 font-normal">|</span> ${o.receiverPhone}
-                                    </p>
-                                    <p class="text-sm text-gray-600 flex items-start gap-2">
-                                        <span class="material-symbols-outlined text-[18px] text-gray-400 mt-0.5">location_on</span>
-                                        ${o.deliveryAddressLine}
-                                    </p>
-                                    <c:if test="${not empty o.deliveryNote}">
-                                        <p class="text-sm text-orange-600 font-medium italic mt-2 flex items-center gap-1">
-                                            <span class="material-symbols-outlined text-[16px]">edit_note</span> Ghi chú: "${o.deliveryNote}"
-                                        </p>
-                                    </c:if>
-                                </div>
-                            </div>
-
-                            <div class="w-full md:w-56 shrink-0 flex flex-col justify-center gap-3">
-
-                                <c:if test="${o.orderStatus == 'CREATED' || o.orderStatus == 'PAID'}">
-                                    <button onclick="openPrepModal(${o.id})" class="w-full bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-xl shadow-md transition-colors flex items-center justify-center gap-2">
-                                        <span class="material-symbols-outlined">check_circle</span> Nhận đơn
-                                    </button>
-                                    <button onclick="openCancelModal(${o.id})" class="w-full bg-red-50 hover:bg-red-100 text-red-600 font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
-                                        <span class="material-symbols-outlined">cancel</span> Từ chối
-                                    </button>
-                                </c:if>
-
-                                <c:if test="${o.orderStatus == 'MERCHANT_ACCEPTED' || o.orderStatus == 'PREPARING'}">
-                                    <form action="${pageContext.request.contextPath}/merchant/orders" method="POST">
-                                        <input type="hidden" name="action" value="ready">
-                                        <input type="hidden" name="orderId" value="${o.id}">
-                                        <input type="hidden" name="tab" value="${currentTab}">
-                                        <input type="hidden" name="status" value="${statusFilter}">
-                                        <input type="hidden" name="from" value="${fromDateTime}">
-                                        <input type="hidden" name="to" value="${toDateTime}">
-                                        <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl shadow-md transition-colors flex items-center justify-center gap-2">
-                                            <span class="material-symbols-outlined">done_all</span> Xong, chờ Shipper
-                                        </button>
-                                    </form>
-                                </c:if>
-
-                                <c:if test="${o.orderStatus == 'READY_FOR_PICKUP' || o.orderStatus == 'DELIVERING' || o.orderStatus == 'PICKED_UP' || o.orderStatus == 'DELIVERED' || o.orderStatus == 'CANCELLED' || o.orderStatus == 'MERCHANT_REJECTED' || o.orderStatus == 'FAILED'}">
-                                    <div class="text-center p-3 rounded-xl ${o.orderStatus == 'DELIVERED' ? 'bg-green-50 text-green-700' : (o.orderStatus == 'READY_FOR_PICKUP' ? 'bg-blue-50 text-blue-700' : 'bg-red-50 text-red-700')}">
-                                        <p class="font-bold text-sm uppercase">
-                                            ${o.orderStatus == 'READY_FOR_PICKUP' ? 'Đang đợi Shipper' : (o.orderStatus == 'DELIVERED' ? 'Giao thành công' : (o.orderStatus == 'DELIVERING' || o.orderStatus == 'PICKED_UP' ? 'Đang giao hàng' : 'Đã hủy'))}
-                                        </p>
-                                    </div>
-                                </c:if>
-
-                                <a href="${pageContext.request.contextPath}/merchant/orders/detail?id=${o.id}" class="w-full bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-700 font-bold py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2">
-                                    <span class="material-symbols-outlined text-[20px]">visibility</span> Chi tiết món
-                                </a>
-                            </div>
-                        </div>
-                    </c:forEach>
-
-                    <c:if test="${totalPages > 1}">
-                        <div class="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
-                            <p class="text-xs text-gray-500 font-medium">Tổng ${totalOrders} đơn • Trang ${currentPageNum}/${totalPages}</p>
-                            <div class="flex items-center gap-2">
-                                <c:url var="prevPageUrl" value="/merchant/orders">
-                                    <c:param name="tab" value="${currentTab}"/>
-                                    <c:if test="${not empty statusFilter}"><c:param name="status" value="${statusFilter}"/></c:if>
-                                    <c:if test="${not empty fromDateTime}"><c:param name="from" value="${fromDateTime}"/></c:if>
-                                    <c:if test="${not empty toDateTime}"><c:param name="to" value="${toDateTime}"/></c:if>
-                                    <c:param name="page" value="${currentPageNum - 1}"/>
-                                </c:url>
-                                <a href="${currentPageNum > 1 ? prevPageUrl : '#'}" class="px-3 py-2 rounded-lg border text-sm font-bold ${currentPageNum > 1 ? 'border-gray-200 text-gray-700 hover:bg-gray-50' : 'border-gray-100 text-gray-300 pointer-events-none'}">Trước</a>
-
-                                <c:forEach begin="1" end="${totalPages}" var="p">
-                                    <c:if test="${p >= currentPageNum - 1 && p <= currentPageNum + 1}">
-                                        <c:url var="pageUrl" value="/merchant/orders">
-                                            <c:param name="tab" value="${currentTab}"/>
-                                            <c:if test="${not empty statusFilter}"><c:param name="status" value="${statusFilter}"/></c:if>
-                                            <c:if test="${not empty fromDateTime}"><c:param name="from" value="${fromDateTime}"/></c:if>
-                                            <c:if test="${not empty toDateTime}"><c:param name="to" value="${toDateTime}"/></c:if>
-                                            <c:param name="page" value="${p}"/>
-                                        </c:url>
-                                        <a href="${pageUrl}" class="w-9 h-9 rounded-lg text-sm font-bold flex items-center justify-center ${p == currentPageNum ? 'bg-primary text-white' : 'border border-gray-200 text-gray-700 hover:bg-gray-50'}">${p}</a>
-                                    </c:if>
                                 </c:forEach>
 
                                 <c:if test="${totalPages > 1}">
@@ -237,184 +211,210 @@
                                             <c:url var="prevPageUrl" value="/merchant/orders">
                                                 <c:param name="tab" value="${currentTab}"/>
                                                 <c:if test="${not empty statusFilter}"><c:param name="status" value="${statusFilter}"/></c:if>
-                                                <c:if test="${not empty fromDateTime}"><c:param name="from" value="${fromDateTime}"/></c:if>
-                                                <c:if test="${not empty toDateTime}"><c:param name="to" value="${toDateTime}"/></c:if>
-                                                <c:param name="page" value="${currentPageNum - 1}"/>
-                                            </c:url>
-                                            <a href="${currentPageNum > 1 ? prevPageUrl : '#'}" class="px-3 py-2 rounded-lg border text-sm font-bold ${currentPageNum > 1 ? 'border-gray-200 text-gray-700 hover:bg-gray-50' : 'border-gray-100 text-gray-300 pointer-events-none'}">Trước</a>
-
-                                            <c:forEach begin="1" end="${totalPages}" var="p">
-                                                <c:if test="${p >= currentPageNum - 1 && p <= currentPageNum + 1}">
-                                                    <c:url var="pageUrl" value="/merchant/orders">
-                                                        <c:param name="tab" value="${currentTab}"/>
-                                                        <c:if test="${not empty statusFilter}"><c:param name="status" value="${statusFilter}"/></c:if>
-                                                        <c:if test="${not empty fromDateTime}"><c:param name="from" value="${fromDateTime}"/></c:if>
+                                                    <c:if test="${not empty fromDateTime}"><c:param name="from" value="${fromDateTime}"/></c:if>
                                                         <c:if test="${not empty toDateTime}"><c:param name="to" value="${toDateTime}"/></c:if>
-                                                        <c:param name="page" value="${p}"/>
-                                                    </c:url>
-                                                    <a href="${pageUrl}" class="w-9 h-9 rounded-lg text-sm font-bold flex items-center justify-center ${p == currentPageNum ? 'bg-primary text-white' : 'border border-gray-200 text-gray-700 hover:bg-gray-50'}">${p}</a>
-                                                </c:if>
-                                            </c:forEach>
+                                                            <c:param name="page" value="${currentPageNum - 1}"/>
+                                                        </c:url>
+                                                        <a href="${currentPageNum > 1 ? prevPageUrl : '#'}" class="px-3 py-2 rounded-lg border text-sm font-bold ${currentPageNum > 1 ? 'border-gray-200 text-gray-700 hover:bg-gray-50' : 'border-gray-100 text-gray-300 pointer-events-none'}">Trước</a>
 
-                                            <c:url var="nextPageUrl" value="/merchant/orders">
-                                                <c:param name="tab" value="${currentTab}"/>
-                                                <c:if test="${not empty statusFilter}"><c:param name="status" value="${statusFilter}"/></c:if>
-                                                <c:if test="${not empty fromDateTime}"><c:param name="from" value="${fromDateTime}"/></c:if>
-                                                <c:if test="${not empty toDateTime}"><c:param name="to" value="${toDateTime}"/></c:if>
-                                                <c:param name="page" value="${currentPageNum + 1}"/>
-                                            </c:url>
-                                            <a href="${currentPageNum < totalPages ? nextPageUrl : '#'}" class="px-3 py-2 rounded-lg border text-sm font-bold ${currentPageNum < totalPages ? 'border-gray-200 text-gray-700 hover:bg-gray-50' : 'border-gray-100 text-gray-300 pointer-events-none'}">Sau</a>
-                                        </div>
-                                    </div>
-                                </c:if>
+                                                        <c:forEach begin="1" end="${totalPages}" var="p">
+                                                            <c:if test="${p >= currentPageNum - 1 && p <= currentPageNum + 1}">
+                                                                <c:url var="pageUrl" value="/merchant/orders">
+                                                                    <c:param name="tab" value="${currentTab}"/>
+                                                                    <c:if test="${not empty statusFilter}"><c:param name="status" value="${statusFilter}"/></c:if>
+                                                                        <c:if test="${not empty fromDateTime}"><c:param name="from" value="${fromDateTime}"/></c:if>
+                                                                            <c:if test="${not empty toDateTime}"><c:param name="to" value="${toDateTime}"/></c:if>
+                                                                                <c:param name="page" value="${p}"/>
+                                                                            </c:url>
+                                                                            <a href="${pageUrl}" class="w-9 h-9 rounded-lg text-sm font-bold flex items-center justify-center ${p == currentPageNum ? 'bg-primary text-white' : 'border border-gray-200 text-gray-700 hover:bg-gray-50'}">${p}</a>
+                                                                        </c:if>
+                                                                    </c:forEach>
 
-                            </div>
-                        </div>
-                    </c:if>
+                                                                    <c:if test="${totalPages > 1}">
+                                                                        <div class="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
+                                                                            <p class="text-xs text-gray-500 font-medium">Tổng ${totalOrders} đơn • Trang ${currentPageNum}/${totalPages}</p>
+                                                                            <div class="flex items-center gap-2">
+                                                                                <c:url var="prevPageUrl" value="/merchant/orders">
+                                                                                    <c:param name="tab" value="${currentTab}"/>
+                                                                                    <c:if test="${not empty statusFilter}"><c:param name="status" value="${statusFilter}"/></c:if>
+                                                                                        <c:if test="${not empty fromDateTime}"><c:param name="from" value="${fromDateTime}"/></c:if>
+                                                                                            <c:if test="${not empty toDateTime}"><c:param name="to" value="${toDateTime}"/></c:if>
+                                                                                                <c:param name="page" value="${currentPageNum - 1}"/>
+                                                                                            </c:url>
+                                                                                            <a href="${currentPageNum > 1 ? prevPageUrl : '#'}" class="px-3 py-2 rounded-lg border text-sm font-bold ${currentPageNum > 1 ? 'border-gray-200 text-gray-700 hover:bg-gray-50' : 'border-gray-100 text-gray-300 pointer-events-none'}">Trước</a>
 
-                </div>
-            </div>
-        </main>
+                                                                                            <c:forEach begin="1" end="${totalPages}" var="p">
+                                                                                                <c:if test="${p >= currentPageNum - 1 && p <= currentPageNum + 1}">
+                                                                                                    <c:url var="pageUrl" value="/merchant/orders">
+                                                                                                        <c:param name="tab" value="${currentTab}"/>
+                                                                                                        <c:if test="${not empty statusFilter}"><c:param name="status" value="${statusFilter}"/></c:if>
+                                                                                                            <c:if test="${not empty fromDateTime}"><c:param name="from" value="${fromDateTime}"/></c:if>
+                                                                                                                <c:if test="${not empty toDateTime}"><c:param name="to" value="${toDateTime}"/></c:if>
+                                                                                                                    <c:param name="page" value="${p}"/>
+                                                                                                                </c:url>
+                                                                                                                <a href="${pageUrl}" class="w-9 h-9 rounded-lg text-sm font-bold flex items-center justify-center ${p == currentPageNum ? 'bg-primary text-white' : 'border border-gray-200 text-gray-700 hover:bg-gray-50'}">${p}</a>
+                                                                                                            </c:if>
+                                                                                                        </c:forEach>
 
-        <div id="prepModal" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm">
-            <div class="bg-white rounded-[2rem] p-8 w-full max-w-sm shadow-2xl relative text-center">
-                <button onclick="closePrepModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-                <div class="w-16 h-16 bg-orange-100 text-primary rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
-                    <span class="material-symbols-outlined text-[32px]">skillet</span>
-                </div>
-                <h3 class="text-xl font-bold text-gray-900 mb-2">Nhận đơn hàng</h3>
-                <p class="text-gray-500 mb-6 text-sm">Xác nhận bắt đầu chuẩn bị món ăn?</p>
+                                                                                                        <c:url var="nextPageUrl" value="/merchant/orders">
+                                                                                                            <c:param name="tab" value="${currentTab}"/>
+                                                                                                            <c:if test="${not empty statusFilter}"><c:param name="status" value="${statusFilter}"/></c:if>
+                                                                                                                <c:if test="${not empty fromDateTime}"><c:param name="from" value="${fromDateTime}"/></c:if>
+                                                                                                                    <c:if test="${not empty toDateTime}"><c:param name="to" value="${toDateTime}"/></c:if>
+                                                                                                                        <c:param name="page" value="${currentPageNum + 1}"/>
+                                                                                                                    </c:url>
+                                                                                                                    <a href="${currentPageNum < totalPages ? nextPageUrl : '#'}" class="px-3 py-2 rounded-lg border text-sm font-bold ${currentPageNum < totalPages ? 'border-gray-200 text-gray-700 hover:bg-gray-50' : 'border-gray-100 text-gray-300 pointer-events-none'}">Sau</a>
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                        </c:if>
 
-                <form action="${pageContext.request.contextPath}/merchant/orders" method="POST">
-                    <input type="hidden" name="action" value="accept">
-                    <input type="hidden" name="orderId" id="prepOrderIdInput">
-                    <input type="hidden" name="tab" value="${currentTab}">
-                    <input type="hidden" name="status" value="${statusFilter}">
-                    <input type="hidden" name="from" value="${fromDateTime}">
-                    <input type="hidden" name="to" value="${toDateTime}">
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </c:if>
 
-                    <div class="flex gap-3">
-                        <button type="button" onclick="closePrepModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition-colors">Hủy</button>
-                        <button type="submit" class="flex-1 bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-xl transition-colors shadow-md">Xác nhận</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </main>
 
-        <div id="cancelModal" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm">
-            <div class="bg-white rounded-[2rem] p-8 w-full max-w-md shadow-2xl relative text-center">
-                <button onclick="closeCancelModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-                <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
-                    <span class="material-symbols-outlined text-[32px]">warning</span>
-                </div>
-                <h3 class="text-xl font-bold text-gray-900 mb-2">Từ chối đơn hàng</h3>
-                <p class="text-gray-500 mb-6 text-sm">Vui lòng chọn lý do từ chối để thông báo cho khách hàng.</p>
+                                                                                <div id="prepModal" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+                                                                                    <div class="bg-white rounded-[2rem] p-8 w-full max-w-sm shadow-2xl relative text-center">
+                                                                                        <button onclick="closePrepModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
+                                                                                            <span class="material-symbols-outlined">close</span>
+                                                                                        </button>
+                                                                                        <div class="w-16 h-16 bg-orange-100 text-primary rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+                                                                                            <span class="material-symbols-outlined text-[32px]">skillet</span>
+                                                                                        </div>
+                                                                                        <h3 class="text-xl font-bold text-gray-900 mb-2">Nhận đơn hàng</h3>
+                                                                                        <p class="text-gray-500 mb-6 text-sm">Xác nhận bắt đầu chuẩn bị món ăn?</p>
 
-                <form action="${pageContext.request.contextPath}/merchant/orders" method="POST" id="cancelForm">
-                    <input type="hidden" name="action" value="cancel">
-                    <input type="hidden" name="orderId" id="cancelOrderIdInput">
-                    <input type="hidden" name="tab" value="${currentTab}">
-                    <input type="hidden" name="status" value="${statusFilter}">
-                    <input type="hidden" name="from" value="${fromDateTime}">
-                    <input type="hidden" name="to" value="${toDateTime}">
-                    <input type="hidden" name="cancelReason" id="cancelReasonInput">
+                                                                                        <form action="${pageContext.request.contextPath}/merchant/orders" method="POST">
+                                                                                            <input type="hidden" name="action" value="accept">
+                                                                                            <input type="hidden" name="orderId" id="prepOrderIdInput">
+                                                                                            <input type="hidden" name="tab" value="${currentTab}">
+                                                                                            <input type="hidden" name="status" value="${statusFilter}">
+                                                                                            <input type="hidden" name="from" value="${fromDateTime}">
+                                                                                            <input type="hidden" name="to" value="${toDateTime}">
 
-                    <div class="space-y-2 mb-8">
-                        <button type="button" onclick="selectReason('Hết món', this)" class="cancel-reason-btn w-full text-left px-4 py-3 rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors">Hết món trong đơn</button>
-                        <button type="button" onclick="selectReason('Quán quá tải', this)" class="cancel-reason-btn w-full text-left px-4 py-3 rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors">Quán đang quá tải</button>
-                        <button type="button" onclick="selectReason('Sắp đóng cửa', this)" class="cancel-reason-btn w-full text-left px-4 py-3 rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors">Chuẩn bị đóng cửa</button>
-                    </div>
+                                                                                            <div class="flex gap-3">
+                                                                                                <button type="button" onclick="closePrepModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition-colors">Hủy</button>
+                                                                                                <button type="submit" class="flex-1 bg-primary hover:bg-primary-dark text-white font-bold py-3 rounded-xl transition-colors shadow-md">Xác nhận</button>
+                                                                                            </div>
+                                                                                        </form>
+                                                                                    </div>
+                                                                                </div>
 
-                    <div class="flex gap-3">
-                        <button type="button" onclick="closeCancelModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition-colors">Quay lại</button>
-                        <button type="button" onclick="submitCancel()" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl transition-colors shadow-md">Từ chối đơn</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+                                                                                <div id="cancelModal" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+                                                                                    <div class="bg-white rounded-[2rem] p-8 w-full max-w-md shadow-2xl relative text-center">
+                                                                                        <button onclick="closeCancelModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600">
+                                                                                            <span class="material-symbols-outlined">close</span>
+                                                                                        </button>
+                                                                                        <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">
+                                                                                            <span class="material-symbols-outlined text-[32px]">warning</span>
+                                                                                        </div>
+                                                                                        <h3 class="text-xl font-bold text-gray-900 mb-2">Từ chối đơn hàng</h3>
+                                                                                        <p class="text-gray-500 mb-6 text-sm">Vui lòng chọn lý do từ chối để thông báo cho khách hàng.</p>
 
-        <script>
-            // Xử lý Modal Nhận đơn
-            function openPrepModal(orderId) {
-                document.getElementById('prepOrderIdInput').value = orderId;
-                const m = document.getElementById('prepModal');
-                m.classList.remove('hidden');
-                m.classList.add('flex');
-            }
-            function closePrepModal() {
-                const m = document.getElementById('prepModal');
-                m.classList.add('hidden');
-                m.classList.remove('flex');
-            }
+                                                                                        <form action="${pageContext.request.contextPath}/merchant/orders" method="POST" id="cancelForm">
+                                                                                            <input type="hidden" name="action" value="cancel">
+                                                                                            <input type="hidden" name="orderId" id="cancelOrderIdInput">
+                                                                                            <input type="hidden" name="tab" value="${currentTab}">
+                                                                                            <input type="hidden" name="status" value="${statusFilter}">
+                                                                                            <input type="hidden" name="from" value="${fromDateTime}">
+                                                                                            <input type="hidden" name="to" value="${toDateTime}">
+                                                                                            <input type="hidden" name="cancelReason" id="cancelReasonInput">
 
-            // Xử lý Modal Hủy đơn
-            function openCancelModal(orderId) {
-                document.getElementById('cancelOrderIdInput').value = orderId;
-                const m = document.getElementById('cancelModal');
-                m.classList.remove('hidden');
-                m.classList.add('flex');
-            }
-            function closeCancelModal() {
-                const m = document.getElementById('cancelModal');
-                m.classList.add('hidden');
-                m.classList.remove('flex');
-            }
-            function selectReason(reason, btn) {
-                document.getElementById('cancelReasonInput').value = reason;
-                document.querySelectorAll('.cancel-reason-btn').forEach(b => {
-                    b.classList.remove('border-red-400', 'bg-red-50', 'text-red-700');
-                    b.classList.add('border-gray-200', 'text-gray-700');
-                });
-                btn.classList.add('border-red-400', 'bg-red-50', 'text-red-700');
-                btn.classList.remove('border-gray-200', 'text-gray-700');
-            }
-            function submitCancel() {
-                if (!document.getElementById('cancelReasonInput').value) {
-                    alert("Vui lòng chọn 1 lý do từ chối!");
-                    return;
-                }
-                document.getElementById('cancelForm').submit();
-            }
+                                                                                            <div class="space-y-2 mb-8">
+                                                                                                <button type="button" onclick="selectReason('Hết món', this)" class="cancel-reason-btn w-full text-left px-4 py-3 rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors">Hết món trong đơn</button>
+                                                                                                <button type="button" onclick="selectReason('Quán quá tải', this)" class="cancel-reason-btn w-full text-left px-4 py-3 rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors">Quán đang quá tải</button>
+                                                                                                <button type="button" onclick="selectReason('Sắp đóng cửa', this)" class="cancel-reason-btn w-full text-left px-4 py-3 rounded-xl border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors">Chuẩn bị đóng cửa</button>
+                                                                                            </div>
 
-            // Hiệu ứng nháy Title khi có đơn mới & Đồng hồ 30s
-            const newOrderSpan = document.getElementById('newOrderCount');
-            const NEW_ORDER_COUNT = newOrderSpan ? parseInt(newOrderSpan.textContent) : 0;
-            const PREV_KEY = 'clickeat_merchant_prev_orders';
-            const prevCount = parseInt(localStorage.getItem(PREV_KEY) || '0');
+                                                                                            <div class="flex gap-3">
+                                                                                                <button type="button" onclick="closeCancelModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl transition-colors">Quay lại</button>
+                                                                                                <button type="button" onclick="submitCancel()" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl transition-colors shadow-md">Từ chối đơn</button>
+                                                                                            </div>
+                                                                                        </form>
+                                                                                    </div>
+                                                                                </div>
 
-            if (NEW_ORDER_COUNT > prevCount) {
-                let flash = true;
-                const origTitle = document.title;
-                const flashInterval = setInterval(() => {
-                    document.title = flash ? '🔔 ' + NEW_ORDER_COUNT + ' Đơn mới!' : origTitle;
-                    flash = !flash;
-                }, 800);
-                setTimeout(() => {
-                    clearInterval(flashInterval);
-                    document.title = origTitle;
-                }, 10000);
-            }
-            localStorage.setItem(PREV_KEY, NEW_ORDER_COUNT);
-
-            // Auto Refresh tránh lúc đang mở Modal
-            let countdown = 30;
-            const timerEl = document.getElementById('refreshTimer');
-            setInterval(() => {
-                const anyModalOpen = !document.getElementById('cancelModal').classList.contains('hidden')
-                        || !document.getElementById('prepModal').classList.contains('hidden');
-                if (anyModalOpen)
-                    return;
-                countdown--;
-                if (countdown <= 0) {
-                    location.reload();
-                    return;
-                }
-                timerEl.textContent = 'Tự động làm mới sau ' + countdown + 's';
-            }, 1000);
-        </script>
-    </body>
-</html>
+                                                                                <script>
+                                                                                    // Xử lý Modal Nhận đơn
+                                                                                    function openPrepModal(orderId) {
+                                                                                        document.getElementById('prepOrderIdInput').value = orderId;
+                                                                                        const m = document.getElementById('prepModal');
+                                                                                        m.classList.remove('hidden');
+                                                                                        m.classList.add('flex');
+                                                                                    }
+                                                                                    function closePrepModal() {
+                                                                                        const m = document.getElementById('prepModal');
+                                                                                        m.classList.add('hidden');
+                                                                                        m.classList.remove('flex');
+                                                                                    }
+                                                                                    
+                                                                                    // Xử lý Modal Hủy đơn
+                                                                                    function openCancelModal(orderId) {
+                                                                                        document.getElementById('cancelOrderIdInput').value = orderId;
+                                                                                        const m = document.getElementById('cancelModal');
+                                                                                        m.classList.remove('hidden');
+                                                                                        m.classList.add('flex');
+                                                                                    }
+                                                                                    function closeCancelModal() {
+                                                                                        const m = document.getElementById('cancelModal');
+                                                                                        m.classList.add('hidden');
+                                                                                        m.classList.remove('flex');
+                                                                                    }
+                                                                                    function selectReason(reason, btn) {
+                                                                                        document.getElementById('cancelReasonInput').value = reason;
+                                                                                        document.querySelectorAll('.cancel-reason-btn').forEach(b => {
+                                                                                            b.classList.remove('border-red-400', 'bg-red-50', 'text-red-700');
+                                                                                            b.classList.add('border-gray-200', 'text-gray-700');
+                                                                                        });
+                                                                                        btn.classList.add('border-red-400', 'bg-red-50', 'text-red-700');
+                                                                                        btn.classList.remove('border-gray-200', 'text-gray-700');
+                                                                                    }
+                                                                                    function submitCancel() {
+                                                                                        if (!document.getElementById('cancelReasonInput').value) {
+                                                                                            alert("Vui lòng chọn 1 lý do từ chối!");
+                                                                                            return;
+                                                                                        }
+                                                                                        document.getElementById('cancelForm').submit();
+                                                                                    }
+                                                                                    
+                                                                                    // Hiệu ứng nháy Title khi có đơn mới & Đồng hồ 30s
+                                                                                    const newOrderSpan = document.getElementById('newOrderCount');
+                                                                                    const NEW_ORDER_COUNT = newOrderSpan ? parseInt(newOrderSpan.textContent) : 0;
+                                                                                    const PREV_KEY = 'clickeat_merchant_prev_orders';
+                                                                                    const prevCount = parseInt(localStorage.getItem(PREV_KEY) || '0');
+                                                                                    
+                                                                                    if (NEW_ORDER_COUNT > prevCount) {
+                                                                                        let flash = true;
+                                                                                        const origTitle = document.title;
+                                                                                        const flashInterval = setInterval(() => {
+                                                                                            document.title = flash ? '🔔 ' + NEW_ORDER_COUNT + ' Đơn mới!' : origTitle;
+                                                                                            flash = !flash;
+                                                                                        }, 800);
+                                                                                        setTimeout(() => {
+                                                                                            clearInterval(flashInterval);
+                                                                                            document.title = origTitle;
+                                                                                        }, 10000);
+                                                                                    }
+                                                                                    localStorage.setItem(PREV_KEY, NEW_ORDER_COUNT);
+                                                                                    
+                                                                                    // Auto Refresh tránh lúc đang mở Modal
+                                                                                    let countdown = 30;
+                                                                                    const timerEl = document.getElementById('refreshTimer');
+                                                                                    setInterval(() => {
+                                                                                        const anyModalOpen = !document.getElementById('cancelModal').classList.contains('hidden')
+                                                                                        || !document.getElementById('prepModal').classList.contains('hidden');
+                                                                                        if (anyModalOpen)
+                                                                                        return;
+                                                                                        countdown--;
+                                                                                        if (countdown <= 0) {
+                                                                                            location.reload();
+                                                                                            return;
+                                                                                        }
+                                                                                        timerEl.textContent = 'Tự động làm mới sau ' + countdown + 's';
+                                                                                    }, 1000);
+                                                                                </script>
+                                                                            </body>
+                                                                        </html>

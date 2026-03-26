@@ -85,4 +85,30 @@ public class CustomerProfileDAO extends AbstractDAO<CustomerProfile> {
     public CustomerProfile findById(int id) {
         throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
     }
+
+    public boolean setDefaultAddressId(int userId, Integer addressId) {
+        String sql = """
+        UPDATE CustomerProfiles
+        SET default_address_id = ?,
+            updated_at = SYSUTCDATETIME()
+        WHERE user_id = ?
+    """;
+        return update(sql, addressId, userId) > 0;
+    }
+
+    public Integer getDefaultAddressId(int userId) {
+        String sql = "SELECT default_address_id FROM CustomerProfiles WHERE user_id = ?";
+        try (java.sql.Connection conn = getConnection(); java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    Object val = rs.getObject(1);
+                    return val == null ? null : rs.getInt(1);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 }

@@ -4,7 +4,10 @@
  */
 package com.clickeat.controller.auth;
 
+import com.clickeat.dal.impl.AddressDAO;
+import com.clickeat.dal.impl.CustomerProfileDAO;
 import com.clickeat.dal.impl.UserDAO;
+import com.clickeat.model.Address;
 import com.clickeat.model.User;
 import java.io.IOException;
 import jakarta.servlet.ServletException;
@@ -32,63 +35,27 @@ public class RegisterServlet extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
 
         // 1. Lấy dữ liệu từ JSP và trim khoảng trắng
-        String fullName = request.getParameter("fullName");
-        if (fullName != null) {
-            fullName = fullName.trim();
-        }
+        String fullName = trim(request.getParameter("fullName"));
+        String email = trim(request.getParameter("email"));
+        String phone = trim(request.getParameter("phone"));
+        String password = trim(request.getParameter("password"));
+        String confirmPassword = trim(request.getParameter("confirmPassword"));
 
-        String email = request.getParameter("email");
-        if (email != null) {
-            email = email.trim();
-        }
+        // Thông tin địa chỉ / người nhận
+        String receiverName = trim(request.getParameter("receiverName"));
+        String receiverPhone = trim(request.getParameter("receiverPhone"));
+        String addressLine = trim(request.getParameter("addressLine"));
 
-        String phone = request.getParameter("phone");
-        if (phone != null) {
-            phone = phone.trim();
-        }
+        String provinceCode = trim(request.getParameter("provinceName"));
+        String districtCode = trim(request.getParameter("districtName"));
+        String wardCode = trim(request.getParameter("wardName"));
 
-        String password = request.getParameter("password");
-        if (password != null) {
-            password = password.trim();
-        }
+        String provinceName = trim(request.getParameter("provinceNameText"));
+        String districtName = trim(request.getParameter("districtNameText"));
+        String wardName = trim(request.getParameter("wardNameText"));
 
-        String confirmPassword = request.getParameter("confirmPassword");
-        if (confirmPassword != null) {
-            confirmPassword = confirmPassword.trim();
-        }
-
-        // 2. Validate dữ liệu bắt buộc
-        if (fullName == null || fullName.isEmpty()
-                || email == null || email.isEmpty()
-                || phone == null || phone.isEmpty()
-                || password == null || password.isEmpty()
-                || confirmPassword == null || confirmPassword.isEmpty()) {
-            request.setAttribute("error", "Vui lòng nhập đầy đủ thông tin!");
-            request.getRequestDispatcher("views/web/register.jsp").forward(request, response);
-            return;
-        }
-
-        // Validate đơn giản theo format chung
-        if (!email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$")) {
-            request.setAttribute("error", "Email không đúng định dạng!");
-            request.getRequestDispatcher("views/web/register.jsp").forward(request, response);
-            return;
-        }
-
-        if (!phone.matches("^0\\d{9,10}$")) {
-            request.setAttribute("error", "Số điện thoại không đúng định dạng!");
-            request.getRequestDispatcher("views/web/register.jsp").forward(request, response);
-            return;
-        }
-
-        if (password.length() < 6) {
-            request.setAttribute("error", "Mật khẩu phải có ít nhất 6 ký tự!");
-            request.getRequestDispatcher("views/web/register.jsp").forward(request, response);
-            return;
-        }
-
-        // 3. Kiểm tra mật khẩu khớp nhau
-        if (!password.equals(confirmPassword)) {
+        // 2. Kiểm tra mật khẩu khớp nhau
+        if (password == null || !password.equals(confirmPassword)) {
             request.setAttribute("error", "Mật khẩu xác nhận không khớp!");
             request.getRequestDispatcher("views/web/register.jsp").forward(request, response);
             return;
@@ -96,7 +63,7 @@ public class RegisterServlet extends HttpServlet {
 
         UserDAO userDAO = new UserDAO();
 
-        // 4. Kiểm tra trùng lặp (Logic DAO bạn đã viết sẵn)
+        // 3. Kiểm tra trùng lặp
         if (userDAO.checkPhoneExist(phone)) {
             request.setAttribute("error", "Số điện thoại này đã được đăng ký!");
             request.getRequestDispatcher("views/web/register.jsp").forward(request, response);
@@ -109,25 +76,70 @@ public class RegisterServlet extends HttpServlet {
             return;
         }
 
-        // 5. Tạo Object User và lưu xuống DB
+        // 4. Tạo User và lưu xuống DB
         User newUser = new User();
         newUser.setFullName(fullName);
         newUser.setEmail(email);
         newUser.setPhone(phone);
-        newUser.setPasswordHash(password); // Lưu ý: Thực tế chỗ này cần mã hóa MD5/BCrypt
-        newUser.setRole("CUSTOMER");       // Mặc định đăng ký mới là Khách hàng
+        newUser.setPasswordHash(password); // Sau này nên hash
+        newUser.setRole("CUSTOMER");
 
         int newId = userDAO.insert(newUser);
 
-        // 6. Kiểm tra kết quả
-        if (newId > 0) {
-            // Đăng ký thành công, đẩy về trang Login kèm thông báo
-            request.setAttribute("message", "Đăng ký thành công! Vui lòng đăng nhập.");
-            request.getRequestDispatcher("views/web/login.jsp").forward(request, response);
-        } else {
-            // Lỗi hệ thống/DB
+        // 5. Kiểm tra kết quả user insert
+        if (newId <= 0) {
             request.setAttribute("error", "Lỗi hệ thống, vui lòng thử lại sau!");
             request.getRequestDispatcher("views/web/register.jsp").forward(request, response);
+            return;
         }
+
+        // 6. Tạo CustomerProfile nếu chưa có
+        CustomerProfileDAO customerProfileDAO = new CustomerProfileDAO();
+        customerProfileDAO.ensureExists(newId);
+
+        // 7. Nếu người dùng có nhập địa chỉ thì lưu vào Addresses
+        boolean hasAddress = notBlank(addressLine)
+                && notBlank(provinceCode)
+                && notBlank(districtCode)
+                && notBlank(wardCode)
+                && notBlank(provinceName)
+                && notBlank(districtName)
+                && notBlank(wardName);
+
+        if (hasAddress) {
+            AddressDAO addressDAO = new AddressDAO();
+
+            Address address = new Address();
+            address.setUserId(newId);
+            address.setReceiverName(notBlank(receiverName) ? receiverName : fullName);
+            address.setReceiverPhone(notBlank(receiverPhone) ? receiverPhone : phone);
+            address.setAddressLine(addressLine);
+            address.setProvinceCode(provinceCode);
+            address.setProvinceName(provinceName);
+            address.setDistrictCode(districtCode);
+            address.setDistrictName(districtName);
+            address.setWardCode(wardCode);
+            address.setWardName(wardName);
+            address.setIsDefault(true);
+            address.setNote(null);
+
+            int addressId = addressDAO.insert(address);
+
+            if (addressId > 0) {
+                customerProfileDAO.setDefaultAddressId(newId, addressId);
+            }
+        }
+
+        // 8. Đăng ký thành công
+        request.setAttribute("message", "Đăng ký thành công! Vui lòng đăng nhập.");
+        request.getRequestDispatcher("views/web/login.jsp").forward(request, response);
+    }
+
+    private String trim(String value) {
+        return value == null ? null : value.trim();
+    }
+
+    private boolean notBlank(String value) {
+        return value != null && !value.isBlank();
     }
 }

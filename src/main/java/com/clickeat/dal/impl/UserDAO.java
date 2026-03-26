@@ -188,6 +188,16 @@ public class UserDAO extends AbstractDAO<User> implements IUserDAO {
         return queryOne(sql, email);
     }
 
+    public User findByPhoneAnyStatus(String phone) {
+        String sql = "SELECT * FROM Users WHERE phone = ?";
+        return queryOne(sql, phone);
+    }
+
+    public User findByEmailAnyStatus(String email) {
+        String sql = "SELECT * FROM Users WHERE email = ?";
+        return queryOne(sql, email);
+    }
+
     public User findByGoogleSub(String sub) {
         String sql = "SELECT u.* FROM Users u JOIN UserAuthProviders p ON p.user_id = u.id WHERE p.provider = 'GOOGLE' AND p.provider_user_id = ? AND u.status = 'ACTIVE'";
         return queryOne(sql, sub);
@@ -237,6 +247,16 @@ public class UserDAO extends AbstractDAO<User> implements IUserDAO {
     public void createCustomerProfile(long userId, String food, String allergies, String goal, Integer dailyCal) {
         String sql = "INSERT INTO CustomerProfiles(user_id, food_preferences, allergies, health_goal, daily_calorie_target) VALUES(?, ?, ?, ?, ?)";
         update(sql, userId, food, allergies, goal, dailyCal);
+    }
+
+    public boolean reactivateMerchantForReapply(int userId, String fullName, String email, String phone, String passwordHash) {
+        String sql = "UPDATE Users SET full_name = ?, email = ?, phone = ?, password_hash = ?, role = 'MERCHANT', status = 'ACTIVE', updated_at = GETDATE() WHERE id = ?";
+        return update(sql, fullName, email, phone, passwordHash, userId) > 0;
+    }
+
+    public boolean deleteHard(int userId) {
+        String sql = "DELETE FROM Users WHERE id = ?";
+        return update(sql, userId) > 0;
     }
 
     private Integer queryInt(String sql, Object... params) {

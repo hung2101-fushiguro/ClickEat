@@ -1,7 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
-<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
+<%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
 <% request.setAttribute("currentPage", "reviews");%>
 <!DOCTYPE html>
 <html lang="vi">
@@ -172,15 +172,15 @@
                 <p class="text-sm text-gray-500 font-semibold">Hiển thị ${fn:length(reviews)} / ${filteredTotal} đánh giá</p>
                 <div class="flex items-center gap-2">
                     <a href="${pageContext.request.contextPath}/merchant/reviews?filter=${filter}&page=${currentPageNum > 1 ? currentPageNum - 1 : 1}"
-                       class="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-semibold ${currentPageNum > 1 ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-300 pointer-events-none'}">Trước</a>
-                    <span class="text-sm font-bold text-gray-700">Trang ${currentPageNum}/${totalPages}</span>
-                    <a href="${pageContext.request.contextPath}/merchant/reviews?filter=${filter}&page=${currentPageNum < totalPages ? currentPageNum + 1 : totalPages}"
-                       class="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-semibold ${currentPageNum < totalPages ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-300 pointer-events-none'}">Sau</a>
+                        class="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-semibold ${currentPageNum > 1 ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-300 pointer-events-none'}">Trước</a>
+                        <span class="text-sm font-bold text-gray-700">Trang ${currentPageNum}/${totalPages}</span>
+                        <a href="${pageContext.request.contextPath}/merchant/reviews?filter=${filter}&page=${currentPageNum < totalPages ? currentPageNum + 1 : totalPages}"
+                        class="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-semibold ${currentPageNum < totalPages ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-300 pointer-events-none'}">Sau</a>
+                    </div>
                 </div>
-            </div>
-        </c:if>
+            </c:if>
+        </div>
     </div>
-</div>
 </div>
 </div>
 

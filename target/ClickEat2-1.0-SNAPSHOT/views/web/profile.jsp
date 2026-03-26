@@ -25,7 +25,7 @@
                     Hồ sơ cá nhân
                 </div>
                 <h1 class="mt-4 text-4xl font-black tracking-tight">Thông tin tài khoản</h1>
-                <p class="mt-2 text-gray-500 text-lg">Quản lý thông tin cá nhân, hồ sơ ăn uống và ảnh đại diện của bạn.</p>
+                <p class="mt-2 text-gray-500 text-lg">Quản lý thông tin cá nhân, hồ sơ ăn uống, địa chỉ giao hàng và ảnh đại diện của bạn.</p>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-7">
@@ -79,99 +79,205 @@
                             </div>
                         </div>
 
-                        <div class="p-7 md:p-8">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                <div>
-                                    <label class="block text-sm font-bold text-gray-800 mb-2">Họ và tên</label>
-                                    <input type="text"
-                                           name="fullName"
-                                           id="fullName"
-                                           value="${profileUser.fullName}"
-                                           maxlength="100"
-                                           disabled
-                                           class="profile-editable w-full h-12 px-4 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition disabled:bg-gray-100 disabled:text-gray-500">
-                                    <p class="mt-2 text-xs text-gray-400">Tối thiểu 2 ký tự, tối đa 100 ký tự.</p>
+                        <div class="p-7 md:p-8 space-y-8">
+
+                            <!-- THÔNG TIN CƠ BẢN -->
+                            <div>
+                                <div class="flex items-center gap-2 mb-4">
+                                    <div class="w-2 h-2 rounded-full bg-orange-500"></div>
+                                    <h3 class="text-lg font-black text-gray-900">Thông tin cơ bản</h3>
                                 </div>
 
-                                <div>
-                                    <label class="block text-sm font-bold text-gray-800 mb-2">Email</label>
-                                    <input type="email"
-                                           name="email"
-                                           id="email"
-                                           value="${profileUser.email}"
-                                           maxlength="150"
-                                           disabled
-                                           class="profile-editable w-full h-12 px-4 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition disabled:bg-gray-100 disabled:text-gray-500">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-800 mb-2">Họ và tên</label>
+                                        <input type="text"
+                                               name="fullName"
+                                               id="fullName"
+                                               value="${profileUser.fullName}"
+                                               maxlength="100"
+                                               disabled
+                                               class="profile-editable w-full h-12 px-4 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition disabled:bg-gray-100 disabled:text-gray-500">
+                                        <p class="mt-2 text-xs text-gray-400">Tối thiểu 2 ký tự, tối đa 100 ký tự.</p>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-800 mb-2">Email</label>
+                                        <input type="email"
+                                               name="email"
+                                               id="email"
+                                               value="${profileUser.email}"
+                                               maxlength="150"
+                                               disabled
+                                               class="profile-editable w-full h-12 px-4 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition disabled:bg-gray-100 disabled:text-gray-500">
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-800 mb-2">Số điện thoại</label>
+                                        <input type="text"
+                                               value="${profileUser.phone}"
+                                               readonly
+                                               class="w-full h-12 px-4 rounded-2xl border border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed">
+                                        <p class="mt-2 text-xs text-gray-400">Số điện thoại hiện chưa cho phép chỉnh sửa.</p>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-800 mb-2">Avatar URL</label>
+                                        <input type="text"
+                                               name="avatarUrl"
+                                               id="avatarUrl"
+                                               value="${profileUser.avatarUrl}"
+                                               maxlength="500"
+                                               disabled
+                                               class="profile-editable w-full h-12 px-4 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition disabled:bg-gray-100 disabled:text-gray-500">
+                                        <p class="mt-2 text-xs text-gray-400">Cho phép đường dẫn bắt đầu bằng http://, https:// hoặc /</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- HỒ SƠ ĂN UỐNG -->
+                            <div>
+                                <div class="flex items-center gap-2 mb-4">
+                                    <div class="w-2 h-2 rounded-full bg-orange-500"></div>
+                                    <h3 class="text-lg font-black text-gray-900">Hồ sơ ăn uống</h3>
                                 </div>
 
-                                <div>
-                                    <label class="block text-sm font-bold text-gray-800 mb-2">Số điện thoại</label>
-                                    <input type="text"
-                                           value="${profileUser.phone}"
-                                           readonly
-                                           class="w-full h-12 px-4 rounded-2xl border border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed">
-                                    <p class="mt-2 text-xs text-gray-400">Số điện thoại hiện chưa cho phép chỉnh sửa.</p>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-bold text-gray-800 mb-2">Sở thích ăn uống</label>
+                                        <textarea name="foodPreferences"
+                                                  id="foodPreferences"
+                                                  rows="4"
+                                                  maxlength="1000"
+                                                  disabled
+                                                  class="profile-editable w-full min-h-[120px] px-4 py-3 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition disabled:bg-gray-100 disabled:text-gray-500 resize-none">${customerProfile.foodPreferences}</textarea>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-800 mb-2">Dị ứng</label>
+                                        <textarea name="allergies"
+                                                  id="allergies"
+                                                  rows="4"
+                                                  maxlength="1000"
+                                                  disabled
+                                                  class="profile-editable w-full min-h-[120px] px-4 py-3 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition disabled:bg-gray-100 disabled:text-gray-500 resize-none">${customerProfile.allergies}</textarea>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-800 mb-2">Mục tiêu sức khỏe</label>
+                                        <textarea name="healthGoal"
+                                                  id="healthGoal"
+                                                  rows="4"
+                                                  maxlength="200"
+                                                  disabled
+                                                  class="profile-editable w-full min-h-[120px] px-4 py-3 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition disabled:bg-gray-100 disabled:text-gray-500 resize-none">${customerProfile.healthGoal}</textarea>
+                                    </div>
+
+                                    <div class="md:max-w-[420px]">
+                                        <label class="block text-sm font-bold text-gray-800 mb-2">Mục tiêu calo mỗi ngày</label>
+                                        <input type="number"
+                                               name="dailyCalorieTarget"
+                                               id="dailyCalorieTarget"
+                                               value="${customerProfile.dailyCalorieTarget}"
+                                               min="500"
+                                               max="10000"
+                                               disabled
+                                               class="profile-editable w-full h-12 px-4 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition disabled:bg-gray-100 disabled:text-gray-500">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ĐỊA CHỈ GIAO HÀNG -->
+                            <div>
+                                <div class="flex items-center gap-2 mb-4">
+                                    <div class="w-2 h-2 rounded-full bg-orange-500"></div>
+                                    <h3 class="text-lg font-black text-gray-900">Địa chỉ giao hàng mặc định</h3>
                                 </div>
 
-                                <div>
-                                    <label class="block text-sm font-bold text-gray-800 mb-2">Avatar URL</label>
-                                    <input type="text"
-                                           name="avatarUrl"
-                                           id="avatarUrl"
-                                           value="${profileUser.avatarUrl}"
-                                           maxlength="500"
-                                           disabled
-                                           class="profile-editable w-full h-12 px-4 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition disabled:bg-gray-100 disabled:text-gray-500">
-                                    <p class="mt-2 text-xs text-gray-400">Cho phép đường dẫn bắt đầu bằng http://, https:// hoặc /</p>
-                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-800 mb-2">Người nhận</label>
+                                        <input type="text"
+                                               name="receiverName"
+                                               id="receiverName"
+                                               value="${defaultAddress.receiverName}"
+                                               maxlength="100"
+                                               disabled
+                                               class="profile-editable w-full h-12 px-4 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition disabled:bg-gray-100 disabled:text-gray-500">
+                                    </div>
 
-                                <div class="md:col-span-2">
-                                    <label class="block text-sm font-bold text-gray-800 mb-2">Sở thích ăn uống</label>
-                                    <textarea name="foodPreferences"
-                                              id="foodPreferences"
-                                              rows="3"
-                                              maxlength="1000"
-                                              disabled
-                                              class="profile-editable w-full px-4 py-3 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition disabled:bg-gray-100 disabled:text-gray-500 resize-none">${customerProfile.foodPreferences}</textarea>
-                                </div>
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-800 mb-2">Số điện thoại nhận hàng</label>
+                                        <input type="text"
+                                               name="receiverPhone"
+                                               id="receiverPhone"
+                                               value="${defaultAddress.receiverPhone}"
+                                               maxlength="20"
+                                               disabled
+                                               class="profile-editable w-full h-12 px-4 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition disabled:bg-gray-100 disabled:text-gray-500">
+                                    </div>
 
-                                <div>
-                                    <label class="block text-sm font-bold text-gray-800 mb-2">Dị ứng</label>
-                                    <textarea name="allergies"
-                                              id="allergies"
-                                              rows="3"
-                                              maxlength="1000"
-                                              disabled
-                                              class="profile-editable w-full px-4 py-3 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition disabled:bg-gray-100 disabled:text-gray-500 resize-none">${customerProfile.allergies}</textarea>
-                                </div>
+                                    <div class="md:col-span-2">
+                                        <label class="block text-sm font-bold text-gray-800 mb-2">Địa chỉ chi tiết</label>
+                                        <input type="text"
+                                               name="addressLine"
+                                               id="addressLine"
+                                               value="${defaultAddress.addressLine}"
+                                               maxlength="255"
+                                               disabled
+                                               class="profile-editable w-full h-12 px-4 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition disabled:bg-gray-100 disabled:text-gray-500">
+                                    </div>
 
-                                <div>
-                                    <label class="block text-sm font-bold text-gray-800 mb-2">Mục tiêu sức khỏe</label>
-                                    <textarea name="healthGoal"
-                                              id="healthGoal"
-                                              rows="3"
-                                              maxlength="200"
-                                              disabled
-                                              class="profile-editable w-full px-4 py-3 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition disabled:bg-gray-100 disabled:text-gray-500 resize-none">${customerProfile.healthGoal}</textarea>
-                                </div>
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-800 mb-2">Tỉnh / Thành</label>
+                                        <input type="text"
+                                               name="provinceName"
+                                               id="provinceName"
+                                               value="${defaultAddress.provinceName}"
+                                               maxlength="100"
+                                               disabled
+                                               class="profile-editable w-full h-12 px-4 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition disabled:bg-gray-100 disabled:text-gray-500">
+                                    </div>
 
-                                <div>
-                                    <label class="block text-sm font-bold text-gray-800 mb-2">Mục tiêu calo mỗi ngày</label>
-                                    <input type="number"
-                                           name="dailyCalorieTarget"
-                                           id="dailyCalorieTarget"
-                                           value="${customerProfile.dailyCalorieTarget}"
-                                           min="500"
-                                           max="10000"
-                                           disabled
-                                           class="profile-editable w-full h-12 px-4 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition disabled:bg-gray-100 disabled:text-gray-500">
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-800 mb-2">Quận / Huyện</label>
+                                        <input type="text"
+                                               name="districtName"
+                                               id="districtName"
+                                               value="${defaultAddress.districtName}"
+                                               maxlength="100"
+                                               disabled
+                                               class="profile-editable w-full h-12 px-4 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition disabled:bg-gray-100 disabled:text-gray-500">
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-800 mb-2">Phường / Xã</label>
+                                        <input type="text"
+                                               name="wardName"
+                                               id="wardName"
+                                               value="${defaultAddress.wardName}"
+                                               maxlength="100"
+                                               disabled
+                                               class="profile-editable w-full h-12 px-4 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition disabled:bg-gray-100 disabled:text-gray-500">
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-800 mb-2">Ghi chú giao hàng</label>
+                                        <input type="text"
+                                               name="addressNote"
+                                               id="addressNote"
+                                               value="${defaultAddress.note}"
+                                               maxlength="255"
+                                               disabled
+                                               class="profile-editable w-full h-12 px-4 rounded-2xl border border-gray-200 bg-gray-50 text-gray-900 outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition disabled:bg-gray-100 disabled:text-gray-500">
+                                    </div>
                                 </div>
                             </div>
 
                             <div id="clientError"
-                                 class="hidden mt-6 rounded-2xl border border-red-200 bg-red-50 text-red-700 px-5 py-4 font-semibold"></div>
+                                 class="hidden rounded-2xl border border-red-200 bg-red-50 text-red-700 px-5 py-4 font-semibold"></div>
 
-                            <div class="mt-8 flex flex-wrap items-center justify-between gap-4">
+                            <div class="pt-2 flex flex-wrap items-center justify-between gap-4">
                                 <button type="button"
                                         id="editBtn"
                                         class="inline-flex items-center gap-2 h-12 px-6 rounded-full bg-orange-500 text-white font-extrabold hover:bg-orange-600 transition shadow">
@@ -250,6 +356,14 @@
                 const healthGoal = document.getElementById('healthGoal').value.trim();
                 const dailyCalorieTarget = document.getElementById('dailyCalorieTarget').value.trim();
 
+                const receiverName = document.getElementById('receiverName').value.trim();
+                const receiverPhone = document.getElementById('receiverPhone').value.trim();
+                const addressLine = document.getElementById('addressLine').value.trim();
+                const provinceName = document.getElementById('provinceName').value.trim();
+                const districtName = document.getElementById('districtName').value.trim();
+                const wardName = document.getElementById('wardName').value.trim();
+                const addressNote = document.getElementById('addressNote').value.trim();
+
                 let error = '';
 
                 if (fullName.length < 2 || fullName.length > 100) {
@@ -270,6 +384,24 @@
                     const cal = Number(dailyCalorieTarget);
                     if (Number.isNaN(cal) || cal < 500 || cal > 10000) {
                         error = 'Mục tiêu calo mỗi ngày phải trong khoảng 500 - 10000.';
+                    }
+                } else {
+                    const hasAnyAddressField = receiverName || receiverPhone || addressLine || provinceName || districtName || wardName || addressNote;
+
+                    if (hasAnyAddressField) {
+                        if (receiverName.length < 2 || receiverName.length > 100) {
+                            error = 'Tên người nhận phải từ 2 đến 100 ký tự.';
+                        } else if (!/^[\p{L}0-9\s'.-]+$/u.test(receiverName)) {
+                            error = 'Tên người nhận không hợp lệ.';
+                        } else if (!/^[0-9]{8,11}$/.test(receiverPhone)) {
+                            error = 'Số điện thoại nhận hàng phải gồm 8 đến 11 chữ số.';
+                        } else if (addressLine.length < 5 || addressLine.length > 255) {
+                            error = 'Địa chỉ chi tiết phải từ 5 đến 255 ký tự.';
+                        } else if (!provinceName || !districtName || !wardName) {
+                            error = 'Vui lòng nhập đầy đủ tỉnh/thành, quận/huyện và phường/xã.';
+                        } else if (addressNote.length > 255) {
+                            error = 'Ghi chú giao hàng không được vượt quá 255 ký tự.';
+                        }
                     }
                 }
 

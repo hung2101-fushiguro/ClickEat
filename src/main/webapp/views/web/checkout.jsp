@@ -16,6 +16,22 @@
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
         crossorigin=""/>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+        <style>
+            #leafletCheckoutMap {
+                position: relative;
+                z-index: 0;
+            }
+            
+            #leafletCheckoutMap .leaflet-pane,
+            #leafletCheckoutMap .leaflet-top,
+            #leafletCheckoutMap .leaflet-bottom {
+                z-index: 1;
+            }
+            
+            #leafletCheckoutMap .leaflet-control {
+                z-index: 2;
+            }
+        </style>
     </head>
     <body class="bg-gray-50 flex flex-col min-h-screen">
 
@@ -130,7 +146,15 @@
                     <div class="flex justify-between items-start gap-3 text-sm">
                         <div class="flex gap-2 min-w-0">
                             <span class="font-bold text-gray-900 shrink-0">${item.quantity}x</span>
-                            <span class="text-gray-700">${food.name}</span>
+                            <div>
+                                <span class="text-gray-700">${food.name}</span>
+                                <c:if test="${not empty item.selectedSize}">
+                                    <div class="text-[11px] text-gray-500">Size: ${item.selectedSize}</div>
+                                </c:if>
+                                <c:if test="${not empty item.selectedToppings}">
+                                    <div class="text-[11px] text-gray-500">Topping: ${item.selectedToppings}</div>
+                                </c:if>
+                            </div>
                         </div>
                         <span class="font-medium text-gray-900 shrink-0">
                             <fmt:formatNumber value="${item.unitPriceSnapshot * item.quantity}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ
@@ -184,6 +208,46 @@
 
                 <c:if test="${not empty voucherError}">
                     <div class="mt-2 text-sm text-red-500 font-medium">${voucherError}</div>
+                </c:if>
+
+                <c:if test="${not empty upsellFoods}">
+                    <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                        <div class="text-sm font-bold text-amber-700">
+                            Thêm món để mở ưu đãi
+                        </div>
+                        <div class="text-xs text-amber-700 mt-1">
+                            Chỉ cần thêm khoảng
+                            <fmt:formatNumber value="${upsellTargetAmount}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ
+                                để đạt điều kiện voucher.
+                            </div>
+                            <div class="mt-3 space-y-2">
+                                <c:forEach var="u" items="${upsellFoods}">
+                                    <div class="flex items-center justify-between gap-2 bg-white border border-amber-100 rounded-lg px-3 py-2">
+                                        <div>
+                                            <div class="text-sm font-semibold text-gray-800">${u.name}</div>
+                                            <div class="text-xs text-gray-500">${u.categoryName}</div>
+                                        </div>
+                                        <div class="text-right flex flex-col items-end gap-1">
+                                            <div class="text-sm font-black text-orange-500">
+                                                <fmt:formatNumber value="${u.price}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ
+                                                </div>
+                                                <button type="button"
+                                                data-food-id="${u.id}"
+                                                onclick="quickAddUpsell(this)"
+                                                class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-md bg-orange-500 text-white hover:bg-orange-600 transition">
+                                                <i class="fa-solid fa-plus"></i> Thêm nhanh
+                                            </button>
+                                        </div>
+                                    </div>
+                                </c:forEach>
+                            </div>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <a href="${pageContext.request.contextPath}/store-detail?id=${upsellMerchantId}"
+                                class="inline-flex items-center gap-2 text-xs font-bold px-3 py-2 rounded-md bg-amber-500 text-white hover:bg-amber-600 transition">
+                                Chọn thêm món & option <i class="fa-solid fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
                 </c:if>
             </div>
 
@@ -275,6 +339,7 @@
                                         </button>
                                     </c:otherwise>
                                 </c:choose>
+                                <p id="autoRefreshHint" class="mt-2 text-[11px] text-gray-400">Đơn sẽ tự cập nhật khi đổi vị trí hoặc thêm món gợi ý.</p>
                             </div>
 
                         </form>
@@ -286,8 +351,11 @@
                     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
                     crossorigin=""></script>
                     <script>
+                        const checkoutCtx = '${pageContext.request.contextPath}';
                         let checkoutMap;
                         let checkoutMarker;
+                        let refreshTimer;
+                        let lastRefreshKey = '';
                         
                         function buildFinalAddress() {
                             const baseAddressInput = document.getElementById('addressLine');
@@ -317,270 +385,357 @@
                             if (shippingAddressHidden) {
                                 shippingAddressHidden.value = finalAddress;
                             }
-                            if (addressLineSubmit) {
-                                addressLineSubmit.value = finalAddress;
-                            }
-                            if (shippingLat && shippingLng) {
-                                saveLocationPreference(shippingLat.value, shippingLng.value);
-                                const latText = shippingLat.value ? shippingLat.value : '--';
-                                const lngText = shippingLng.value ? shippingLng.value : '--';
-                                if (precisionLabel) {
-                                    precisionLabel.textContent = 'Tọa độ ghim: ' + latText + ', ' + lngText;
-                                }
-                                } else if (precisionLabel) {
-                                    precisionLabel.textContent = '';
-                                }
-                            }
                             
-                            function saveLocationPreference(lat, lng) {
-                                if (!lat || !lng) {
-                                    return;
-                                }
-                                const oneYear = 60 * 60 * 24 * 365;
-                                document.cookie = 'ce_home_lat=' + encodeURIComponent(lat) + '; path=/; max-age=' + oneYear + '; SameSite=Lax';
-                                document.cookie = 'ce_home_lng=' + encodeURIComponent(lng) + '; path=/; max-age=' + oneYear + '; SameSite=Lax';
-                            }
-                            
-                            function applySuggestedVoucher(button) {
-                                const input = document.getElementById('voucherCodeInput');
-                                if (!input) {
-                                    return;
-                                }
-                                const code = button ? button.getAttribute('data-code') : '';
-                                input.value = code || '';
-                            }
-                            
-                            window.addEventListener('ce-location-updated', function (event) {
-                                const detail = event && event.detail ? event.detail : null;
-                                if (!detail || !detail.lat || !detail.lng) {
-                                    return;
-                                }
-                                
-                                const lat = parseFloat(detail.lat);
-                                const lng = parseFloat(detail.lng);
-                                if (Number.isNaN(lat) || Number.isNaN(lng)) {
-                                    return;
-                                }
-                                
-                                setCheckoutLocation(lat, lng, detail.address || '', true);
-                            });
-                            
-                            function setCheckoutLocation(lat, lng, addressText, moveMap) {
+                            function refreshCheckoutSummary(reason) {
+                                syncVoucherForm();
                                 const latInput = document.getElementById('shippingLat');
                                 const lngInput = document.getElementById('shippingLng');
-                                const addressInput = document.getElementById('addressLine');
+                                const voucherInput = document.getElementById('voucherCodeInput');
+                                const params = new URLSearchParams();
                                 
-                                if (latInput) {
-                                    latInput.value = Number(lat).toFixed(7);
-                                }
-                                if (lngInput) {
-                                    lngInput.value = Number(lng).toFixed(7);
-                                }
-                                saveLocationPreference(Number(lat).toFixed(7), Number(lng).toFixed(7));
-                                if (addressText && addressInput) {
-                                    addressInput.value = addressText;
+                                const finalAddress = buildFinalAddress();
+                                if (finalAddress) {
+                                    params.set('addressLine', finalAddress);
                                 }
                                 
-                                if (checkoutMarker) {
-                                    checkoutMarker.setLatLng([lat, lng]);
+                                if (latInput && latInput.value) {
+                                    params.set('shippingLat', latInput.value);
                                 }
-                                if (checkoutMap && moveMap) {
-                                    checkoutMap.setView([lat, lng], Math.max(checkoutMap.getZoom(), 16));
+                                if (lngInput && lngInput.value) {
+                                    params.set('shippingLng', lngInput.value);
+                                }
+                                if (voucherInput && voucherInput.value && voucherInput.value.trim()) {
+                                    params.set('voucherCode', voucherInput.value.trim());
                                 }
                                 
-                                syncVoucherForm();
-                            }
-                            
-                            async function reverseGeocode(lat, lng) {
-                                const url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat='
-                                + encodeURIComponent(lat)
-                                + '&lon=' + encodeURIComponent(lng)
-                                + '&accept-language=vi';
-                                const response = await fetch(url);
-                                if (!response.ok) {
-                                    throw new Error('Không thể reverse geocode');
+                                const key = params.toString();
+                                if (!key || key === lastRefreshKey) {
+                                    return;
                                 }
-                                const data = await response.json();
-                                return data.display_name || '';
+                                lastRefreshKey = key;
+                                window.location.href = checkoutCtx + '/checkout?' + key;
                             }
                             
-                            async function geocodeAddress(keyword) {
-                                const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&addressdetails=1&accept-language=vi&q='
-                                + encodeURIComponent(keyword);
-                                const response = await fetch(url);
-                                if (!response.ok) {
-                                    throw new Error('Không thể tìm địa chỉ');
-                                }
-                                return response.json();
+                            function scheduleCheckoutRefresh(reason) {
+                                clearTimeout(refreshTimer);
+                                refreshTimer = setTimeout(function () {
+                                    refreshCheckoutSummary(reason || 'auto');
+                                }, 700);
                             }
                             
-                            async function renderNearbySuggestions(centerLat, centerLng) {
-                                const wrap = document.getElementById('nearbySuggestionWrap');
-                                const list = document.getElementById('nearbySuggestionList');
-                                if (!wrap || !list) {
+                            async function quickAddUpsell(button) {
+                                if (!button) {
                                     return;
                                 }
                                 
-                                const offsets = [
-                                [0, 0],
-                                [0.002, 0],
-                                [0, 0.002]
-                                ];
-                                
-                                const suggestions = [];
-                                for (const [dLat, dLng] of offsets) {
-                                    try {
-                                        const lat = centerLat + dLat;
-                                        const lng = centerLng + dLng;
-                                        const address = await reverseGeocode(lat, lng);
-                                        if (address) {
-                                            suggestions.push({lat, lng, address});
-                                        }
-                                        } catch (e) {
-                                        }
-                                    }
-                                    
-                                    list.innerHTML = '';
-                                    if (suggestions.length === 0) {
-                                        wrap.classList.add('hidden');
-                                        return;
-                                    }
-                                    
-                                    suggestions.forEach((item) => {
-                                        const btn = document.createElement('button');
-                                        btn.type = 'button';
-                                        btn.className = 'px-3 py-1.5 text-xs rounded-full border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100';
-                                        btn.textContent = item.address.length > 45 ? item.address.substring(0, 45) + '...' : item.address;
-                                        btn.title = item.address;
-                                        btn.addEventListener('click', () => setCheckoutLocation(item.lat, item.lng, item.address, true));
-                                        list.appendChild(btn);
-                                    });
-                                    
-                                    wrap.classList.remove('hidden');
+                                const foodId = button.getAttribute('data-food-id');
+                                if (!foodId) {
+                                    return;
                                 }
                                 
-                                async function runMapSearch() {
-                                    const input = document.getElementById('addressLine');
-                                    const hint = document.getElementById('mapHint');
-                                    if (!input || !input.value.trim()) {
+                                const oldHtml = button.innerHTML;
+                                button.disabled = true;
+                                button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                                
+                                try {
+                                    const body = new URLSearchParams({
+                                        action: 'ajax-add',
+                                        id: foodId,
+                                        qty: 1,
+                                        selectedSize: '',
+                                        selectedToppings: ''
+                                    });
+                                    
+                                    const response = await fetch(checkoutCtx + '/cart', {
+                                        method: 'POST',
+                                        body
+                                    });
+                                    
+                                    const data = await response.json();
+                                    if (data && data.success) {
+                                        refreshCheckoutSummary('upsell');
                                         return;
                                     }
                                     
-                                    try {
-                                        const results = await geocodeAddress(input.value.trim());
-                                        if (!results || results.length === 0) {
-                                            if (hint) {
-                                                hint.textContent = 'Không tìm thấy địa chỉ phù hợp.';
-                                            }
-                                            return;
+                                    alert((data && data.message) ? data.message : 'Không thể thêm món gợi ý.');
+                                    } catch (error) {
+                                        alert('Lỗi kết nối khi thêm món gợi ý.');
+                                        } finally {
+                                            button.disabled = false;
+                                            button.innerHTML = oldHtml;
                                         }
-                                        
-                                        const first = results[0];
-                                        const lat = parseFloat(first.lat);
-                                        const lng = parseFloat(first.lon);
-                                        setCheckoutLocation(lat, lng, first.display_name || input.value.trim(), true);
-                                        renderNearbySuggestions(lat, lng);
-                                        if (hint) {
-                                            hint.textContent = 'Đã cập nhật địa chỉ từ kết quả tìm kiếm.';
+                                    }
+                                    if (addressLineSubmit) {
+                                        addressLineSubmit.value = finalAddress;
+                                    }
+                                    if (shippingLat && shippingLng) {
+                                        saveLocationPreference(shippingLat.value, shippingLng.value);
+                                        const latText = shippingLat.value ? shippingLat.value : '--';
+                                        const lngText = shippingLng.value ? shippingLng.value : '--';
+                                        if (precisionLabel) {
+                                            precisionLabel.textContent = 'Tọa độ ghim: ' + latText + ', ' + lngText;
                                         }
-                                        } catch (e) {
-                                            if (hint) {
-                                                hint.textContent = 'Tìm kiếm tạm lỗi, vui lòng thử lại.';
-                                            }
+                                        } else if (precisionLabel) {
+                                            precisionLabel.textContent = '';
                                         }
                                     }
                                     
-                                    function initCheckoutMap() {
-                                        const mapEl = document.getElementById('leafletCheckoutMap');
-                                        if (!mapEl || typeof L === 'undefined') {
+                                    function saveLocationPreference(lat, lng) {
+                                        if (!lat || !lng) {
+                                            return;
+                                        }
+                                        const oneYear = 60 * 60 * 24 * 365;
+                                        document.cookie = 'ce_home_lat=' + encodeURIComponent(lat) + '; path=/; max-age=' + oneYear + '; SameSite=Lax';
+                                        document.cookie = 'ce_home_lng=' + encodeURIComponent(lng) + '; path=/; max-age=' + oneYear + '; SameSite=Lax';
+                                    }
+                                    
+                                    function applySuggestedVoucher(button) {
+                                        const input = document.getElementById('voucherCodeInput');
+                                        if (!input) {
+                                            return;
+                                        }
+                                        const code = button ? button.getAttribute('data-code') : '';
+                                        input.value = code || '';
+                                    }
+                                    
+                                    window.addEventListener('ce-location-updated', function (event) {
+                                        const detail = event && event.detail ? event.detail : null;
+                                        if (!detail || !detail.lat || !detail.lng) {
                                             return;
                                         }
                                         
+                                        const lat = parseFloat(detail.lat);
+                                        const lng = parseFloat(detail.lng);
+                                        if (Number.isNaN(lat) || Number.isNaN(lng)) {
+                                            return;
+                                        }
+                                        
+                                        setCheckoutLocation(lat, lng, detail.address || '', true);
+                                    });
+                                    
+                                    function setCheckoutLocation(lat, lng, addressText, moveMap) {
                                         const latInput = document.getElementById('shippingLat');
                                         const lngInput = document.getElementById('shippingLng');
-                                        const initialLat = latInput && latInput.value ? parseFloat(latInput.value) : 10.7769;
-                                        const initialLng = lngInput && lngInput.value ? parseFloat(lngInput.value) : 106.7009;
+                                        const addressInput = document.getElementById('addressLine');
                                         
-                                        checkoutMap = L.map(mapEl).setView([initialLat, initialLng], 14);
-                                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                                            maxZoom: 19,
-                                            attribution: '&copy; OpenStreetMap'
-                                        }).addTo(checkoutMap);
+                                        if (latInput) {
+                                            latInput.value = Number(lat).toFixed(7);
+                                        }
+                                        if (lngInput) {
+                                            lngInput.value = Number(lng).toFixed(7);
+                                        }
+                                        saveLocationPreference(Number(lat).toFixed(7), Number(lng).toFixed(7));
+                                        if (addressText && addressInput) {
+                                            addressInput.value = addressText;
+                                        }
                                         
-                                        checkoutMarker = L.marker([initialLat, initialLng], {draggable: true}).addTo(checkoutMap);
+                                        if (checkoutMarker) {
+                                            checkoutMarker.setLatLng([lat, lng]);
+                                        }
+                                        if (checkoutMap && moveMap) {
+                                            checkoutMap.setView([lat, lng], Math.max(checkoutMap.getZoom(), 16));
+                                        }
                                         
-                                        checkoutMap.on('click', async function (event) {
-                                            const lat = event.latlng.lat;
-                                            const lng = event.latlng.lng;
-                                            let address = '';
+                                        syncVoucherForm();
+                                        scheduleCheckoutRefresh('location');
+                                    }
+                                    
+                                    async function reverseGeocode(lat, lng) {
+                                        const url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat='
+                                        + encodeURIComponent(lat)
+                                        + '&lon=' + encodeURIComponent(lng)
+                                        + '&accept-language=vi';
+                                        const response = await fetch(url);
+                                        if (!response.ok) {
+                                            throw new Error('Không thể reverse geocode');
+                                        }
+                                        const data = await response.json();
+                                        return data.display_name || '';
+                                    }
+                                    
+                                    async function geocodeAddress(keyword) {
+                                        const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&addressdetails=1&accept-language=vi&q='
+                                        + encodeURIComponent(keyword);
+                                        const response = await fetch(url);
+                                        if (!response.ok) {
+                                            throw new Error('Không thể tìm địa chỉ');
+                                        }
+                                        return response.json();
+                                    }
+                                    
+                                    async function renderNearbySuggestions(centerLat, centerLng) {
+                                        const wrap = document.getElementById('nearbySuggestionWrap');
+                                        const list = document.getElementById('nearbySuggestionList');
+                                        if (!wrap || !list) {
+                                            return;
+                                        }
+                                        
+                                        const offsets = [
+                                        [0, 0],
+                                        [0.002, 0],
+                                        [0, 0.002]
+                                        ];
+                                        
+                                        const suggestions = [];
+                                        for (const [dLat, dLng] of offsets) {
                                             try {
-                                                address = await reverseGeocode(lat, lng);
+                                                const lat = centerLat + dLat;
+                                                const lng = centerLng + dLng;
+                                                const address = await reverseGeocode(lat, lng);
+                                                if (address) {
+                                                    suggestions.push({lat, lng, address});
+                                                }
                                                 } catch (e) {
                                                 }
-                                                setCheckoutLocation(lat, lng, address, false);
+                                            }
+                                            
+                                            list.innerHTML = '';
+                                            if (suggestions.length === 0) {
+                                                wrap.classList.add('hidden');
+                                                return;
+                                            }
+                                            
+                                            suggestions.forEach((item) => {
+                                                const btn = document.createElement('button');
+                                                btn.type = 'button';
+                                                btn.className = 'px-3 py-1.5 text-xs rounded-full border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100';
+                                                btn.textContent = item.address.length > 45 ? item.address.substring(0, 45) + '...' : item.address;
+                                                btn.title = item.address;
+                                                btn.addEventListener('click', () => setCheckoutLocation(item.lat, item.lng, item.address, true));
+                                                list.appendChild(btn);
                                             });
                                             
-                                            checkoutMarker.on('dragend', async function () {
-                                                const point = checkoutMarker.getLatLng();
-                                                let address = '';
-                                                try {
-                                                    address = await reverseGeocode(point.lat, point.lng);
-                                                    } catch (e) {
+                                            wrap.classList.remove('hidden');
+                                        }
+                                        
+                                        async function runMapSearch() {
+                                            const input = document.getElementById('addressLine');
+                                            const hint = document.getElementById('mapHint');
+                                            if (!input || !input.value.trim()) {
+                                                return;
+                                            }
+                                            
+                                            try {
+                                                const results = await geocodeAddress(input.value.trim());
+                                                if (!results || results.length === 0) {
+                                                    if (hint) {
+                                                        hint.textContent = 'Không tìm thấy địa chỉ phù hợp.';
                                                     }
-                                                    setCheckoutLocation(point.lat, point.lng, address, false);
-                                                });
-                                                
-                                                const searchBtn = document.getElementById('mapSearchBtn');
-                                                const searchInput = document.getElementById('addressLine');
-                                                if (searchBtn) {
-                                                    searchBtn.addEventListener('click', runMapSearch);
+                                                    return;
                                                 }
-                                                if (searchInput) {
-                                                    searchInput.addEventListener('keydown', function (e) {
-                                                        if (e.key === 'Enter') {
-                                                            e.preventDefault();
-                                                            runMapSearch();
+                                                
+                                                const first = results[0];
+                                                const lat = parseFloat(first.lat);
+                                                const lng = parseFloat(first.lon);
+                                                setCheckoutLocation(lat, lng, first.display_name || input.value.trim(), true);
+                                                renderNearbySuggestions(lat, lng);
+                                                if (hint) {
+                                                    hint.textContent = 'Đã cập nhật địa chỉ từ kết quả tìm kiếm.';
+                                                }
+                                                } catch (e) {
+                                                    if (hint) {
+                                                        hint.textContent = 'Tìm kiếm tạm lỗi, vui lòng thử lại.';
+                                                    }
+                                                }
+                                            }
+                                            
+                                            function initCheckoutMap() {
+                                                const mapEl = document.getElementById('leafletCheckoutMap');
+                                                if (!mapEl || typeof L === 'undefined') {
+                                                    return;
+                                                }
+                                                
+                                                const latInput = document.getElementById('shippingLat');
+                                                const lngInput = document.getElementById('shippingLng');
+                                                const initialLat = latInput && latInput.value ? parseFloat(latInput.value) : 10.7769;
+                                                const initialLng = lngInput && lngInput.value ? parseFloat(lngInput.value) : 106.7009;
+                                                
+                                                checkoutMap = L.map(mapEl).setView([initialLat, initialLng], 14);
+                                                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                                    maxZoom: 19,
+                                                    attribution: '&copy; OpenStreetMap'
+                                                }).addTo(checkoutMap);
+                                                
+                                                checkoutMarker = L.marker([initialLat, initialLng], {draggable: true}).addTo(checkoutMap);
+                                                
+                                                checkoutMap.on('click', async function (event) {
+                                                    const lat = event.latlng.lat;
+                                                    const lng = event.latlng.lng;
+                                                    let address = '';
+                                                    try {
+                                                        address = await reverseGeocode(lat, lng);
+                                                        } catch (e) {
                                                         }
+                                                        setCheckoutLocation(lat, lng, address, false);
                                                     });
-                                                }
-                                                
-                                                if (!(latInput && latInput.value && lngInput && lngInput.value) && navigator.geolocation) {
-                                                    navigator.geolocation.getCurrentPosition(async function (position) {
-                                                        const lat = position.coords.latitude;
-                                                        const lng = position.coords.longitude;
+                                                    
+                                                    checkoutMarker.on('dragend', async function () {
+                                                        const point = checkoutMarker.getLatLng();
                                                         let address = '';
                                                         try {
-                                                            address = await reverseGeocode(lat, lng);
+                                                            address = await reverseGeocode(point.lat, point.lng);
                                                             } catch (e) {
                                                             }
-                                                            setCheckoutLocation(lat, lng, address, true);
-                                                            renderNearbySuggestions(lat, lng);
+                                                            setCheckoutLocation(point.lat, point.lng, address, false);
                                                         });
-                                                        } else {
-                                                            renderNearbySuggestions(initialLat, initialLng);
-                                                        }
-                                                    }
-                                                    
-                                                    document.addEventListener('DOMContentLoaded', function () {
-                                                        const addressInput = document.getElementById('addressLine');
-                                                        const addressDetailInput = document.getElementById('addressDetail');
-                                                        const noteInput = document.getElementById('noteInput');
                                                         
-                                                        if (addressInput) {
-                                                            addressInput.addEventListener('input', syncVoucherForm);
+                                                        const searchBtn = document.getElementById('mapSearchBtn');
+                                                        const searchInput = document.getElementById('addressLine');
+                                                        if (searchBtn) {
+                                                            searchBtn.addEventListener('click', runMapSearch);
                                                         }
-                                                        
-                                                        if (addressDetailInput) {
-                                                            addressDetailInput.addEventListener('input', syncVoucherForm);
+                                                        if (searchInput) {
+                                                            searchInput.addEventListener('keydown', function (e) {
+                                                                if (e.key === 'Enter') {
+                                                                    e.preventDefault();
+                                                                    runMapSearch();
+                                                                }
+                                                            });
                                                         }
                                                         
-                                                        if (noteInput) {
-                                                            noteInput.addEventListener('input', syncVoucherForm);
-                                                        }
-                                                        
-                                                        syncVoucherForm();
-                                                        initCheckoutMap();
-                                                    });
-                                                </script>
-                                            </body>
-                                        </html>
+                                                        if (!(latInput && latInput.value && lngInput && lngInput.value) && navigator.geolocation) {
+                                                            navigator.geolocation.getCurrentPosition(async function (position) {
+                                                                const lat = position.coords.latitude;
+                                                                const lng = position.coords.longitude;
+                                                                let address = '';
+                                                                try {
+                                                                    address = await reverseGeocode(lat, lng);
+                                                                    } catch (e) {
+                                                                    }
+                                                                    setCheckoutLocation(lat, lng, address, true);
+                                                                    renderNearbySuggestions(lat, lng);
+                                                                });
+                                                                } else {
+                                                                    renderNearbySuggestions(initialLat, initialLng);
+                                                                }
+                                                            }
+                                                            
+                                                            document.addEventListener('DOMContentLoaded', function () {
+                                                                const addressInput = document.getElementById('addressLine');
+                                                                const addressDetailInput = document.getElementById('addressDetail');
+                                                                const noteInput = document.getElementById('noteInput');
+                                                                
+                                                                if (addressInput) {
+                                                                    addressInput.addEventListener('input', function () {
+                                                                        syncVoucherForm();
+                                                                        scheduleCheckoutRefresh('address');
+                                                                    });
+                                                                }
+                                                                
+                                                                if (addressDetailInput) {
+                                                                    addressDetailInput.addEventListener('input', function () {
+                                                                        syncVoucherForm();
+                                                                        scheduleCheckoutRefresh('addressDetail');
+                                                                    });
+                                                                }
+                                                                
+                                                                if (noteInput) {
+                                                                    noteInput.addEventListener('input', syncVoucherForm);
+                                                                }
+                                                                
+                                                                syncVoucherForm();
+                                                                initCheckoutMap();
+                                                            });
+                                                        </script>
+                                                    </body>
+                                                </html>

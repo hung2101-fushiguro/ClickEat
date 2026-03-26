@@ -26,40 +26,40 @@
                 --shadow-hover:0 18px 40px rgba(15,23,42,.10);
                 --radius:28px;
             }
-
+            
             *{
                 box-sizing:border-box;
             }
-
+            
             html{
                 scroll-behavior:smooth;
             }
-
+            
             body{
                 margin:0;
                 font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
                 background:var(--bg);
                 color:var(--text);
             }
-
+            
             .container-click{
                 width:min(1280px, calc(100% - 56px));
                 margin:0 auto;
             }
-
+            
             .shadow-soft{
                 box-shadow:var(--shadow);
             }
-
+            
             .card-hover{
                 transition:transform .22s ease, box-shadow .22s ease;
             }
-
+            
             .card-hover:hover{
                 transform:translateY(-5px);
                 box-shadow:var(--shadow-hover);
             }
-
+            
             .section-title{
                 font-size:34px;
                 line-height:1.05;
@@ -67,7 +67,7 @@
                 letter-spacing:-.03em;
                 color:#131313;
             }
-
+            
             .section-link{
                 color:var(--primary);
                 font-weight:800;
@@ -77,32 +77,32 @@
                 gap:10px;
                 transition:.2s ease;
             }
-
+            
             .section-link:hover{
                 color:var(--primary-hover);
             }
-
+            
             .line-clamp-1{
                 display:-webkit-box;
                 -webkit-line-clamp:1;
                 -webkit-box-orient:vertical;
                 overflow:hidden;
             }
-
+            
             .line-clamp-2{
                 display:-webkit-box;
                 -webkit-line-clamp:2;
                 -webkit-box-orient:vertical;
                 overflow:hidden;
             }
-
+            
             .hero-wrap{
                 display:grid;
                 grid-template-columns:minmax(0,1.45fr) minmax(320px,.7fr);
                 gap:28px;
                 align-items:stretch;
             }
-
+            
             .hero-main{
                 position:relative;
                 min-height:520px;
@@ -110,7 +110,7 @@
                 overflow:hidden;
                 box-shadow:0 18px 50px rgba(0,0,0,.08);
             }
-
+            
             .hero-main img{
                 position:absolute;
                 inset:0;
@@ -118,15 +118,15 @@
                 height:100%;
                 object-fit:cover;
             }
-
+            
             .hero-main::after{
                 content:"";
                 position:absolute;
                 inset:0;
                 background:
-                    linear-gradient(90deg, rgba(0,0,0,.58) 0%, rgba(0,0,0,.36) 38%, rgba(0,0,0,.12) 100%);
+                linear-gradient(90deg, rgba(0,0,0,.58) 0%, rgba(0,0,0,.36) 38%, rgba(0,0,0,.12) 100%);
             }
-
+            
             .hero-content{
                 position:relative;
                 z-index:2;
@@ -136,7 +136,7 @@
                 flex-direction:column;
                 justify-content:center;
             }
-
+            
             .hero-badge{
                 display:inline-flex;
                 align-items:center;
@@ -153,7 +153,7 @@
                 margin-bottom:24px;
                 box-shadow:0 10px 24px rgba(255,122,26,.28);
             }
-
+            
             .hero-title{
                 margin:0;
                 max-width:820px;
@@ -163,11 +163,11 @@
                 letter-spacing:-.05em;
                 font-weight:950;
             }
-
+            
             .hero-title .accent{
                 color:var(--primary);
             }
-
+            
             .hero-desc{
                 margin:26px 0 0;
                 max-width:640px;
@@ -176,14 +176,14 @@
                 line-height:1.55;
                 font-weight:500;
             }
-
+            
             .hero-actions{
                 display:flex;
                 flex-wrap:wrap;
                 gap:16px;
                 margin-top:34px;
             }
-
+            
             .hero-btn-primary,
             .hero-btn-secondary{
                 min-width:280px;
@@ -197,36 +197,36 @@
                 font-weight:900;
                 transition:.22s ease;
             }
-
+            
             .hero-btn-primary{
                 background:var(--primary);
                 color:#fff;
                 box-shadow:0 12px 26px rgba(255,122,26,.22);
             }
-
+            
             .hero-btn-primary:hover{
                 background:var(--primary-hover);
                 transform:translateY(-1px);
             }
-
+            
             .hero-btn-secondary{
                 background:rgba(255,255,255,.14);
                 color:#fff;
                 border:1.5px solid rgba(255,255,255,.36);
                 backdrop-filter:blur(8px);
             }
-
+            
             .hero-btn-secondary:hover{
                 background:rgba(255,255,255,.22);
                 transform:translateY(-1px);
             }
-
+            
             .hero-side{
                 display:grid;
                 grid-template-rows:1fr 1fr;
                 gap:22px;
             }
-
+            
             .hero-mini{
                 border-radius:32px;
                 padding:38px 34px;
@@ -238,17 +238,17 @@
                 flex-direction:column;
                 justify-content:space-between;
             }
-
+            
             .hero-mini.orange{
                 background:#ff6f0f;
                 color:#fff;
             }
-
+            
             .hero-mini.white{
                 background:#fff;
                 color:#182033;
             }
-
+            
             .hero-mini-icon{
                 position:absolute;
                 right:-4px;
@@ -257,7 +257,7 @@
                 opacity:.10;
                 pointer-events:none;
             }
-
+            
             .hero-mini-shop{
                 font-size:13px;
                 font-weight:900;
@@ -265,7 +265,7 @@
                 letter-spacing:.06em;
                 opacity:.92;
             }
-
+            
             .hero-mini-title{
                 margin-top:6px;
                 font-size:38px;
@@ -273,7 +273,7 @@
                 font-weight:950;
                 letter-spacing:-.04em;
             }
-
+            
             .hero-mini-desc{
                 margin-top:14px;
                 font-size:18px;
@@ -282,13 +282,13 @@
                 opacity:.94;
                 max-width:290px;
             }
-
+            
             .hero-mini-code{
                 margin-top:18px;
                 font-size:17px;
                 font-weight:900;
             }
-
+            
             .hero-mini-btn{
                 margin-top:22px;
                 display:inline-flex;
@@ -298,13 +298,13 @@
                 font-weight:900;
                 color:inherit;
             }
-
+            
             .voucher-grid{
                 display:grid;
                 grid-template-columns:repeat(4, minmax(0, 1fr));
                 gap:22px;
             }
-
+            
             .voucher-modern{
                 background:#fff;
                 border-radius:28px;
@@ -313,12 +313,12 @@
                 border:1px solid rgba(226,232,240,.65);
                 transition:transform .22s ease, box-shadow .22s ease;
             }
-
+            
             .voucher-modern:hover{
                 transform:translateY(-4px);
                 box-shadow:var(--shadow-hover);
             }
-
+            
             .voucher-top{
                 min-height:180px;
                 padding:26px 30px 30px;
@@ -327,27 +327,27 @@
                 justify-content:space-between;
                 position:relative;
             }
-
+            
             .voucher-style-1 .voucher-top{
                 background:#dff3f0;
                 color:#0f766e;
             }
-
+            
             .voucher-style-2 .voucher-top{
                 background:#f7e6f2;
                 color:#c02674;
             }
-
+            
             .voucher-style-3 .voucher-top{
                 background:#f4eed6;
                 color:#b45309;
             }
-
+            
             .voucher-style-4 .voucher-top{
                 background:#e6eefc;
                 color:#2563eb;
             }
-
+            
             .voucher-style-1 .voucher-icon{
                 color:#2cb9a7;
             }
@@ -360,7 +360,7 @@
             .voucher-style-4 .voucher-icon{
                 color:#3b82f6;
             }
-
+            
             .voucher-pill{
                 display:inline-flex;
                 align-items:center;
@@ -374,7 +374,7 @@
                 font-weight:900;
                 text-transform:uppercase;
             }
-
+            
             .voucher-style-1 .voucher-pill{
                 background:#1fb8a9;
             }
@@ -387,7 +387,7 @@
             .voucher-style-4 .voucher-pill{
                 background:#3b82f6;
             }
-
+            
             .voucher-code-row{
                 display:flex;
                 align-items:flex-end;
@@ -395,14 +395,14 @@
                 gap:10px;
                 margin-top:24px;
             }
-
+            
             .voucher-code{
                 font-size:30px;
                 line-height:1;
                 font-weight:950;
                 letter-spacing:-.04em;
             }
-
+            
             .voucher-copy{
                 font-size:14px;
                 font-weight:700;
@@ -412,17 +412,17 @@
                 opacity:.95;
                 margin-top:10px;
             }
-
+            
             .voucher-icon{
                 font-size:42px;
                 opacity:.95;
                 flex-shrink:0;
             }
-
+            
             .voucher-bottom{
                 padding:24px 30px 20px;
             }
-
+            
             .voucher-bottom-title{
                 font-size:18px;
                 line-height:1.2;
@@ -431,7 +431,7 @@
                 letter-spacing:-.03em;
                 margin:0;
             }
-
+            
             .voucher-bottom-desc{
                 margin:10px 0 0;
                 color:#6b7280;
@@ -440,20 +440,20 @@
                 font-weight:500;
                 min-height:0;
             }
-
+            
             .voucher-expire{
                 margin-top:16px;
                 color:#9ca3af;
                 font-size:11px;
                 font-weight:800;
             }
-
+            
             .voucher-action{
                 margin-top:16px;
                 display:flex;
                 justify-content:flex-end;
             }
-
+            
             .voucher-save-btn{
                 min-width:122px;
                 height:40px;
@@ -469,12 +469,12 @@
                 transition:.2s ease;
                 box-shadow:0 10px 20px rgba(255,122,26,.16);
             }
-
+            
             .voucher-save-btn:hover{
                 background:var(--primary-hover);
                 transform:translateY(-1px);
             }
-
+            
             .pill{
                 display:inline-flex;
                 align-items:center;
@@ -486,22 +486,22 @@
                 line-height:1;
                 white-space:nowrap;
             }
-
+            
             .pill-orange{
                 background:#fff1e8;
                 color:var(--primary);
             }
-
+            
             .pill-green{
                 background:#e9f8ee;
                 color:#16a34a;
             }
-
+            
             .pill-red{
                 background:#fee2e2;
                 color:#dc2626;
             }
-
+            
             .soft-icon-box{
                 width:98px;
                 height:98px;
@@ -512,7 +512,7 @@
                 box-shadow:0 14px 34px rgba(0,0,0,.07);
                 margin:0 auto 18px;
             }
-
+            
             .add-cart-btn{
                 width:48px;
                 height:48px;
@@ -527,23 +527,23 @@
                 transition:.18s ease;
                 flex-shrink:0;
             }
-
+            
             .add-cart-btn:hover{
                 background:var(--primary);
                 color:#fff;
                 transform:translateY(-1px);
             }
-
+            
             .restaurant-card img,
             .food-card img{
                 transition:.35s ease;
             }
-
+            
             .restaurant-card:hover img,
             .food-card:hover img{
                 transform:scale(1.05);
             }
-
+            
             .deal-badge{
                 background:#ef4444;
                 color:#fff;
@@ -556,15 +556,15 @@
                 gap:6px;
                 box-shadow:0 10px 22px rgba(239,68,68,.20);
             }
-
+            
             .food-card{
                 border-radius:30px;
             }
-
+            
             .food-card .food-body{
                 padding:24px 24px 22px;
             }
-
+            
             .food-card .food-name{
                 font-size:21px;
                 font-weight:900;
@@ -572,14 +572,14 @@
                 letter-spacing:-.02em;
                 color:#111827;
             }
-
+            
             .food-card .food-desc{
                 color:#8b95a7;
                 font-size:15px;
                 line-height:1.6;
                 min-height:25px;
             }
-
+            
             .price-now{
                 font-size:24px;
                 font-weight:950;
@@ -587,7 +587,7 @@
                 line-height:1;
                 letter-spacing:-.03em;
             }
-
+            
             .price-old{
                 color:#9ca3af;
                 text-decoration:line-through;
@@ -595,11 +595,11 @@
                 margin-top:8px;
                 font-weight:700;
             }
-
+            
             .restaurant-card{
                 border-radius:30px;
             }
-
+            
             .empty-box{
                 background:#fff;
                 border-radius:30px;
@@ -608,60 +608,60 @@
                 text-align:center;
                 box-shadow:var(--shadow);
             }
-
+            
             @media (max-width: 1400px){
                 .voucher-grid{
                     grid-template-columns:repeat(4, minmax(0, 1fr));
                 }
             }
-
+            
             @media (max-width: 1200px){
                 .voucher-grid{
                     grid-template-columns:repeat(2, minmax(0, 1fr));
                 }
             }
-
+            
             @media (max-width: 1024px){
                 .container-click{
                     width:min(100% - 28px, 1280px);
                 }
-
+                
                 .hero-wrap{
                     grid-template-columns:1fr;
                 }
-
+                
                 .hero-side{
                     grid-template-columns:1fr 1fr;
                     grid-template-rows:auto;
                 }
-
+                
                 .hero-title{
                     font-size:54px;
                 }
             }
-
+            
             @media (max-width: 768px){
                 .section-title{
                     font-size:26px;
                 }
-
+                
                 .hero-content{
                     padding:34px 24px 32px;
                 }
-
+                
                 .hero-main{
                     min-height:460px;
                 }
-
+                
                 .hero-title{
                     font-size:42px;
                 }
-
+                
                 .hero-desc{
                     font-size:18px;
                     line-height:1.6;
                 }
-
+                
                 .hero-btn-primary,
                 .hero-btn-secondary{
                     width:100%;
@@ -669,23 +669,23 @@
                     height:56px;
                     font-size:17px;
                 }
-
+                
                 .hero-side{
                     grid-template-columns:1fr;
                 }
-
+                
                 .voucher-grid{
                     grid-template-columns:1fr;
                 }
-
+                
                 .voucher-code{
                     font-size:30px;
                 }
-
+                
                 .voucher-bottom-title{
                     font-size:20px;
                 }
-
+                
                 .voucher-save-btn{
                     height:58px;
                     font-size:18px;
@@ -709,9 +709,9 @@
                     <div class="hero-wrap">
                         <div class="hero-main">
                             <img
-                                src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1600&auto=format&fit=crop"
-                                alt="Hero banner"
-                                >
+                            src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1600&auto=format&fit=crop"
+                            alt="Hero banner"
+                            >
 
                             <div class="hero-content">
                                 <div class="hero-badge">MỚI NHẤT</div>
@@ -1028,127 +1028,163 @@
                                             <div>
                                                 <div class="price-now">
                                                     <fmt:formatNumber value="${f.price}" type="number" groupingUsed="true" maxFractionDigits="0" />đ
-                                                </div>
-                                                <div class="price-old">
-                                                    <fmt:formatNumber value="${f.originalPrice}" type="number" groupingUsed="true" maxFractionDigits="0" />đ
+                                                    </div>
+                                                    <div class="price-old">
+                                                        <fmt:formatNumber value="${f.originalPrice}" type="number" groupingUsed="true" maxFractionDigits="0" />đ
+                                                        </div>
+                                                    </div>
+
+                                                    <a href="${ctx}/cart?action=add&id=${f.id}" class="add-cart-btn" title="Thêm vào giỏ hàng">
+                                                        <i class="fa-solid fa-cart-plus"></i>
+                                                    </a>
                                                 </div>
                                             </div>
+                                        </div>
+                                    </c:forEach>
+                                </div>
+                            </c:if>
+                        </div>
+                    </section>
 
-                                            <a href="${ctx}/cart?action=add&id=${f.id}" class="add-cart-btn" title="Thêm vào giỏ hàng">
-                                                <i class="fa-solid fa-cart-plus"></i>
+                    <!-- NHÀ HÀNG NỔI BẬT -->
+                    <section class="pt-24">
+                        <div class="container-click">
+                            <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+                                <h2 class="section-title">NHÀ HÀNG NỔI BẬT</h2>
+                                <a href="${ctx}/store" class="section-link">
+                                    Khám phá thêm quán <i class="fa-solid fa-angle-right text-[12px]"></i>
+                                </a>
+                            </div>
+
+                            <c:if test="${empty merchants}">
+                                <div class="empty-box">
+                                    <i class="fa-solid fa-store text-5xl text-gray-300 mb-4"></i>
+                                    <p class="text-gray-500 text-lg font-medium">
+                                        Hiện chưa có quán nổi bật để hiển thị.
+                                    </p>
+                                </div>
+                            </c:if>
+
+                            <c:if test="${not empty merchants}">
+                                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                                    <c:forEach var="m" items="${merchants}">
+                                        <a href="${ctx}/store-detail?id=${m.userId}" class="block h-full">
+                                            <article class="restaurant-card bg-white overflow-hidden border border-gray-100 shadow-soft card-hover h-full">
+                                                <div class="relative h-[240px] overflow-hidden">
+                                                    <c:choose>
+                                                        <c:when test="${not empty m.imageUrl}">
+                                                            <img src="${ctx}${m.imageUrl}" alt="${m.shopName}" class="w-full h-full object-cover">
+                                                        </c:when>
+                                                        <c:otherwise>
+                                                            <img src="${ctx}/assets/images/default-store.jpg" alt="${m.shopName}" class="w-full h-full object-cover">
+                                                        </c:otherwise>
+                                                    </c:choose>
+
+                                                    <span class="absolute top-4 right-4 pill bg-orange-50 text-orange-500">NỔI BẬT</span>
+                                                </div>
+
+                                                <div class="p-7">
+                                                    <h3 class="text-[22px] font-black text-gray-900 leading-tight line-clamp-1">
+                                                        ${m.shopName}
+                                                    </h3>
+
+                                                    <div class="flex items-center gap-3 text-[14px] text-gray-600 mt-4 font-semibold flex-wrap">
+                                                        <span class="pill bg-orange-50 text-orange-500"><i class="fa-regular fa-clock mr-1"></i> ${m.deliveryTime}</span>
+                                                        <span class="pill bg-orange-50 text-orange-500"><i class="fa-solid fa-location-dot mr-1"></i> ${m.distance}</span>
+                                                        <span class="pill bg-orange-50 text-orange-500">
+                                                            <i class="fa-solid fa-motorcycle mr-1"></i>
+                                                            <c:choose>
+                                                                <c:when test="${m.shippingFee != null}">
+                                                                    <fmt:formatNumber value="${m.shippingFee}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ
+                                                                    </c:when>
+                                                                    <c:otherwise>Phí ship linh hoạt</c:otherwise>
+                                                                    </c:choose>
+                                                                </span>
+                                                                <span><i class="fa-solid fa-map text-orange-500 mr-1"></i> ${m.districtName}</span>
+                                                            </div>
+
+                                                            <div class="flex items-center justify-between gap-4 mt-6 flex-wrap">
+                                                                <div class="flex flex-wrap gap-2">
+                                                                    <span class="pill pill-orange">${empty m.categoryName ? 'Món ăn' : m.categoryName}</span>
+                                                                    <span class="pill pill-green line-clamp-1">${empty m.voucherTitle ? 'Đang mở bán' : m.voucherTitle}</span>
+                                                                </div>
+
+                                                                <span class="pill bg-orange-50 text-orange-500">
+                                                                    <i class="fa-solid fa-star mr-1"></i>
+                                                                    <fmt:formatNumber value="${m.rating}" type="number" minFractionDigits="1" maxFractionDigits="1" />
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </article>
+                                                </a>
+                                            </c:forEach>
+                                        </div>
+                                    </c:if>
+                                </div>
+                            </section>
+
+                            <!-- AI BANNER -->
+                            <section class="pt-24">
+                                <div class="container-click">
+                                    <div class="rounded-[40px] bg-orange-500 min-h-[420px] overflow-hidden shadow-soft px-8 md:px-14 py-12 md:py-16 grid grid-cols-1 lg:grid-cols-[1fr_.9fr] gap-10 items-center">
+                                        <div class="text-white">
+                                            <h2 class="font-black tracking-[-0.03em] leading-[1.02] text-[42px] md:text-[58px] max-w-[620px]">
+                                                ClickEat — Trợ lý ẩm thực AI cá nhân
+                                            </h2>
+
+                                            <p class="mt-8 text-[20px] leading-9 text-white/92 max-w-[620px]">
+                                                AI giúp bạn chọn món phù hợp theo khẩu vị, nhu cầu và ngân sách chỉ trong vài giây.
+                                            </p>
+
+                                            <a href="${ctx}/aichat" class="mt-10 inline-flex items-center justify-center gap-3 h-[58px] px-10 rounded-full bg-white text-orange-500 font-black text-[18px] hover:translate-y-[-1px] transition">
+                                                TRẢI NGHIỆM AI NGAY
+                                                <i class="fa-solid fa-wand-magic-sparkles text-[14px]"></i>
                                             </a>
+                                        </div>
+
+                                        <div class="flex justify-center lg:justify-end">
+                                            <div class="w-full max-w-[470px] rounded-[30px] border-[8px] border-orange-400/55 overflow-hidden shadow-[0_18px_40px_rgba(0,0,0,.18)]">
+                                                <img
+                                                src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=1400&auto=format&fit=crop"
+                                                alt="AI food suggestion"
+                                                class="w-full h-[290px] md:h-[320px] object-cover"
+                                                >
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </c:forEach>
-                        </div>
-                    </c:if>  
-                </div>
-            </section>
+                            </section>
 
-            <!-- NHÀ HÀNG NỔI BẬT -->
-            <section class="pt-24">
-                <div class="container-click">
-                    <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
-                        <h2 class="section-title">NHÀ HÀNG NỔI BẬT</h2>
-                        <a href="${ctx}/store" class="section-link">
-                            Khám phá thêm quán <i class="fa-solid fa-angle-right text-[12px]"></i>
-                        </a>
-                    </div>
+                        </main>
 
-                    <c:if test="${empty merchants}">
-                        <div class="empty-box">
-                            <i class="fa-solid fa-store text-5xl text-gray-300 mb-4"></i>
-                            <p class="text-gray-500 text-lg font-medium">
-                                Hiện chưa có quán nổi bật để hiển thị.
-                            </p>
-                        </div>
-                    </c:if>
+                        <jsp:include page="footer.jsp" />
 
-                    <c:if test="${not empty merchants}">
-                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-                            <c:forEach var="m" items="${merchants}">
-                                <a href="${ctx}/store-detail?id=${m.userId}" class="block h-full">
-                                    <article class="restaurant-card bg-white overflow-hidden border border-gray-100 shadow-soft card-hover h-full">
-                                        <div class="relative h-[240px] overflow-hidden">
-                                            <c:choose>
-                                                <c:when test="${not empty m.imageUrl}">
-                                                    <img src="${ctx}${m.imageUrl}" alt="${m.shopName}" class="w-full h-full object-cover">
-                                                </c:when>
-                                                <c:otherwise>
-                                                    <img src="${ctx}/assets/images/default-store.jpg" alt="${m.shopName}" class="w-full h-full object-cover">
-                                                </c:otherwise>
-                                            </c:choose>
+                        <script>
+                            (function persistHomeLocationPreference() {
+                                if (!navigator.geolocation) {
+                                    return;
+                                }
+                                
+                                const now = Date.now();
+                                const lastUpdated = parseInt(localStorage.getItem('ce_home_location_updated_at') || '0', 10);
+                                const tenMinutes = 10 * 60 * 1000;
+                                
+                                if (lastUpdated && now - lastUpdated < tenMinutes) {
+                                    return;
+                                }
+                                
+                                navigator.geolocation.getCurrentPosition(function (position) {
+                                    const lat = Number(position.coords.latitude).toFixed(7);
+                                    const lng = Number(position.coords.longitude).toFixed(7);
+                                    const oneYear = 60 * 60 * 24 * 365;
+                                    
+                                    document.cookie = 'ce_home_lat=' + encodeURIComponent(lat) + '; path=/; max-age=' + oneYear + '; SameSite=Lax';
+                                    document.cookie = 'ce_home_lng=' + encodeURIComponent(lng) + '; path=/; max-age=' + oneYear + '; SameSite=Lax';
+                                    
+                                    localStorage.setItem('ce_home_location_updated_at', String(now));
+                                });
+                            })();
+                        </script>
 
-                                            <span class="absolute top-4 right-4 pill bg-orange-50 text-orange-500">NỔI BẬT</span>
-                                        </div>
-
-                                        <div class="p-7">
-                                            <h3 class="text-[22px] font-black text-gray-900 leading-tight line-clamp-1">
-                                                ${m.shopName}
-                                            </h3>
-
-                                            <div class="flex items-center gap-5 text-[15px] text-gray-500 mt-4 font-semibold flex-wrap">
-                                                <span><i class="fa-regular fa-clock text-orange-500 mr-1"></i> ${m.deliveryTime}</span>
-                                                <span><i class="fa-solid fa-location-dot text-orange-500 mr-1"></i> ${m.distance}</span>
-                                                <span><i class="fa-solid fa-map text-orange-500 mr-1"></i> ${m.districtName}</span>
-                                            </div>
-
-                                            <div class="flex items-center justify-between gap-4 mt-6 flex-wrap">
-                                                <div class="flex flex-wrap gap-2">
-                                                    <span class="pill pill-orange">${empty m.categoryName ? 'Món ăn' : m.categoryName}</span>
-                                                    <span class="pill pill-green line-clamp-1">${empty m.voucherTitle ? 'Đang mở bán' : m.voucherTitle}</span>
-                                                </div>
-
-                                                <span class="pill bg-orange-50 text-orange-500">
-                                                    <i class="fa-solid fa-star mr-1"></i>
-                                                    <fmt:formatNumber value="${m.rating}" type="number" minFractionDigits="1" maxFractionDigits="1" />
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </article>
-                                </a>
-                            </c:forEach>
-                        </div>
-                    </c:if>
-                </div>
-            </section>
-
-            <!-- AI BANNER -->
-            <section class="pt-24">
-                <div class="container-click">
-                    <div class="rounded-[40px] bg-orange-500 min-h-[420px] overflow-hidden shadow-soft px-8 md:px-14 py-12 md:py-16 grid grid-cols-1 lg:grid-cols-[1fr_.9fr] gap-10 items-center">
-                        <div class="text-white">
-                            <h2 class="font-black tracking-[-0.03em] leading-[1.02] text-[42px] md:text-[58px] max-w-[620px]">
-                                ClickEat — Trợ lý ẩm thực AI cá nhân
-                            </h2>
-
-                            <p class="mt-8 text-[20px] leading-9 text-white/92 max-w-[620px]">
-                                AI giúp bạn chọn món phù hợp theo khẩu vị, nhu cầu và ngân sách chỉ trong vài giây.
-                            </p>
-
-                            <a href="${ctx}/aichat" class="mt-10 inline-flex items-center justify-center gap-3 h-[58px] px-10 rounded-full bg-white text-orange-500 font-black text-[18px] hover:translate-y-[-1px] transition">
-                                TRẢI NGHIỆM AI NGAY
-                                <i class="fa-solid fa-wand-magic-sparkles text-[14px]"></i>
-                            </a>
-                        </div>
-
-                        <div class="flex justify-center lg:justify-end">
-                            <div class="w-full max-w-[470px] rounded-[30px] border-[8px] border-orange-400/55 overflow-hidden shadow-[0_18px_40px_rgba(0,0,0,.18)]">
-                                <img
-                                    src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=1400&auto=format&fit=crop"
-                                    alt="AI food suggestion"
-                                    class="w-full h-[290px] md:h-[320px] object-cover"
-                                    >
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-        </main>
-
-        <jsp:include page="footer.jsp" />
-
-    </body>
-</html>
+                    </body>
+                </html>

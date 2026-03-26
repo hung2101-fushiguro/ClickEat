@@ -5,8 +5,21 @@
     <head>
         <meta charset="UTF-8">
         <title>Hồ sơ của tôi - ClickEat Shipper</title>
+        <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/assets/images/shipperlogo.png">
         <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        fontFamily: {sans: ['Inter', 'sans-serif']},
+                        colors: {primary: '#c86601', 'primary-dark': '#a05201'}
+                    }
+                }
+            };
+        </script>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+        <style>body { font-family: 'Inter', sans-serif; }</style>
     </head>
     <body class="bg-gray-100 flex justify-center min-h-screen">
 
@@ -65,6 +78,10 @@
                     <div>
                         <h3 class="font-bold text-gray-900 mb-3 px-2 uppercase text-xs tracking-widest text-gray-500">Thông tin cá nhân</h3>
                         <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 mb-1">Họ và tên</label>
+                                <input type="text" name="fullName" value="${sessionScope.account.fullName}" required class="w-full bg-white text-gray-900 px-4 py-3 rounded-xl border border-gray-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition">
+                            </div>
                             <div>
                                 <label class="block text-xs font-bold text-gray-600 mb-1">Số điện thoại</label>
                                 <input type="text" name="phone" value="${sessionScope.account.phone}" required class="w-full bg-white text-gray-900 px-4 py-3 rounded-xl border border-gray-300 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition">
@@ -133,11 +150,11 @@
                         const preview = document.getElementById('avatar-preview');
                         preview.src = e.target.result;
                         preview.classList.remove('hidden');
-
+                        
                         const fallback = document.getElementById('avatar-preview-fallback');
                         if (fallback)
-                            fallback.classList.add('hidden');
-
+                        fallback.classList.add('hidden');
+                        
                         // Hiện nút Lưu Ảnh Mới
                         document.getElementById('btn-save-avatar').classList.remove('hidden');
                     }

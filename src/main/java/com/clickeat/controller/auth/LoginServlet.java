@@ -1,5 +1,6 @@
 package com.clickeat.controller.auth;
 
+import com.clickeat.dal.impl.CartDAO;
 import com.clickeat.dal.impl.UserDAO;
 import com.clickeat.model.User;
 import com.clickeat.util.RememberMeUtil;
@@ -16,6 +17,7 @@ public class LoginServlet extends HttpServlet {
 
     private void redirectByRole(HttpServletRequest request, HttpServletResponse response, User user) throws IOException {
         String contextPath = request.getContextPath();
+        String redirect = request.getParameter("redirect");
 
         if ("ADMIN".equalsIgnoreCase(user.getRole())) {
             response.sendRedirect(contextPath + "/admin/dashboard");
@@ -24,7 +26,11 @@ public class LoginServlet extends HttpServlet {
         } else if ("MERCHANT".equalsIgnoreCase(user.getRole())) {
             response.sendRedirect(contextPath + "/merchant/dashboard");
         } else {
-            response.sendRedirect(contextPath + "/home");
+            if (redirect != null && !redirect.isBlank()) {
+                response.sendRedirect(redirect);
+            } else {
+                response.sendRedirect(contextPath + "/home");
+            }
         }
     }
 
@@ -50,10 +56,12 @@ public class LoginServlet extends HttpServlet {
 
         String userRaw = request.getParameter("username");
         String passRaw = request.getParameter("password");
+        String redirect = request.getParameter("redirect");
         boolean remember = request.getParameter("remember") != null;
 
         request.setAttribute("username", userRaw);
         request.setAttribute("remember", remember);
+        request.setAttribute("redirect", redirect);
 
         UserDAO userDAO = new UserDAO();
         User user = userDAO.checkLogin(userRaw, passRaw);
@@ -72,13 +80,35 @@ public class LoginServlet extends HttpServlet {
         }
 
         HttpSession oldSession = request.getSession(false);
+
+        String guestId = null;
         if (oldSession != null) {
+            Object guestIdSnake = oldSession.getAttribute("guest_id");
+            Object guestIdCamel = oldSession.getAttribute("guestId");
+
+            if (guestIdSnake != null && !guestIdSnake.toString().isBlank()) {
+                guestId = guestIdSnake.toString();
+            } else if (guestIdCamel != null && !guestIdCamel.toString().isBlank()) {
+                guestId = guestIdCamel.toString();
+            }
+
             oldSession.invalidate();
         }
 
         HttpSession newSession = request.getSession(true);
         newSession.setAttribute("account", user);
         newSession.setMaxInactiveInterval(60 * 60 * 24);
+
+        if (redirect != null && !redirect.isBlank()) {
+            newSession.setAttribute("postLoginRedirect", redirect);
+        }
+
+        if (guestId != null && !guestId.isBlank()) {
+            newSession.setAttribute("guest_id", guestId);
+
+            CartDAO cartDAO = new CartDAO();
+            cartDAO.attachGuestCartToCustomer(guestId, user.getId());
+        }
 
         if (remember) {
             RememberMeUtil.createRememberMeCookie(request, response, user);

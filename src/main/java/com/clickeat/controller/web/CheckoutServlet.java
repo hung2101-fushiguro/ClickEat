@@ -1,10 +1,13 @@
 package com.clickeat.controller.web;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.clickeat.config.VnpayConfig;
 import com.clickeat.dal.impl.AddressDAO;
@@ -239,6 +242,44 @@ public class CheckoutServlet extends HttpServlet {
         if (suggestedVoucher != null) {
             request.setAttribute("suggestedVoucher", suggestedVoucher.voucher);
             request.setAttribute("suggestedDiscount", suggestedVoucher.discountAmount);
+
+            if (suggestedVoucher.voucher.getMinOrderAmount() != null
+                    && subTotal < suggestedVoucher.voucher.getMinOrderAmount()
+                    && cart.getMerchantUserId() != null
+                    && cart.getMerchantUserId() > 0) {
+                double amountToUnlock = suggestedVoucher.voucher.getMinOrderAmount() - subTotal;
+                List<FoodItem> merchantFoods = foodDAO.findStoreFoodsPaged(
+                        cart.getMerchantUserId(),
+                        null,
+                        null,
+                        null,
+                        "price_asc",
+                        1,
+                        30
+                );
+
+                Set<Integer> existingFoodIds = new HashSet<>();
+                for (CartItem item : checkoutItems) {
+                    existingFoodIds.add(item.getFoodItemId());
+                }
+
+                List<FoodItem> upsellFoods = new ArrayList<>();
+                for (FoodItem f : merchantFoods) {
+                    if (f == null || existingFoodIds.contains(f.getId())) {
+                        continue;
+                    }
+                    upsellFoods.add(f);
+                    if (upsellFoods.size() >= 3) {
+                        break;
+                    }
+                }
+
+                if (!upsellFoods.isEmpty()) {
+                    request.setAttribute("upsellFoods", upsellFoods);
+                    request.setAttribute("upsellTargetAmount", amountToUnlock);
+                    request.setAttribute("upsellMerchantId", cart.getMerchantUserId());
+                }
+            }
         }
 
         if (account != null) {
@@ -541,6 +582,9 @@ public class CheckoutServlet extends HttpServlet {
             oi.setUnitPriceSnapshot(c.getUnitPriceSnapshot());
             oi.setQuantity(c.getQuantity());
             oi.setNote(c.getNote());
+            oi.setSelectedSize(c.getSelectedSize());
+            oi.setSelectedToppings(c.getSelectedToppings());
+            oi.setOptionExtraPrice(c.getOptionExtraPrice());
             orderItemDAO.insert(oi);
         }
 

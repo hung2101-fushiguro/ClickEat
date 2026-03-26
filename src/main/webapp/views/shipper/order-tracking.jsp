@@ -24,8 +24,8 @@ Author     : DELL
             };
         </script>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/vendor/leaflet/leaflet.css" />
+        <script src="${pageContext.request.contextPath}/assets/vendor/leaflet/leaflet.js"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
         <style>body { font-family: 'Inter', sans-serif; }</style>
     </head>
@@ -70,6 +70,7 @@ Author     : DELL
                             <i class="fa-solid fa-magnifying-glass"></i>
                         </button>
                     </div>
+                    <p id="tracking-last-updated" class="text-[11px] text-gray-400 mt-2">Chưa có lần cập nhật vị trí nào</p>
                 </div>
                 <div class="bg-white rounded-2xl p-2 shadow-sm border border-gray-100 relative z-0 mb-2">
                     <div id="map" class="w-full h-64 rounded-xl z-0 relative"></div>
@@ -139,150 +140,333 @@ Author     : DELL
 
                 </form>
             </div>
-<script>
-            let map, shipperMarker, targetMarker, routeLine;
-
-            // ĐÃ FIX CHỐNG SẬP: Bọc dấu nháy và dùng parseFloat, dự phòng tọa độ mặc định
-            let targetLat = parseFloat('${order.orderStatus == "DELIVERING" ? merchant.latitude : order.latitude}') || 16.0736;
-            let targetLng = parseFloat('${order.orderStatus == "DELIVERING" ? merchant.longitude : order.longitude}') || 108.2240;
-            const targetName = "${order.orderStatus == 'DELIVERING' ? 'Quán ăn' : 'Khách hàng'}";
-
-            document.addEventListener('DOMContentLoaded', function () {
-                // 1. Lấy tọa độ
-                const shopLat = ${not empty merchant.latitude ? merchant.latitude : 10.7769};
-                const shopLng = ${not empty merchant.longitude ? merchant.longitude : 106.7009};
+            <script>
+                let map, shipperMarker, targetMarker, routeLine;
+                let lastLocationSyncAt = 0;
+                let locationWatchId = null;
+                let routeRequestAt = 0;
+                let lastRouteLat = null;
+                let lastRouteLng = null;
+                let isRouting = false;
+                let lastTrackingUpdateAt = 0;
+                let trackingTickerId = null;
                 
-                const customerLat = ${not empty order.latitude && order.latitude != 0.0 ? order.latitude : 10.7926};
-                const customerLng = ${not empty order.longitude && order.longitude != 0.0 ? order.longitude : 106.6853};
+                // ĐÃ FIX CHỐNG SẬP: Bọc dấu nháy và dùng parseFloat, dự phòng tọa độ mặc định
+                let targetLat = parseFloat('${order.orderStatus == "DELIVERING" ? merchant.latitude : order.latitude}') || 16.0736;
+                let targetLng = parseFloat('${order.orderStatus == "DELIVERING" ? merchant.longitude : order.longitude}') || 108.2240;
+                const targetName = "${order.orderStatus == 'DELIVERING' ? 'Quán ăn' : 'Khách hàng'}";
                 
-                // 2. Khởi tạo bản đồ
-                const map = L.map('map').setView([shopLat, shopLng], 14);
-                
-                // 3. Load lớp bản đồ (OpenStreetMap)
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors'
-                }).addTo(map);
-                
-                // 4. Tạo icon Tùy chỉnh
-                const shopIcon = L.divIcon({
-                    html: '<div class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center border-2 border-white shadow-lg"><i class="fa-solid fa-store"></i></div>',
-                    className: '', iconSize: [32, 32], iconAnchor: [16, 16]
-                });
-                
-                const customerIcon = L.divIcon({
-                    html: '<div class="w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center border-2 border-white shadow-lg"><i class="fa-solid fa-house"></i></div>',
-                    className: '', iconSize: [32, 32], iconAnchor: [16, 16]
-                });
-                
-                // Gắn Marker
-                L.marker([shopLat, shopLng], {icon: shopIcon}).addTo(map).bindPopup("<b>Lấy hàng tại đây</b>");
-                L.marker([customerLat, customerLng], {icon: customerIcon}).addTo(map).bindPopup("<b>Giao hàng đến đây</b>");
-                
-                // 5. Gọi OSRM API để vẽ đường
-                const osrmUrl = `https://router.project-osrm.org/route/v1/driving/\${shopLng},\${shopLat};\${customerLng},\${customerLat}?overview=full&geometries=geojson`;
-                
-                fetch(osrmUrl)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.routes && data.routes.length > 0) {
-                        const route = data.routes[0];
-                        
-                        // Cập nhật text khoảng cách
-                        const distanceKm = (route.distance / 1000).toFixed(1);
-                        const durationMin = Math.round(route.duration / 60);
-                        document.getElementById('distance-text').innerHTML = `\${distanceKm} km • \${durationMin} phút`;
-                        
-                        // Vẽ đường đi
-                        const coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-                        const polyline = L.polyline(coordinates, {
-                            color: '#3B82F6',
-                            weight: 5,
-                            opacity: 0.8,
-                            dashArray: '10, 10'
-                        }).addTo(map);
-                        
-                        // Zoom bản đồ vừa vặn
-                        map.fitBounds(polyline.getBounds(), {padding: [30, 30]});
-                    }
-                })
-                .catch(err => {
-                    console.error("Lỗi vẽ đường đi: ", err);
-                    document.getElementById('distance-text').innerHTML = "Không thể tính khoảng cách";
-                });
-            });
-
-            // Hàm 1: Lấy GPS từ điện thoại/trình duyệt
-            function getGPSLocation() {
-                document.getElementById('distance-text').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang định vị...';
-                if (navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(
-                            (position) => {
-                        updateShipperLocation(position.coords.latitude, position.coords.longitude);
-                    },
-                            (error) => {
-                        alert("Vui lòng bật GPS hoặc tự nhập địa chỉ ở thanh phía trên!");
-                        document.getElementById('distance-text').innerHTML = 'Chưa có vị trí';
-                    }
-                    );
-                } else {
-                    alert("Trình duyệt không hỗ trợ GPS.");
-                }
-            }
-
-            // Hàm 2: Lấy tọa độ từ địa chỉ gõ tay
-            function searchAddress() {
-                const address = document.getElementById('custom-address').value.trim();
-                if (!address)
-                    return alert("Vui lòng nhập địa chỉ!");
-
-                document.getElementById('distance-text').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tìm...';
-                
-                const url = `https://nominatim.openstreetmap.org/search?format=json&q=\${encodeURIComponent(address + ", Vietnam")}&limit=1`;
-
-                fetch(url).then(res => res.json()).then(data => {
-                    if (data.length > 0)
-                        updateShipperLocation(data[0].lat, data[0].lon);
-                    else {
-                        alert("Không tìm thấy địa chỉ này!");
-                        document.getElementById('distance-text').innerHTML = 'Không tìm thấy';
-                    }
-                }).catch(err => alert("Lỗi mạng!"));
-            }
-
-            // Hàm 3: Cập nhật vị trí Shipper và Vẽ lại đường đi
-            function updateShipperLocation(lat, lng) {
-                // Cập nhật Marker Shipper
-                if (shipperMarker) {
-                    shipperMarker.setLatLng([lat, lng]);
-                } else {
-                    const shipperIcon = L.divIcon({
-                        html: `<div class="w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center border-2 border-white shadow-lg text-lg"><i class="fa-solid fa-motorcycle"></i></div>`,
-                        className: '', iconSize: [40, 40], iconAnchor: [20, 40]
+                document.addEventListener('DOMContentLoaded', function () {
+                    // 1. Lấy tọa độ
+                    const shopLat = ${not empty merchant.latitude ? merchant.latitude : 10.7769};
+                    const shopLng = ${not empty merchant.longitude ? merchant.longitude : 106.7009};
+                    
+                    const customerLat = ${not empty order.latitude && order.latitude != 0.0 ? order.latitude : 10.7926};
+                    const customerLng = ${not empty order.longitude && order.longitude != 0.0 ? order.longitude : 106.6853};
+                    
+                    // 2. Khởi tạo bản đồ
+                    map = L.map('map').setView([shopLat, shopLng], 14);
+                    
+                    // 3. Load lớp bản đồ (OpenStreetMap)
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors'
+                    }).addTo(map);
+                    
+                    // 4. Tạo icon Tùy chỉnh
+                    const shopIcon = L.divIcon({
+                        html: '<div class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center border-2 border-white shadow-lg"><i class="fa-solid fa-store"></i></div>',
+                        className: '', iconSize: [32, 32], iconAnchor: [16, 16]
                     });
-                    shipperMarker = L.marker([lat, lng], {icon: shipperIcon}).addTo(map).bindPopup("<b>Vị trí của bạn</b>");
+                    
+                    const customerIcon = L.divIcon({
+                        html: '<div class="w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center border-2 border-white shadow-lg"><i class="fa-solid fa-house"></i></div>',
+                        className: '', iconSize: [32, 32], iconAnchor: [16, 16]
+                    });
+                    
+                    // Gắn Marker
+                    L.marker([shopLat, shopLng], {icon: shopIcon}).addTo(map).bindPopup("<b>Lấy hàng tại đây</b>");
+                    L.marker([customerLat, customerLng], {icon: customerIcon}).addTo(map).bindPopup("<b>Giao hàng đến đây</b>");
+                    
+                    // 5. Gọi OSRM API để vẽ đường
+                    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/\${shopLng},\${shopLat};\${customerLng},\${customerLat}?overview=full&geometries=geojson`;
+                    
+                    fetch(osrmUrl)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.routes && data.routes.length > 0) {
+                            const route = data.routes[0];
+                            
+                            // Cập nhật text khoảng cách
+                            const distanceKm = (route.distance / 1000).toFixed(1);
+                            const durationMin = Math.round(route.duration / 60);
+                            document.getElementById('distance-text').innerHTML = `\${distanceKm} km • \${durationMin} phút`;
+                            
+                            // Vẽ đường đi
+                            const coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                            const polyline = L.polyline(coordinates, {
+                                color: '#3B82F6',
+                                weight: 5,
+                                opacity: 0.8,
+                                dashArray: '10, 10'
+                            }).addTo(map);
+                            
+                            // Zoom bản đồ vừa vặn
+                            map.fitBounds(polyline.getBounds(), {padding: [30, 30]});
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Lỗi vẽ đường đi: ", err);
+                        document.getElementById('distance-text').innerHTML = "Không thể tính khoảng cách";
+                    });
+                    
+                    startLiveTracking();
+                    
+                    if (trackingTickerId === null) {
+                        trackingTickerId = setInterval(renderTrackingLastUpdated, 1000);
+                    }
+                    renderTrackingLastUpdated();
+                });
+                
+                function renderTrackingLastUpdated() {
+                    const label = document.getElementById('tracking-last-updated');
+                    if (!label) {
+                        return;
+                    }
+                    if (!lastTrackingUpdateAt) {
+                        label.textContent = 'Chưa có lần cập nhật vị trí nào';
+                        return;
+                    }
+                    
+                    const sec = Math.max(0, Math.floor((Date.now() - lastTrackingUpdateAt) / 1000));
+                    if (sec < 60) {
+                        label.textContent = 'Cập nhật vị trí ' + sec + ' giây trước';
+                        return;
+                    }
+                    
+                    const min = Math.floor(sec / 60);
+                    label.textContent = 'Cập nhật vị trí ' + min + ' phút trước';
                 }
-
-                // Vẽ đường đi bằng OSRM API
-                if (routeLine)
-                    map.removeLayer(routeLine); // Xóa đường cũ
-
-                const osrmUrl = `https://router.project-osrm.org/route/v1/driving/\${lng},\${lat};\${targetLng},\${targetLat}?overview=full&geometries=geojson`;
-
-                fetch(osrmUrl).then(res => res.json()).then(data => {
-                    if (data.routes && data.routes.length > 0) {
-                        const route = data.routes[0];
+                
+                function markTrackingUpdatedNow() {
+                    lastTrackingUpdateAt = Date.now();
+                    renderTrackingLastUpdated();
+                }
+                
+                function toRad(value) {
+                    return value * (Math.PI / 180);
+                }
+                
+                function distanceMeters(lat1, lng1, lat2, lng2) {
+                    const earthRadius = 6371000;
+                    const dLat = toRad(lat2 - lat1);
+                    const dLng = toRad(lng2 - lng1);
+                    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                    + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2))
+                    * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                    return earthRadius * c;
+                }
+                
+                function animateMarkerTo(marker, lat, lng, durationMs) {
+                    const from = marker.getLatLng();
+                    const start = performance.now();
+                    const duration = Math.max(400, Number(durationMs) || 700);
+                    
+                    function frame(now) {
+                        const progress = Math.min(1, (now - start) / duration);
+                        const nextLat = from.lat + (lat - from.lat) * progress;
+                        const nextLng = from.lng + (lng - from.lng) * progress;
+                        marker.setLatLng([nextLat, nextLng]);
+                        if (progress < 1) {
+                            requestAnimationFrame(frame);
+                        }
+                    }
+                    
+                    requestAnimationFrame(frame);
+                }
+                
+                function shouldRefreshRoute(lat, lng, forceRefresh) {
+                    if (forceRefresh || lastRouteLat === null || lastRouteLng === null) {
+                        return true;
+                    }
+                    
+                    const moved = distanceMeters(lastRouteLat, lastRouteLng, lat, lng);
+                    const ageMs = Date.now() - routeRequestAt;
+                    return moved >= 35 || ageMs >= 15000;
+                }
+                
+                function drawRouteFromShipper(lat, lng, forceRefresh) {
+                    if (isRouting || !shouldRefreshRoute(lat, lng, forceRefresh)) {
+                        return;
+                    }
+                    
+                    isRouting = true;
+                    routeRequestAt = Date.now();
+                    lastRouteLat = lat;
+                    lastRouteLng = lng;
+                    
+                    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/\${lng},\${lat};\${targetLng},\${targetLat}?overview=full&geometries=geojson`;
+                    
+                    fetch(osrmUrl)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (!data.routes || data.routes.length === 0) {
+                            throw new Error('no-route');
+                        }
                         
-                        document.getElementById('distance-text').innerHTML = `\${(route.distance / 1000).toFixed(1)} km • \${Math.round(route.duration / 60)} phút`;
-
+                        const route = data.routes[0];
+                        const distanceKm = (route.distance / 1000).toFixed(1);
+                        const durationMin = Math.max(1, Math.round(route.duration / 60));
+                        document.getElementById('distance-text').innerHTML = `\${distanceKm} km • ~\${durationMin} phút`;
+                        
+                        if (routeLine) {
+                            map.removeLayer(routeLine);
+                        }
+                        
                         const coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
                         routeLine = L.polyline(coordinates, {color: '#3B82F6', weight: 5, dashArray: '10, 10'}).addTo(map);
-
-                        // Zoom bản đồ để thấy rõ cả Shipper và Đích
-                        map.fitBounds(L.latLngBounds([lat, lng], [targetLat, targetLng]), {padding: [50, 50]});
+                        
+                        const bounds = L.latLngBounds([lat, lng], [targetLat, targetLng]);
+                        map.fitBounds(bounds, {padding: [50, 50]});
+                    })
+                    .catch(() => {
+                        document.getElementById('distance-text').innerHTML = 'Không thể cập nhật lộ trình';
+                    })
+                    .finally(() => {
+                        isRouting = false;
+                    });
+                }
+                
+                function syncLocationToServer(lat, lng, force) {
+                    const now = Date.now();
+                    if (!force && now - lastLocationSyncAt < 10000) {
+                        return;
                     }
-                });
-            }
-        </script>
+                    
+                    const body = new URLSearchParams();
+                    body.set('latitude', String(lat));
+                    body.set('longitude', String(lng));
+                    
+                    fetch('${pageContext.request.contextPath}/shipper/update-location', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                        },
+                        credentials: 'same-origin',
+                        body: body.toString()
+                        }).then(function (res) {
+                            if (res.ok) {
+                                lastLocationSyncAt = now;
+                                markTrackingUpdatedNow();
+                            }
+                            }).catch(function () {
+                            });
+                        }
+                        
+                        // Hàm 1: Lấy GPS từ điện thoại/trình duyệt
+                        function getGPSLocation() {
+                            document.getElementById('distance-text').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang định vị...';
+                            if (navigator.geolocation) {
+                                navigator.geolocation.getCurrentPosition(
+                                (position) => {
+                                    updateShipperLocation(position.coords.latitude, position.coords.longitude, true);
+                                },
+                                () => {
+                                    alert("Vui lòng bật GPS hoặc tự nhập địa chỉ ở thanh phía trên!");
+                                    document.getElementById('distance-text').innerHTML = 'Chưa có vị trí';
+                                },
+                                {
+                                    enableHighAccuracy: true,
+                                    maximumAge: 0,
+                                    timeout: 12000
+                                }
+                                );
+                                } else {
+                                    alert("Trình duyệt không hỗ trợ GPS.");
+                                }
+                            }
+                            
+                            function startLiveTracking() {
+                                if (!navigator.geolocation) {
+                                    getGPSLocation();
+                                    return;
+                                }
+                                
+                                if (locationWatchId !== null) {
+                                    navigator.geolocation.clearWatch(locationWatchId);
+                                }
+                                
+                                locationWatchId = navigator.geolocation.watchPosition(
+                                (position) => {
+                                    updateShipperLocation(position.coords.latitude, position.coords.longitude, false);
+                                },
+                                () => {
+                                    getGPSLocation();
+                                },
+                                {
+                                    enableHighAccuracy: true,
+                                    maximumAge: 7000,
+                                    timeout: 15000
+                                }
+                                );
+                            }
+                            
+                            // Hàm 2: Lấy tọa độ từ địa chỉ gõ tay
+                            function searchAddress() {
+                                const address = document.getElementById('custom-address').value.trim();
+                                if (!address)
+                                return alert("Vui lòng nhập địa chỉ!");
+                                
+                                document.getElementById('distance-text').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tìm...';
+                                
+                                const url = `https://nominatim.openstreetmap.org/search?format=json&q=\${encodeURIComponent(address + ", Vietnam")}&limit=1`;
+                                
+                                fetch(url).then(res => res.json()).then(data => {
+                                    if (data.length > 0)
+                                    updateShipperLocation(data[0].lat, data[0].lon);
+                                    else {
+                                        alert("Không tìm thấy địa chỉ này!");
+                                        document.getElementById('distance-text').innerHTML = 'Không tìm thấy';
+                                    }
+                                }).catch(err => alert("Lỗi mạng!"));
+                            }
+                            
+                            // Hàm 3: Cập nhật vị trí Shipper và Vẽ lại đường đi
+                            function updateShipperLocation(lat, lng, forceRouteRefresh) {
+                                lat = Number(lat);
+                                lng = Number(lng);
+                                
+                                if (Number.isNaN(lat) || Number.isNaN(lng)) {
+                                    return;
+                                }
+                                
+                                syncLocationToServer(lat, lng, false);
+                                
+                                // Cập nhật Marker Shipper
+                                if (shipperMarker) {
+                                    animateMarkerTo(shipperMarker, lat, lng, 700);
+                                    } else {
+                                        const shipperIcon = L.divIcon({
+                                            html: `<div class="w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center border-2 border-white shadow-lg text-lg"><i class="fa-solid fa-motorcycle"></i></div>`,
+                                            className: '', iconSize: [40, 40], iconAnchor: [20, 40]
+                                        });
+                                        shipperMarker = L.marker([lat, lng], {icon: shipperIcon}).addTo(map).bindPopup("<b>Vị trí của bạn</b>");
+                                    }
+                                    
+                                    drawRouteFromShipper(lat, lng, !!forceRouteRefresh);
+                                }
+                                
+                                window.addEventListener('beforeunload', function () {
+                                    if (locationWatchId !== null && navigator.geolocation) {
+                                        navigator.geolocation.clearWatch(locationWatchId);
+                                        locationWatchId = null;
+                                    }
+                                    if (trackingTickerId !== null) {
+                                        clearInterval(trackingTickerId);
+                                        trackingTickerId = null;
+                                    }
+                                });
+                            </script>
 
-    </body>
-</html>
+                        </body>
+                    </html>

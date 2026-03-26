@@ -1,13 +1,10 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.clickeat.dal.impl;
 
-import com.clickeat.model.OrderItem;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+
+import com.clickeat.model.OrderItem;
 
 public class OrderItemDAO extends AbstractDAO<OrderItem> {
 
@@ -21,16 +18,63 @@ public class OrderItemDAO extends AbstractDAO<OrderItem> {
         item.setUnitPriceSnapshot(rs.getDouble("unit_price_snapshot"));
         item.setQuantity(rs.getInt("quantity"));
         item.setNote(rs.getString("note"));
+        try {
+            item.setSelectedSize(rs.getString("selected_size"));
+        } catch (SQLException ignored) {
+        }
+        try {
+            item.setSelectedToppings(rs.getString("selected_toppings"));
+        } catch (SQLException ignored) {
+        }
+        try {
+            double optionExtraPrice = rs.getDouble("option_extra_price");
+            item.setOptionExtraPrice(rs.wasNull() ? null : optionExtraPrice);
+        } catch (SQLException ignored) {
+        }
         return item;
     }
-   
+
     public List<OrderItem> getItemsByOrderId(int orderId) {
         return query("SELECT * FROM OrderItems WHERE order_id = ?", orderId);
     }
-    
-    @Override public List<OrderItem> findAll() { return null; }
-    @Override public OrderItem findById(int id) { return null; }
-    @Override public int insert(OrderItem t) { return 0; }
-    @Override public boolean update(OrderItem t) { return false; }
-    @Override public boolean delete(int id) { return false; }
+
+    @Override
+    public int insert(OrderItem t) {
+        Double optionExtraPrice = t.getOptionExtraPrice();
+        double safeOptionExtra = optionExtraPrice == null ? 0d : optionExtraPrice.doubleValue();
+        String sql = """
+            INSERT INTO OrderItems(order_id, food_item_id, item_name_snapshot, unit_price_snapshot, quantity, note, selected_size, selected_toppings, option_extra_price)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """;
+        return update(sql,
+                t.getOrderId(),
+                t.getFoodItemId(),
+                t.getItemNameSnapshot(),
+                t.getUnitPriceSnapshot(),
+                t.getQuantity(),
+                t.getNote(),
+                t.getSelectedSize(),
+                t.getSelectedToppings(),
+                safeOptionExtra);
+    }
+
+    @Override
+    public List<OrderItem> findAll() {
+        return null;
+    }
+
+    @Override
+    public OrderItem findById(int id) {
+        return null;
+    }
+
+    @Override
+    public boolean update(OrderItem t) {
+        return false;
+    }
+
+    @Override
+    public boolean delete(int id) {
+        return false;
+    }
 }

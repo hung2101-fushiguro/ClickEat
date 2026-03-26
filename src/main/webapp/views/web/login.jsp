@@ -24,7 +24,7 @@
                 --shadow: 0 22px 60px rgba(0,0,0,.12);
                 --radius: 18px;
             }
-
+            
             *{
                 box-sizing:border-box;
             }
@@ -39,13 +39,13 @@
                 padding:32px 18px;
                 color:var(--text);
             }
-
+            
             .frame{
                 border: none;
                 padding: 0;
                 background: transparent;
             }
-
+            
             .card{
                 width:100%;
                 background:var(--card);
@@ -56,18 +56,17 @@
                 grid-template-columns: 1.1fr 0.9fr;
                 min-height: 560px;
             }
-
-            /* LEFT (Hero) */
+            
             .hero{
                 position:relative;
                 padding:28px;
                 background:
-                    linear-gradient(90deg, rgba(0,0,0,.65) 0%, rgba(0,0,0,.25) 55%, rgba(0,0,0,.10) 100%),
-                    url("https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=1400&q=80");
+                linear-gradient(90deg, rgba(0,0,0,.65) 0%, rgba(0,0,0,.25) 55%, rgba(0,0,0,.10) 100%),
+                url("https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=1400&q=80");
                 background-size:cover;
                 background-position:center;
             }
-
+            
             .brand{
                 display:flex;
                 align-items:center;
@@ -95,7 +94,7 @@
                 display:block;
                 clip-path: polygon(0 20%, 70% 20%, 70% 0, 100% 0, 100% 100%, 0 100%);
             }
-
+            
             .hero h1{
                 margin:32px 0 10px;
                 font-size: clamp(34px, 4.2vw, 56px);
@@ -115,7 +114,7 @@
                 font-size: 14px;
                 line-height: 1.65;
             }
-
+            
             .bullets{
                 position:absolute;
                 left:28px;
@@ -152,15 +151,14 @@
                 display:block;
                 margin-top:-1px;
             }
-
-            /* RIGHT (Form) */
+            
             .formWrap{
                 padding:40px 44px;
                 display:flex;
                 flex-direction:column;
                 justify-content:center;
             }
-
+            
             .title{
                 font-size:30px;
                 font-weight:800;
@@ -173,7 +171,7 @@
                 font-size:14px;
                 line-height:1.6;
             }
-
+            
             .alert{
                 border-radius:12px;
                 padding:12px 14px;
@@ -191,7 +189,7 @@
                 border-color:#a7f3d0;
                 color:#065f46;
             }
-
+            
             .field{
                 margin-bottom:14px;
             }
@@ -202,7 +200,7 @@
                 color:#374151;
                 margin: 0 0 8px;
             }
-
+            
             .input{
                 width:100%;
                 height:44px;
@@ -218,7 +216,7 @@
                 border-color: rgba(255,122,26,.65);
                 box-shadow: 0 0 0 4px rgba(255,122,26,.16);
             }
-
+            
             .passwordWrap{
                 position:relative;
             }
@@ -240,7 +238,7 @@
             .toggle:hover{
                 background:#f3f4f6;
             }
-
+            
             .row{
                 margin: 10px 0 18px;
                 display:flex;
@@ -269,7 +267,7 @@
             .link:hover{
                 text-decoration:underline;
             }
-
+            
             .btn{
                 width:100%;
                 height:46px;
@@ -292,7 +290,22 @@
             .btn.primary:active{
                 transform: translateY(0px);
             }
-
+            
+            .btn.secondary{
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                text-decoration:none;
+                background:#fff;
+                border:1px solid var(--line);
+                color:#374151;
+                margin-bottom:12px;
+            }
+            .btn.secondary:hover{
+                background:#f9fafb;
+                border-color:#d1d5db;
+            }
+            
             .divider{
                 display:flex;
                 align-items:center;
@@ -309,7 +322,7 @@
                 background: var(--line);
                 flex:1;
             }
-
+            
             .btn.google{
                 background:#fff;
                 border:1px solid var(--line);
@@ -324,12 +337,12 @@
                 background:#fafafa;
                 border-color:#d1d5db;
             }
-
+            
             .googleIcon{
                 width:18px;
                 height:18px;
             }
-
+            
             .footer{
                 margin-top:18px;
                 text-align:center;
@@ -341,8 +354,7 @@
                 font-size:12px;
                 color:#9ca3af;
             }
-
-            /* Responsive */
+            
             @media (max-width: 980px){
                 .card{
                     grid-template-columns: 1fr;
@@ -364,7 +376,6 @@
     <body>
         <div class="frame">
             <div class="card">
-                <!-- LEFT -->
                 <section class="hero">
                     <div class="brand">
                         <div class="logo" aria-hidden="true"></div>
@@ -385,8 +396,8 @@
                     </div>
                 </section>
 
-                <!-- RIGHT -->
                 <section class="formWrap">
+                    <a class="btn secondary" href="${pageContext.request.contextPath}/home">← Back to Home</a>
                     <h2 class="title">Đăng nhập</h2>
                     <p class="subtitle">Chào mừng bạn quay lại! Vui lòng nhập thông tin.</p>
 
@@ -397,17 +408,16 @@
                         <div class="alert success">✅ ${message}</div>
                     </c:if>
 
-                    <!-- ✅ FIX 2: action dùng contextPath để không bị sai route -->
                     <form action="${pageContext.request.contextPath}/login" method="post" autocomplete="on">
+                        <input type="hidden" name="redirect" value="${not empty param.redirect ? param.redirect : redirect}">
                         <div class="field">
                             <label>Email hoặc Số điện thoại</label>
-                            <!-- giữ name giống code cũ của bạn -->
                             <input class="input"
-                                   type="text"
-                                   name="username"
-                                   value="${username}"
-                                   placeholder="example@email.com"
-                                   required>
+                            type="text"
+                            name="username"
+                            value="${username}"
+                            placeholder="example@email.com"
+                            required>
                         </div>
 
                         <div class="field">
@@ -416,8 +426,8 @@
                                 <input class="input" id="password" type="password" name="password" placeholder="••••••••" required>
                                 <button class="toggle" type="button" aria-label="Hiện/ẩn mật khẩu" onclick="togglePassword()">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" stroke="currentColor" stroke-width="2"/>
-                                    <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="2"/>
+                                        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" stroke="currentColor" stroke-width="2"/>
+                                        <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" stroke-width="2"/>
                                     </svg>
                                 </button>
                             </div>
@@ -426,43 +436,41 @@
                         <div class="row">
                             <label class="remember">
                                 <input type="checkbox" name="remember" value="1"
-                                       <c:if test="${remember}">checked</c:if>>
-                                       Ghi nhớ đăng nhập
+                                <c:if test="${remember}">checked</c:if>>
+                                    Ghi nhớ đăng nhập
                                 </label>
 
                                 <a class="link" href="${pageContext.request.contextPath}/forgot-password">Quên mật khẩu?</a>
-                        </div>
+                            </div>
 
-                        <button class="btn primary" type="submit">Đăng nhập</button>
+                            <button class="btn primary" type="submit">Đăng nhập</button>
 
-                        <div class="divider">HOẶC</div>
+                            <div class="divider">HOẶC</div>
 
-                        <!-- Nếu bạn có OAuth Google: đổi href sang endpoint của bạn (vd: google-login) -->
-                        <button class="btn google" type="button" onclick="location.href = '${pageContext.request.contextPath}/google-login'">
-                            <svg class="googleIcon" viewBox="0 0 48 48" aria-hidden="true">
-                            <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.2 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.1-.1-2.3-.4-3.5z"/>
-                            <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.5 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.2 6.1 29.3 4 24 4 16.3 4 9.6 8.3 6.3 14.7z"/>
-                            <path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.6-5.2l-6.3-5.1C29.2 35.6 26.7 36 24 36c-5.3 0-9.7-3.4-11.3-8.1l-6.5 5C9.4 39.6 16.2 44 24 44z"/>
-                            <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.4 4.2-4.6 5.7l.1-.1 6.3 5.1C36.8 39 44 34 44 24c0-1.1-.1-2.3-.4-3.5z"/>
-                            </svg>
-                            Tiếp tục với Google
-                        </button>
+                            <button class="btn google" type="button" onclick="location.href = '${pageContext.request.contextPath}/google-login'">
+                                <svg class="googleIcon" viewBox="0 0 48 48" aria-hidden="true">
+                                    <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.2 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.1-.1-2.3-.4-3.5z"/>
+                                    <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.5 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.2 6.1 29.3 4 24 4 16.3 4 9.6 8.3 6.3 14.7z"/>
+                                    <path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.6-5.2l-6.3-5.1C29.2 35.6 26.7 36 24 36c-5.3 0-9.7-3.4-11.3-8.1l-6.5 5C9.4 39.6 16.2 44 24 44z"/>
+                                    <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.4 4.2-4.6 5.7l.1-.1 6.3 5.1C36.8 39 44 34 44 24c0-1.1-.1-2.3-.4-3.5z"/>
+                                </svg>
+                                Tiếp tục với Google
+                            </button>
 
-                        <div class="footer">
-                            Chưa có tài khoản? <a class="link" href="${pageContext.request.contextPath}/register">Đăng ký</a><br/>
-                            <span class="small">Hoặc <a class="link" href="${pageContext.request.contextPath}/shipper/register">Trở thành shipper</a> ngay!</span><br/>
-                            <span class="small">Bạn là đối tác? <a class="link" href="${pageContext.request.contextPath}/merchant-login">Đăng nhập Merchant</a> · <a class="link" href="${pageContext.request.contextPath}/merchant-register">Đi tới Merchant</a></span>
-                        </div>
-                    </form>
-                </section>
+                            <div class="footer">
+                                Chưa có tài khoản? <a class="link" href="${pageContext.request.contextPath}/register">Đăng ký</a><br/>
+                                <span class="small">Bạn là đối tác? <a class="link" href="${pageContext.request.contextPath}/shipper/register">Đăng ký làm Shipper</a> · <a class="link" href="${pageContext.request.contextPath}/merchant-register">Đăng ký làm Merchant</a></span>
+                            </div>
+                        </form>
+                    </section>
+                </div>
             </div>
-        </div>
 
-        <script>
-            function togglePassword() {
-                const p = document.getElementById('password');
-                p.type = (p.type === 'password') ? 'text' : 'password';
-            }
-        </script>
-    </body>
-</html>
+            <script>
+                function togglePassword() {
+                    const p = document.getElementById('password');
+                    p.type = (p.type === 'password') ? 'text' : 'password';
+                }
+            </script>
+        </body>
+    </html>

@@ -29,18 +29,18 @@
                 --radius:22px;
                 --danger:#dc2626;
             }
-
+            
             *{
                 box-sizing:border-box
             }
-
+            
             body{
                 margin:0;
                 font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-                background:var(--bg);
+                background: radial-gradient(1200px 500px at 50% 0%, #ffffff 0%, var(--bg) 55%, #eef2f7 100%);
                 color:var(--text);
             }
-
+            
             .topbar{
                 height:72px;
                 background:#fff;
@@ -49,7 +49,7 @@
                 align-items:center;
                 justify-content:center;
             }
-
+            
             .topbar-inner{
                 width:min(1200px, 100%);
                 padding:0 24px;
@@ -57,7 +57,7 @@
                 align-items:center;
                 justify-content:space-between;
             }
-
+            
             .brand{
                 display:flex;
                 align-items:center;
@@ -68,7 +68,7 @@
                 font-size:20px;
                 line-height:1;
             }
-
+            
             .brand-logo{
                 width:34px;
                 height:34px;
@@ -79,7 +79,7 @@
                 justify-content:center;
                 flex:0 0 34px;
             }
-
+            
             .brand-logo::before{
                 content:"";
                 width:14px;
@@ -89,7 +89,7 @@
                 display:block;
                 clip-path: polygon(0 20%, 70% 20%, 70% 0, 100% 0, 100% 100%, 0 100%);
             }
-
+            
             .topbar-link{
                 color:var(--primary);
                 text-decoration:none;
@@ -98,13 +98,13 @@
                 align-items:center;
                 height:100%;
             }
-
+            
             .page{
-                width:min(1100px, 100%);
+                width:min(980px, 100%);
                 margin:32px auto 72px;
                 padding:0 20px;
             }
-
+            
             .back-link{
                 display:inline-flex;
                 align-items:center;
@@ -114,7 +114,7 @@
                 color:#374151;
                 font-weight:700;
             }
-
+            
             .card{
                 background:var(--card);
                 border-radius:var(--radius);
@@ -122,41 +122,48 @@
                 overflow:hidden;
                 border:1px solid #f1f1f1;
             }
-
+            
             .card-head{
                 padding:28px 28px 16px;
                 border-bottom:1px solid #f1f1f1;
             }
-
+            
             .title{
                 margin:0 0 8px;
-                font-size:22px;
+                font-size:28px;
                 font-weight:800;
+                letter-spacing:-.4px;
             }
-
+            
             .subtitle{
                 margin:0;
                 color:var(--muted);
                 font-size:15px;
             }
-
+            
             .form-body{
                 padding:28px;
             }
-
+            
             .section{
                 margin-bottom:32px;
             }
-
+            
             .section-title{
                 font-size:15px;
                 font-weight:800;
-                margin:0 0 18px;
+                margin:0 0 8px;
                 display:flex;
                 align-items:center;
                 gap:10px;
             }
-
+            
+            .section-subtitle{
+                margin:0 0 16px;
+                color:#6b7280;
+                font-size:13px;
+            }
+            
             .section-title::before{
                 content:"";
                 width:4px;
@@ -165,23 +172,23 @@
                 background:var(--primary);
                 display:block;
             }
-
+            
             .grid-2{
                 display:grid;
                 grid-template-columns:1fr 1fr;
                 gap:18px;
             }
-
+            
             .grid-3{
                 display:grid;
                 grid-template-columns:1fr 1fr 1fr;
                 gap:18px;
             }
-
+            
             .field{
                 margin-bottom:16px;
             }
-
+            
             label{
                 display:block;
                 font-size:14px;
@@ -189,7 +196,7 @@
                 margin-bottom:8px;
                 color:#374151;
             }
-
+            
             input,
             select{
                 width:100%;
@@ -203,7 +210,7 @@
                 font-size:15px;
                 color:var(--text);
             }
-
+            
             textarea{
                 width:100%;
                 min-height:124px;
@@ -220,13 +227,13 @@
                 overflow:auto;
                 display:block;
             }
-
+            
             input::placeholder,
             textarea::placeholder{
                 color:#9ca3af;
                 opacity:1;
             }
-
+            
             select{
                 appearance:none;
                 -webkit-appearance:none;
@@ -238,32 +245,69 @@
                 background-position:right 16px center;
                 background-size:18px;
             }
-
+            
             input:focus,
             textarea:focus,
             select:focus{
                 border-color:rgba(255,122,26,.65);
                 box-shadow:0 0 0 4px rgba(255,122,26,.14);
-                padding: 10px;
             }
-
+            
+            .head-meta{
+                display:flex;
+                gap:10px;
+                flex-wrap:wrap;
+                margin-top:14px;
+            }
+            
+            .pill{
+                display:inline-flex;
+                align-items:center;
+                gap:6px;
+                background:#fff7f2;
+                color:#ea580c;
+                border:1px solid #fed7aa;
+                border-radius:999px;
+                padding:6px 12px;
+                font-size:12px;
+                font-weight:800;
+            }
+            
+            .optional-panel{
+                margin-top:12px;
+                border:1px dashed #f3d3bd;
+                border-radius:18px;
+                padding:16px;
+                background:#fffaf6;
+            }
+            
+            .optional-note{
+                display:inline-flex;
+                align-items:center;
+                gap:8px;
+                margin-bottom:6px;
+                color:#9a6a3f;
+                font-size:12px;
+                font-weight:700;
+            }
+            
             .password-wrap input{
                 padding:0 48px 0 22px;
             }
-
+            
             input.error-input,
             textarea.error-input,
             select.error-input{
                 border-color:#fca5a5;
                 box-shadow:0 0 0 4px rgba(220,38,38,.10);
             }
-
+            
             .hint{
                 margin-top:6px;
                 font-size:12px;
                 color:#9ca3af;
             }
-
+            
             .field-error{
                 min-height:18px;
                 margin-top:6px;
@@ -271,7 +315,7 @@
                 color:var(--danger);
                 font-weight:600;
             }
-
+            
             .alert{
                 border-radius:14px;
                 padding:12px 14px;
@@ -279,13 +323,13 @@
                 margin-bottom:18px;
                 border:1px solid;
             }
-
+            
             .alert.error{
                 background:#fff1f2;
                 border-color:#fecdd3;
                 color:#9f1239;
             }
-
+            
             .check-line{
                 display:flex;
                 align-items:flex-start;
@@ -294,14 +338,14 @@
                 color:#6b7280;
                 font-size:14px;
             }
-
+            
             .check-line input{
                 width:18px;
                 height:18px;
                 margin-top:1px;
                 accent-color:var(--primary);
             }
-
+            
             .submit-btn{
                 width:100%;
                 height:52px;
@@ -315,12 +359,12 @@
                 box-shadow:0 14px 30px rgba(255,122,26,.28);
                 transition:.15s ease;
             }
-
+            
             .submit-btn:hover{
                 background:var(--primary-hover);
                 transform:translateY(-1px);
             }
-
+            
             .divider{
                 display:flex;
                 align-items:center;
@@ -330,14 +374,14 @@
                 font-size:13px;
                 font-weight:700;
             }
-
+            
             .divider::before, .divider::after{
                 content:"";
                 flex:1;
                 height:1px;
                 background:#e5e7eb;
             }
-
+            
             .google-btn{
                 width:100%;
                 height:52px;
@@ -355,50 +399,50 @@
                 transition:.15s ease;
                 box-shadow:0 8px 20px rgba(0,0,0,.04);
             }
-
+            
             .google-btn:hover{
                 background:#fafafa;
                 border-color:#d1d5db;
                 transform:translateY(-1px);
             }
-
+            
             .googleIcon{
                 width:18px;
                 height:18px;
                 flex:0 0 auto;
             }
-
+            
             .bottom-link{
                 margin-top:18px;
                 text-align:center;
                 color:#6b7280;
                 font-size:14px;
             }
-
+            
             .bottom-link a{
                 color:var(--primary);
                 text-decoration:none;
                 font-weight:800;
             }
-
+            
             input[type="number"]::-webkit-outer-spin-button,
             input[type="number"]::-webkit-inner-spin-button{
                 -webkit-appearance:none;
                 margin:0;
             }
-
+            
             input[type="number"]{
                 -moz-appearance:textfield;
             }
-
+            
             .password-wrap{
                 position:relative;
             }
-
+            
             .password-wrap input{
                 padding-right:48px;
             }
-
+            
             .password-toggle{
                 position:absolute;
                 right:12px;
@@ -414,11 +458,11 @@
                 align-items:center;
                 justify-content:center;
             }
-
+            
             .password-toggle:hover{
                 color:#6b7280;
             }
-
+            
             @media (max-width: 900px){
                 .grid-2, .grid-3{
                     grid-template-columns:1fr;
@@ -448,6 +492,10 @@
                 <div class="card-head">
                     <h1 class="title">Đăng ký tài khoản</h1>
                     <p class="subtitle">Tạo tài khoản để đặt món nhanh hơn và nhận ưu đãi.</p>
+                    <div class="head-meta">
+                        <span class="pill"><i class="fa-solid fa-user-check"></i> Đăng ký Customer</span>
+                        <span class="pill"><i class="fa-solid fa-shield-heart"></i> Bảo mật thông tin</span>
+                    </div>
                 </div>
 
                 <div class="form-body">
@@ -456,8 +504,13 @@
                     </c:if>
 
                     <form id="registerForm" action="${pageContext.request.contextPath}/register" method="post" accept-charset="UTF-8" novalidate>
+                        <input type="hidden" name="provinceNameText" id="provinceNameText">
+                        <input type="hidden" name="districtNameText" id="districtNameText">
+                        <input type="hidden" name="wardNameText" id="wardNameText">
+
                         <div class="section">
                             <h2 class="section-title">Thông tin cá nhân</h2>
+                            <p class="section-subtitle">Các trường cơ bản để tạo tài khoản và liên hệ giao hàng.</p>
 
                             <div class="grid-2">
                                 <div class="field">
@@ -473,44 +526,47 @@
                                 </div>
                             </div>
 
-                            <div class="grid-2">
-                                <div class="field">
-                                    <label for="email">E-mail</label>
-                                    <input type="email" id="email" name="email" value="${param.email}" placeholder="example@email.com">
-                                    <div class="hint">Email có thể để trống, nhưng nếu nhập thì phải là duy nhất.</div>
-                                    <div class="field-error" id="emailError"></div>
-                                </div>
+                            <div class="field">
+                                <label for="email">E-mail</label>
+                                <input type="email" id="email" name="email" value="${param.email}" placeholder="example@email.com">
+                                <div class="hint">Email có thể để trống, nhưng nếu nhập thì phải là duy nhất.</div>
+                                <div class="field-error" id="emailError"></div>
+                            </div>
+
+                            <div class="optional-panel">
+                                <div class="optional-note"><i class="fa-regular fa-circle-question"></i> Tùy chọn: Hồ sơ dinh dưỡng cá nhân</div>
 
                                 <div class="field">
                                     <label for="dailyCalorieTarget">Calo mục tiêu/ngày</label>
                                     <input type="number" id="dailyCalorieTarget" name="dailyCalorieTarget" value="${param.dailyCalorieTarget}" placeholder="Ví dụ: 1800">
                                     <div class="field-error" id="dailyCalorieTargetError"></div>
                                 </div>
-                            </div>
 
-                            <div class="field">
-                                <label for="foodPreferences">Thói quen ăn uống</label>
-                                <textarea id="foodPreferences" name="foodPreferences" placeholder="Ví dụ: Ăn chay, thích cay, không ăn hành...">${param.foodPreferences}</textarea>
-                                <div class="field-error" id="foodPreferencesError"></div>
-                            </div>
-
-                            <div class="grid-2">
                                 <div class="field">
-                                    <label for="allergies">Dị ứng thực phẩm</label>
-                                    <textarea id="allergies" name="allergies" placeholder="Ví dụ: Dị ứng tôm, đậu phộng...">${param.allergies}</textarea>
-                                    <div class="field-error" id="allergiesError"></div>
+                                    <label for="foodPreferences">Thói quen ăn uống</label>
+                                    <textarea id="foodPreferences" name="foodPreferences" placeholder="Ví dụ: Ăn chay, thích cay, không ăn hành...">${param.foodPreferences}</textarea>
+                                    <div class="field-error" id="foodPreferencesError"></div>
                                 </div>
 
-                                <div class="field">
-                                    <label for="healthGoal">Mục tiêu sức khỏe</label>
-                                    <textarea id="healthGoal" name="healthGoal" placeholder="Ví dụ: Eat clean, giảm cân, tăng cơ...">${param.healthGoal}</textarea>
-                                    <div class="field-error" id="healthGoalError"></div>
+                                <div class="grid-2">
+                                    <div class="field">
+                                        <label for="allergies">Dị ứng thực phẩm</label>
+                                        <textarea id="allergies" name="allergies" placeholder="Ví dụ: Dị ứng tôm, đậu phộng...">${param.allergies}</textarea>
+                                        <div class="field-error" id="allergiesError"></div>
+                                    </div>
+
+                                    <div class="field">
+                                        <label for="healthGoal">Mục tiêu sức khỏe</label>
+                                        <textarea id="healthGoal" name="healthGoal" placeholder="Ví dụ: Eat clean, giảm cân, tăng cơ...">${param.healthGoal}</textarea>
+                                        <div class="field-error" id="healthGoalError"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         <div class="section">
                             <h2 class="section-title">Địa chỉ giao hàng mặc định (tùy chọn)</h2>
+                            <p class="section-subtitle">Bạn có thể bỏ qua và cập nhật địa chỉ sau trong hồ sơ.</p>
 
                             <div class="grid-3">
                                 <div class="field">
@@ -565,6 +621,7 @@
 
                         <div class="section">
                             <h2 class="section-title">Bảo mật</h2>
+                            <p class="section-subtitle">Đặt mật khẩu mạnh để bảo vệ tài khoản.</p>
 
                             <div class="grid-2">
                                 <div class="field">
@@ -597,55 +654,82 @@
                             <div class="field-error" id="agreeTermsError"></div>
                         </div>
 
-                        <button type="submit" class="submit-btn">Đăng ký</button>
+                        <button type="submit" class="submit-btn">Tạo tài khoản Customer</button>
 
                         <div class="divider">Hoặc</div>
 
                         <button class="google-btn" type="button"
-                                onclick="location.href = '${pageContext.request.contextPath}/google-login'">
-                            <svg class="googleIcon" viewBox="0 0 48 48" aria-hidden="true">
+                        onclick="location.href = '${pageContext.request.contextPath}/google-login'">
+                        <svg class="googleIcon" viewBox="0 0 48 48" aria-hidden="true">
                             <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.2 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.1-.1-2.3-.4-3.5z"/>
                             <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.5 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.2 6.1 29.3 4 24 4 16.3 4 9.6 8.3 6.3 14.7z"/>
                             <path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.6-5.2l-6.3-5.1C29.2 35.6 26.7 36 24 36c-5.3 0-9.7-3.4-11.3-8.1l-6.5 5C9.4 39.6 16.2 44 24 44z"/>
                             <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.4 4.2-4.6 5.7l.1-.1 6.3 5.1C36.8 39 44 34 44 24c0-1.1-.1-2.3-.4-3.5z"/>
-                            </svg>
-                            <span>Tiếp tục với Google</span>
-                        </button>
+                        </svg>
+                        <span>Tiếp tục với Google</span>
+                    </button>
 
-                        <div class="bottom-link">
-                            Đã có tài khoản? <a href="${pageContext.request.contextPath}/login">Đăng nhập</a>
-                        </div>
-                    </form>
-                </div>
+                    <div class="bottom-link">
+                        Đã có tài khoản? <a href="${pageContext.request.contextPath}/login">Đăng nhập</a>
+                    </div>
+                </form>
             </div>
         </div>
+    </div>
 
-        <jsp:include page="footer.jsp" />
+    <jsp:include page="footer.jsp" />
 
-        <script>
-            const provinceSelect = document.getElementById('provinceName');
-            const districtSelect = document.getElementById('districtName');
-            const wardSelect = document.getElementById('wardName');
-
-            let provincesData = [];
-            const provinceMap = new Map();
-            let provincesDepth3Data = null;
-
-            function togglePassword(inputId, btn) {
-                const input = document.getElementById(inputId);
-                const icon = btn.querySelector('i');
-                if (!input || !icon)
-                    return;
-
-                if (input.type === 'password') {
-                    input.type = 'text';
-                    icon.className = 'fa-regular fa-eye-slash';
+    <script>
+        const provinceSelect = document.getElementById('provinceName');
+        const districtSelect = document.getElementById('districtName');
+        const wardSelect = document.getElementById('wardName');
+        
+        const provinceNameTextInput = document.getElementById('provinceNameText');
+        const districtNameTextInput = document.getElementById('districtNameText');
+        const wardNameTextInput = document.getElementById('wardNameText');
+        
+        let provincesData = [];
+        const provinceMap = new Map();
+        let provincesDepth3Data = null;
+        
+        function togglePassword(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const icon = btn.querySelector('i');
+            if (!input || !icon)
+            return;
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fa-regular fa-eye-slash';
                 } else {
                     input.type = 'password';
                     icon.className = 'fa-regular fa-eye';
                 }
             }
-
+            
+            function updateAddressTextFields() {
+                if (provinceSelect && provinceNameTextInput) {
+                    provinceNameTextInput.value =
+                    provinceSelect.selectedIndex > 0
+                    ? provinceSelect.options[provinceSelect.selectedIndex].text
+                    : '';
+                }
+                
+                if (districtSelect && districtNameTextInput) {
+                    districtNameTextInput.value =
+                    districtSelect.selectedIndex > 0
+                    ? districtSelect.options[districtSelect.selectedIndex].text
+                    : '';
+                }
+                
+                if (wardSelect && wardNameTextInput) {
+                    wardNameTextInput.value =
+                    wardSelect.selectedIndex > 0
+                    ? wardSelect.options[wardSelect.selectedIndex].text
+                    : '';
+                }
+            }
+            
             async function fetchJson(url) {
                 const res = await fetch(url, {
                     method: 'GET',
@@ -653,27 +737,27 @@
                         'Accept': 'application/json'
                     }
                 });
-
+                
                 if (!res.ok) {
                     throw new Error('Không tải được dữ liệu từ: ' + url + ' | status=' + res.status);
                 }
-
+                
                 return await res.json();
             }
-
+            
             function resetSelect(selectEl, placeholder, disabled = true) {
                 selectEl.innerHTML = `<option value="">${placeholder}</option>`;
                 selectEl.disabled = disabled;
             }
-
+            
             function fillSelect(selectEl, items, placeholder) {
                 selectEl.innerHTML = `<option value="">${placeholder}</option>`;
-
+                
                 if (!Array.isArray(items) || items.length === 0) {
                     selectEl.disabled = true;
                     return;
                 }
-
+                
                 items.forEach(item => {
                     const option = document.createElement('option');
                     option.value = String(item.code ?? '');
@@ -681,380 +765,377 @@
                     option.dataset.name = item.name ?? '';
                     selectEl.appendChild(option);
                 });
-
+                
                 selectEl.disabled = false;
             }
-
+            
             function setError(inputId, message) {
                 const input = document.getElementById(inputId);
                 const error = document.getElementById(inputId + 'Error');
                 if (!error)
-                    return false;
-
+                return false;
+                
                 error.textContent = message || '';
                 if (input) {
                     input.classList.toggle('error-input', !!message);
                 }
                 return !message;
             }
-
+            
             function clearAddressErrors() {
                 setError('provinceName', '');
                 setError('districtName', '');
                 setError('wardName', '');
             }
-
+            
             async function loadProvinces() {
                 try {
                     resetSelect(provinceSelect, 'Đang tải tỉnh/thành...', true);
                     resetSelect(districtSelect, 'Chọn quận/huyện', true);
                     resetSelect(wardSelect, 'Chọn phường/xã', true);
-
-                    // Dùng endpoint chuẩn theo ví dụ tài liệu: /api/v1/?depth=2
+                    
                     provincesData = await fetchJson('https://provinces.open-api.vn/api/v1/?depth=2');
-                    console.log('Provinces data:', provincesData);
-
+                    
                     provinceMap.clear();
                     provincesData.forEach(province => {
                         provinceMap.set(String(province.code), province);
                     });
-
+                    
                     fillSelect(provinceSelect, provincesData, 'Chọn tỉnh/thành');
                     clearAddressErrors();
-                } catch (e) {
-                    console.error('Lỗi load provinces:', e);
-                    resetSelect(provinceSelect, 'Không tải được tỉnh/thành', true);
-                    setError('provinceName', 'Không tải được danh sách tỉnh/thành.');
+                    updateAddressTextFields();
+                    } catch (e) {
+                        console.error('Lỗi load provinces:', e);
+                        resetSelect(provinceSelect, 'Không tải được tỉnh/thành', true);
+                        setError('provinceName', 'Không tải được danh sách tỉnh/thành.');
+                    }
                 }
-            }
-
-            function loadDistrictsFromLoadedProvince(provinceCode) {
-                const province = provinceMap.get(String(provinceCode));
-                console.log('Selected province object:', province);
-
-                resetSelect(districtSelect, 'Chọn quận/huyện', true);
-                resetSelect(wardSelect, 'Chọn phường/xã', true);
-
-                if (!province) {
-                    setError('districtName', 'Không tìm thấy dữ liệu tỉnh/thành đã chọn.');
-                    return;
-                }
-
-                if (Array.isArray(province.districts) && province.districts.length > 0) {
-                    fillSelect(districtSelect, province.districts, 'Chọn quận/huyện');
-                    setError('districtName', '');
-                } else {
-                    resetSelect(districtSelect, 'Không có quận/huyện', true);
-                    setError('districtName', 'Tỉnh/thành này không có dữ liệu quận/huyện.');
-                }
-            }
-
-            async function findDistrictWithWardsFromProvince(provinceCode, districtCode) {
-                if (!provincesDepth3Data) {
-                    provincesDepth3Data = await fetchJson('https://provinces.open-api.vn/api/v1/?depth=3');
-                    console.log('provincesDepth3Data =', provincesDepth3Data);
-                }
-
-                if (!Array.isArray(provincesDepth3Data)) {
-                    return null;
-                }
-
-                const province = provincesDepth3Data.find(
-                        p => String(p.code) === String(provinceCode)
-                );
-
-                console.log('province from depth=3 data =', province);
-
-                if (!province || !Array.isArray(province.districts)) {
-                    return null;
-                }
-
-                const district = province.districts.find(
-                        d => String(d.code) === String(districtCode)
-                ) || null;
-
-                console.log('district from depth=3 data =', district);
-
-                return district;
-            }
-
-            async function loadWardsByDistrictCode(districtCode) {
-                try {
-                    resetSelect(wardSelect, 'Đang tải phường/xã...', true);
-
-                    const provinceCode = provinceSelect.value;
-                    if (!provinceCode) {
-                        resetSelect(wardSelect, 'Chọn phường/xã', true);
-                        setError('wardName', 'Vui lòng chọn tỉnh/thành trước.');
+                
+                function loadDistrictsFromLoadedProvince(provinceCode) {
+                    const province = provinceMap.get(String(provinceCode));
+                    
+                    resetSelect(districtSelect, 'Chọn quận/huyện', true);
+                    resetSelect(wardSelect, 'Chọn phường/xã', true);
+                    updateAddressTextFields();
+                    
+                    if (!province) {
+                        setError('districtName', 'Không tìm thấy dữ liệu tỉnh/thành đã chọn.');
                         return;
                     }
-
-                    const districtDetail = await findDistrictWithWardsFromProvince(provinceCode, districtCode);
-                    console.log('District detail for wards:', districtDetail);
-
-                    if (districtDetail && Array.isArray(districtDetail.wards) && districtDetail.wards.length > 0) {
-                        fillSelect(wardSelect, districtDetail.wards, 'Chọn phường/xã');
-                        setError('wardName', '');
-                    } else {
-                        resetSelect(wardSelect, 'Không có phường/xã', true);
-                        setError('wardName', 'Quận/huyện này không có dữ liệu phường/xã.');
+                    
+                    if (Array.isArray(province.districts) && province.districts.length > 0) {
+                        fillSelect(districtSelect, province.districts, 'Chọn quận/huyện');
+                        setError('districtName', '');
+                        } else {
+                            resetSelect(districtSelect, 'Không có quận/huyện', true);
+                            setError('districtName', 'Tỉnh/thành này không có dữ liệu quận/huyện.');
+                        }
                     }
-                } catch (e) {
-                    console.error('Lỗi load wards:', e);
-                    resetSelect(wardSelect, 'Không tải được phường/xã', true);
-                    setError('wardName', 'Không tải được phường/xã.');
-                }
-            }
-
-            provinceSelect.addEventListener('change', function () {
-                const provinceCode = this.value;
-
-                resetSelect(districtSelect, 'Chọn quận/huyện', true);
-                resetSelect(wardSelect, 'Chọn phường/xã', true);
-                setError('provinceName', '');
-                setError('districtName', '');
-                setError('wardName', '');
-
-                if (!provinceCode)
-                    return;
-
-                loadDistrictsFromLoadedProvince(provinceCode);
-            });
-
-            districtSelect.addEventListener('change', async function () {
-                const districtCode = this.value;
-
-                resetSelect(wardSelect, 'Chọn phường/xã', true);
-                setError('districtName', '');
-                setError('wardName', '');
-
-                if (!districtCode)
-                    return;
-
-                await loadWardsByDistrictCode(districtCode);
-            });
-
-            wardSelect.addEventListener('change', function () {
-                setError('wardName', '');
-            });
-
-            function validateFullName() {
-                const value = document.getElementById('fullName').value.trim();
-                if (value.length < 2)
-                    return setError('fullName', 'Họ tên phải có ít nhất 2 ký tự.');
-                if (value.length > 60)
-                    return setError('fullName', 'Họ tên không được vượt quá 60 ký tự.');
-                if (!/^[A-Za-zÀ-ỹ\s]+$/.test(value))
-                    return setError('fullName', 'Họ tên chỉ được chứa chữ cái và khoảng trắng.');
-                return setError('fullName', '');
-            }
-
-            function validatePhone() {
-                const value = document.getElementById('phone').value.trim();
-                if (!/^[0-9]{8,11}$/.test(value))
-                    return setError('phone', 'Số điện thoại chỉ được chứa 8-11 chữ số.');
-                return setError('phone', '');
-            }
-
-            function validateEmail() {
-                const value = document.getElementById('email').value.trim();
-                if (value === '')
-                    return setError('email', '');
-                if (value.length > 100)
-                    return setError('email', 'Email không được vượt quá 100 ký tự.');
-                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
-                    return setError('email', 'Email không đúng định dạng.');
-                return setError('email', '');
-            }
-
-            function validateDailyCalorieTarget() {
-                const value = document.getElementById('dailyCalorieTarget').value.trim();
-                if (value === '')
-                    return setError('dailyCalorieTarget', '');
-                const num = Number(value);
-                if (!Number.isInteger(num) || num < 500 || num > 10000) {
-                    return setError('dailyCalorieTarget', 'Calo mục tiêu nên nằm trong khoảng 500 - 10000.');
-                }
-                return setError('dailyCalorieTarget', '');
-            }
-
-            function validateReceiverName() {
-                const value = document.getElementById('receiverName').value.trim();
-                if (value === '')
-                    return setError('receiverName', '');
-                if (value.length < 2)
-                    return setError('receiverName', 'Tên người nhận quá ngắn.');
-                if (value.length > 60)
-                    return setError('receiverName', 'Tên người nhận quá dài.');
-                if (!/^[A-Za-zÀ-ỹ\s]+$/.test(value))
-                    return setError('receiverName', 'Tên người nhận chỉ được chứa chữ cái và khoảng trắng.');
-                return setError('receiverName', '');
-            }
-
-            function validateReceiverPhone() {
-                const value = document.getElementById('receiverPhone').value.trim();
-                if (value === '')
-                    return setError('receiverPhone', '');
-                if (!/^[0-9]{8,11}$/.test(value))
-                    return setError('receiverPhone', 'SĐT người nhận chỉ được chứa 8-11 chữ số.');
-                return setError('receiverPhone', '');
-            }
-
-            function validateTextAreaField(id, maxLen, label) {
-                const value = document.getElementById(id).value.trim();
-                if (value === '')
-                    return setError(id, '');
-                if (value.length > maxLen)
-                    return setError(id, `${label} không được vượt quá ${maxLen} ký tự.`);
-                if (!/^[A-Za-zÀ-ỹ0-9\s,.;:()\-/%]+$/.test(value)) {
-                    return setError(id, `${label} chứa ký tự không hợp lệ.`);
-                }
-                return setError(id, '');
-            }
-
-            function validateAddressLine() {
-                const value = document.getElementById('addressLine').value.trim();
-                if (value === '')
-                    return setError('addressLine', '');
-                if (value.length < 5)
-                    return setError('addressLine', 'Địa chỉ chi tiết quá ngắn.');
-                if (value.length > 255)
-                    return setError('addressLine', 'Địa chỉ chi tiết quá dài.');
-                if (!/^[A-Za-zÀ-ỹ0-9\s,./\-]+$/.test(value)) {
-                    return setError('addressLine', 'Địa chỉ chứa ký tự không hợp lệ.');
-                }
-                return setError('addressLine', '');
-            }
-
-            function validateProvinceDistrictWard() {
-                const province = provinceSelect.value.trim();
-                const district = districtSelect.value.trim();
-                const ward = wardSelect.value.trim();
-                const addressLine = document.getElementById('addressLine').value.trim();
-                const receiverName = document.getElementById('receiverName').value.trim();
-                const receiverPhone = document.getElementById('receiverPhone').value.trim();
-
-                const hasAny = province || district || ward || addressLine || receiverName || receiverPhone;
-
-                if (!hasAny) {
-                    clearAddressErrors();
-                    return true;
-                }
-
-                let ok = true;
-
-                if (!province) {
-                    setError('provinceName', 'Vui lòng chọn tỉnh/thành.');
-                    ok = false;
-                } else {
-                    setError('provinceName', '');
-                }
-
-                if (!district) {
-                    setError('districtName', 'Vui lòng chọn quận/huyện.');
-                    ok = false;
-                } else {
-                    setError('districtName', '');
-                }
-
-                if (!ward) {
-                    setError('wardName', 'Vui lòng chọn phường/xã.');
-                    ok = false;
-                } else {
-                    setError('wardName', '');
-                }
-
-                return ok;
-            }
-
-            function validatePassword() {
-                const value = document.getElementById('password').value;
-                if (value.length < 8)
-                    return setError('password', 'Mật khẩu phải có ít nhất 8 ký tự.');
-                if (value.length > 50)
-                    return setError('password', 'Mật khẩu không được vượt quá 50 ký tự.');
-                if (!/[A-Z]/.test(value))
-                    return setError('password', 'Mật khẩu phải có ít nhất 1 chữ in hoa.');
-                if (!/[a-z]/.test(value))
-                    return setError('password', 'Mật khẩu phải có ít nhất 1 chữ thường.');
-                if (!/[0-9]/.test(value))
-                    return setError('password', 'Mật khẩu phải có ít nhất 1 chữ số.');
-                if (!/[!@#$%^&*(),.?":{}|<>_\-\\/\[\];'+=]/.test(value)) {
-                    return setError('password', 'Mật khẩu phải có ít nhất 1 ký tự đặc biệt.');
-                }
-                return setError('password', '');
-            }
-
-            function validateConfirmPassword() {
-                const password = document.getElementById('password').value;
-                const confirm = document.getElementById('confirmPassword').value;
-                if (confirm.length === 0)
-                    return setError('confirmPassword', 'Vui lòng nhập lại mật khẩu.');
-                if (password !== confirm)
-                    return setError('confirmPassword', 'Mật khẩu xác nhận không khớp.');
-                return setError('confirmPassword', '');
-            }
-
-            function validateAgreeTerms() {
-                const checked = document.getElementById('agreeTerms').checked;
-                const error = document.getElementById('agreeTermsError');
-                error.textContent = checked ? '' : 'Bạn cần đồng ý điều khoản để tiếp tục.';
-                return checked;
-            }
-
-            document.getElementById('fullName').addEventListener('input', validateFullName);
-            document.getElementById('phone').addEventListener('input', validatePhone);
-            document.getElementById('email').addEventListener('input', validateEmail);
-            document.getElementById('dailyCalorieTarget').addEventListener('input', validateDailyCalorieTarget);
-
-            document.getElementById('receiverName').addEventListener('input', validateReceiverName);
-            document.getElementById('receiverPhone').addEventListener('input', validateReceiverPhone);
-            document.getElementById('addressLine').addEventListener('input', validateAddressLine);
-
-            document.getElementById('foodPreferences').addEventListener('input', function () {
-                validateTextAreaField('foodPreferences', 300, 'Thói quen ăn uống');
-            });
-
-            document.getElementById('allergies').addEventListener('input', function () {
-                validateTextAreaField('allergies', 200, 'Dị ứng thực phẩm');
-            });
-
-            document.getElementById('healthGoal').addEventListener('input', function () {
-                validateTextAreaField('healthGoal', 200, 'Mục tiêu sức khỏe');
-            });
-
-            document.getElementById('password').addEventListener('input', function () {
-                validatePassword();
-                validateConfirmPassword();
-            });
-
-            document.getElementById('confirmPassword').addEventListener('input', validateConfirmPassword);
-            document.getElementById('agreeTerms').addEventListener('change', validateAgreeTerms);
-
-            document.getElementById('registerForm').addEventListener('submit', function (e) {
-                const results = [
-                    validateFullName(),
-                    validatePhone(),
-                    validateEmail(),
-                    validateDailyCalorieTarget(),
-                    validateReceiverName(),
-                    validateReceiverPhone(),
-                    validateAddressLine(),
-                    validateProvinceDistrictWard(),
-                    validateTextAreaField('foodPreferences', 300, 'Thói quen ăn uống'),
-                    validateTextAreaField('allergies', 200, 'Dị ứng thực phẩm'),
-                    validateTextAreaField('healthGoal', 200, 'Mục tiêu sức khỏe'),
-                    validatePassword(),
-                    validateConfirmPassword(),
-                    validateAgreeTerms()
-                ];
-
-                if (results.includes(false)) {
-                    e.preventDefault();
-                }
-            });
-
-            loadProvinces();
-        </script>
-    </body>
-</html>
+                    
+                    async function findDistrictWithWardsFromProvince(provinceCode, districtCode) {
+                        if (!provincesDepth3Data) {
+                            provincesDepth3Data = await fetchJson('https://provinces.open-api.vn/api/v1/?depth=3');
+                        }
+                        
+                        if (!Array.isArray(provincesDepth3Data)) {
+                            return null;
+                        }
+                        
+                        const province = provincesDepth3Data.find(
+                        p => String(p.code) === String(provinceCode)
+                        );
+                        
+                        if (!province || !Array.isArray(province.districts)) {
+                            return null;
+                        }
+                        
+                        return province.districts.find(
+                        d => String(d.code) === String(districtCode)
+                        ) || null;
+                    }
+                    
+                    async function loadWardsByDistrictCode(districtCode) {
+                        try {
+                            resetSelect(wardSelect, 'Đang tải phường/xã...', true);
+                            updateAddressTextFields();
+                            
+                            const provinceCode = provinceSelect.value;
+                            if (!provinceCode) {
+                                resetSelect(wardSelect, 'Chọn phường/xã', true);
+                                setError('wardName', 'Vui lòng chọn tỉnh/thành trước.');
+                                return;
+                            }
+                            
+                            const districtDetail = await findDistrictWithWardsFromProvince(provinceCode, districtCode);
+                            
+                            if (districtDetail && Array.isArray(districtDetail.wards) && districtDetail.wards.length > 0) {
+                                fillSelect(wardSelect, districtDetail.wards, 'Chọn phường/xã');
+                                setError('wardName', '');
+                                } else {
+                                    resetSelect(wardSelect, 'Không có phường/xã', true);
+                                    setError('wardName', 'Quận/huyện này không có dữ liệu phường/xã.');
+                                }
+                                } catch (e) {
+                                    console.error('Lỗi load wards:', e);
+                                    resetSelect(wardSelect, 'Không tải được phường/xã', true);
+                                    setError('wardName', 'Không tải được phường/xã.');
+                                }
+                            }
+                            
+                            provinceSelect.addEventListener('change', function () {
+                                const provinceCode = this.value;
+                                
+                                resetSelect(districtSelect, 'Chọn quận/huyện', true);
+                                resetSelect(wardSelect, 'Chọn phường/xã', true);
+                                setError('provinceName', '');
+                                setError('districtName', '');
+                                setError('wardName', '');
+                                updateAddressTextFields();
+                                
+                                if (!provinceCode)
+                                return;
+                                
+                                loadDistrictsFromLoadedProvince(provinceCode);
+                            });
+                            
+                            districtSelect.addEventListener('change', async function () {
+                                const districtCode = this.value;
+                                
+                                resetSelect(wardSelect, 'Chọn phường/xã', true);
+                                setError('districtName', '');
+                                setError('wardName', '');
+                                updateAddressTextFields();
+                                
+                                if (!districtCode)
+                                return;
+                                
+                                await loadWardsByDistrictCode(districtCode);
+                            });
+                            
+                            wardSelect.addEventListener('change', function () {
+                                setError('wardName', '');
+                                updateAddressTextFields();
+                            });
+                            
+                            function validateFullName() {
+                                const value = document.getElementById('fullName').value.trim();
+                                if (value.length < 2)
+                                return setError('fullName', 'Họ tên phải có ít nhất 2 ký tự.');
+                                if (value.length > 60)
+                                return setError('fullName', 'Họ tên không được vượt quá 60 ký tự.');
+                                if (!/^[A-Za-zÀ-ỹ\s]+$/.test(value))
+                                return setError('fullName', 'Họ tên chỉ được chứa chữ cái và khoảng trắng.');
+                                return setError('fullName', '');
+                            }
+                            
+                            function validatePhone() {
+                                const value = document.getElementById('phone').value.trim();
+                                if (!/^[0-9]{8,11}$/.test(value))
+                                return setError('phone', 'Số điện thoại chỉ được chứa 8-11 chữ số.');
+                                return setError('phone', '');
+                            }
+                            
+                            function validateEmail() {
+                                const value = document.getElementById('email').value.trim();
+                                if (value === '')
+                                return setError('email', '');
+                                if (value.length > 100)
+                                return setError('email', 'Email không được vượt quá 100 ký tự.');
+                                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
+                                return setError('email', 'Email không đúng định dạng.');
+                                return setError('email', '');
+                            }
+                            
+                            function validateDailyCalorieTarget() {
+                                const value = document.getElementById('dailyCalorieTarget').value.trim();
+                                if (value === '')
+                                return setError('dailyCalorieTarget', '');
+                                const num = Number(value);
+                                if (!Number.isInteger(num) || num < 500 || num > 10000) {
+                                    return setError('dailyCalorieTarget', 'Calo mục tiêu nên nằm trong khoảng 500 - 10000.');
+                                }
+                                return setError('dailyCalorieTarget', '');
+                            }
+                            
+                            function validateReceiverName() {
+                                const value = document.getElementById('receiverName').value.trim();
+                                if (value === '')
+                                return setError('receiverName', '');
+                                if (value.length < 2)
+                                return setError('receiverName', 'Tên người nhận quá ngắn.');
+                                if (value.length > 60)
+                                return setError('receiverName', 'Tên người nhận quá dài.');
+                                if (!/^[A-Za-zÀ-ỹ\s]+$/.test(value))
+                                return setError('receiverName', 'Tên người nhận chỉ được chứa chữ cái và khoảng trắng.');
+                                return setError('receiverName', '');
+                            }
+                            
+                            function validateReceiverPhone() {
+                                const value = document.getElementById('receiverPhone').value.trim();
+                                if (value === '')
+                                return setError('receiverPhone', '');
+                                if (!/^[0-9]{8,11}$/.test(value))
+                                return setError('receiverPhone', 'SĐT người nhận chỉ được chứa 8-11 chữ số.');
+                                return setError('receiverPhone', '');
+                            }
+                            
+                            function validateTextAreaField(id, maxLen, label) {
+                                const value = document.getElementById(id).value.trim();
+                                if (value === '')
+                                return setError(id, '');
+                                if (value.length > maxLen)
+                                return setError(id, `${label} không được vượt quá ${maxLen} ký tự.`);
+                                if (!/^[A-Za-zÀ-ỹ0-9\s,.;:()\-/%]+$/.test(value)) {
+                                    return setError(id, `${label} chứa ký tự không hợp lệ.`);
+                                }
+                                return setError(id, '');
+                            }
+                            
+                            function validateAddressLine() {
+                                const value = document.getElementById('addressLine').value.trim();
+                                if (value === '')
+                                return setError('addressLine', '');
+                                if (value.length < 5)
+                                return setError('addressLine', 'Địa chỉ chi tiết quá ngắn.');
+                                if (value.length > 255)
+                                return setError('addressLine', 'Địa chỉ chi tiết quá dài.');
+                                if (!/^[A-Za-zÀ-ỹ0-9\s,./\-]+$/.test(value)) {
+                                    return setError('addressLine', 'Địa chỉ chứa ký tự không hợp lệ.');
+                                }
+                                return setError('addressLine', '');
+                            }
+                            
+                            function validateProvinceDistrictWard() {
+                                const province = provinceSelect.value.trim();
+                                const district = districtSelect.value.trim();
+                                const ward = wardSelect.value.trim();
+                                const addressLine = document.getElementById('addressLine').value.trim();
+                                const receiverName = document.getElementById('receiverName').value.trim();
+                                const receiverPhone = document.getElementById('receiverPhone').value.trim();
+                                
+                                const hasAny = province || district || ward || addressLine || receiverName || receiverPhone;
+                                
+                                if (!hasAny) {
+                                    clearAddressErrors();
+                                    return true;
+                                }
+                                
+                                let ok = true;
+                                
+                                if (!province) {
+                                    setError('provinceName', 'Vui lòng chọn tỉnh/thành.');
+                                    ok = false;
+                                    } else {
+                                        setError('provinceName', '');
+                                    }
+                                    
+                                    if (!district) {
+                                        setError('districtName', 'Vui lòng chọn quận/huyện.');
+                                        ok = false;
+                                        } else {
+                                            setError('districtName', '');
+                                        }
+                                        
+                                        if (!ward) {
+                                            setError('wardName', 'Vui lòng chọn phường/xã.');
+                                            ok = false;
+                                            } else {
+                                                setError('wardName', '');
+                                            }
+                                            
+                                            return ok;
+                                        }
+                                        
+                                        function validatePassword() {
+                                            const value = document.getElementById('password').value;
+                                            if (value.length < 8)
+                                            return setError('password', 'Mật khẩu phải có ít nhất 8 ký tự.');
+                                            if (value.length > 50)
+                                            return setError('password', 'Mật khẩu không được vượt quá 50 ký tự.');
+                                            if (!/[A-Z]/.test(value))
+                                            return setError('password', 'Mật khẩu phải có ít nhất 1 chữ in hoa.');
+                                            if (!/[a-z]/.test(value))
+                                            return setError('password', 'Mật khẩu phải có ít nhất 1 chữ thường.');
+                                            if (!/[0-9]/.test(value))
+                                            return setError('password', 'Mật khẩu phải có ít nhất 1 chữ số.');
+                                            if (!/[!@#$%^&*(),.?":{}|<>_\-\\/\[\];'+=]/.test(value)) {
+                                                return setError('password', 'Mật khẩu phải có ít nhất 1 ký tự đặc biệt.');
+                                            }
+                                            return setError('password', '');
+                                        }
+                                        
+                                        function validateConfirmPassword() {
+                                            const password = document.getElementById('password').value;
+                                            const confirm = document.getElementById('confirmPassword').value;
+                                            if (confirm.length === 0)
+                                            return setError('confirmPassword', 'Vui lòng nhập lại mật khẩu.');
+                                            if (password !== confirm)
+                                            return setError('confirmPassword', 'Mật khẩu xác nhận không khớp.');
+                                            return setError('confirmPassword', '');
+                                        }
+                                        
+                                        function validateAgreeTerms() {
+                                            const checked = document.getElementById('agreeTerms').checked;
+                                            const error = document.getElementById('agreeTermsError');
+                                            error.textContent = checked ? '' : 'Bạn cần đồng ý điều khoản để tiếp tục.';
+                                            return checked;
+                                        }
+                                        
+                                        document.getElementById('fullName').addEventListener('input', validateFullName);
+                                        document.getElementById('phone').addEventListener('input', validatePhone);
+                                        document.getElementById('email').addEventListener('input', validateEmail);
+                                        document.getElementById('dailyCalorieTarget').addEventListener('input', validateDailyCalorieTarget);
+                                        
+                                        document.getElementById('receiverName').addEventListener('input', validateReceiverName);
+                                        document.getElementById('receiverPhone').addEventListener('input', validateReceiverPhone);
+                                        document.getElementById('addressLine').addEventListener('input', validateAddressLine);
+                                        
+                                        document.getElementById('foodPreferences').addEventListener('input', function () {
+                                            validateTextAreaField('foodPreferences', 300, 'Thói quen ăn uống');
+                                        });
+                                        
+                                        document.getElementById('allergies').addEventListener('input', function () {
+                                            validateTextAreaField('allergies', 200, 'Dị ứng thực phẩm');
+                                        });
+                                        
+                                        document.getElementById('healthGoal').addEventListener('input', function () {
+                                            validateTextAreaField('healthGoal', 200, 'Mục tiêu sức khỏe');
+                                        });
+                                        
+                                        document.getElementById('password').addEventListener('input', function () {
+                                            validatePassword();
+                                            validateConfirmPassword();
+                                        });
+                                        
+                                        document.getElementById('confirmPassword').addEventListener('input', validateConfirmPassword);
+                                        document.getElementById('agreeTerms').addEventListener('change', validateAgreeTerms);
+                                        
+                                        document.getElementById('registerForm').addEventListener('submit', function (e) {
+                                            updateAddressTextFields();
+                                            
+                                            const results = [
+                                            validateFullName(),
+                                            validatePhone(),
+                                            validateEmail(),
+                                            validateDailyCalorieTarget(),
+                                            validateReceiverName(),
+                                            validateReceiverPhone(),
+                                            validateAddressLine(),
+                                            validateProvinceDistrictWard(),
+                                            validateTextAreaField('foodPreferences', 300, 'Thói quen ăn uống'),
+                                            validateTextAreaField('allergies', 200, 'Dị ứng thực phẩm'),
+                                            validateTextAreaField('healthGoal', 200, 'Mục tiêu sức khỏe'),
+                                            validatePassword(),
+                                            validateConfirmPassword(),
+                                            validateAgreeTerms()
+                                            ];
+                                            
+                                            if (results.includes(false)) {
+                                                e.preventDefault();
+                                            }
+                                        });
+                                        
+                                        loadProvinces();
+                                    </script>
+                                </body>
+                            </html>

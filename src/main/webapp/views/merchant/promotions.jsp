@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
+<%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
 <jsp:useBean id="now" class="java.util.Date" />
 <% request.setAttribute("currentPage", "promotions");%>
 <!DOCTYPE html>
@@ -37,7 +38,7 @@
                     <h1 class="text-2xl font-black text-gray-900 tracking-tight">Khuyến mãi</h1>
                     <p class="text-sm text-gray-500 font-medium mt-1">Quản lý mã code, trạng thái hoạt động, hiển thị và lưu trữ voucher</p>
                 </div>
-                <button onclick="openCreate()" class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-md flex items-center gap-2">
+                <button onclick="openModal('createModal')" class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-md flex items-center gap-2">
                     <span class="material-symbols-outlined text-[20px]">add</span>Tạo voucher
                 </button>
             </header>
@@ -153,7 +154,7 @@
             <div class="bg-white w-full max-w-lg rounded-[2rem] shadow-2xl overflow-hidden relative">
                 <div class="flex items-center justify-between px-4 md:px-8 py-6 border-b border-gray-50">
                     <h2 class="text-xl font-black text-gray-900 tracking-tight">Tạo Voucher Mới</h2>
-                    <button onclick="closeCreate()" class="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full transition-colors">
+                    <button onclick="closeModal('createModal')" class="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full transition-colors">
                         <span class="material-symbols-outlined">close</span>
                     </button>
                 </div>
@@ -238,9 +239,23 @@
                                                         </div>
                                                     </td>
                                                     <td class="px-6 py-5">
-                                                        <span class="inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${v.merchantStatusClass}">
-                                                            ${v.merchantStatusLabel}
-                                                        </span>
+                                                        <c:choose>
+                                                            <c:when test="${v.status ne 'ACTIVE'}">
+                                                                <span class="inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-gray-100 text-gray-600">Tạm dừng</span>
+                                                            </c:when>
+                                                            <c:when test="${not v.published}">
+                                                                <span class="inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-600">Nháp</span>
+                                                            </c:when>
+                                                            <c:when test="${not empty v.startAt and v.startAt.time > now.time}">
+                                                                <span class="inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-700">Sắp diễn ra</span>
+                                                            </c:when>
+                                                            <c:when test="${not empty v.endAt and v.endAt.time < now.time}">
+                                                                <span class="inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-100 text-red-700">Hết hạn</span>
+                                                            </c:when>
+                                                            <c:otherwise>
+                                                                <span class="inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-green-100 text-green-700">Đang chạy</span>
+                                                            </c:otherwise>
+                                                        </c:choose>
                                                     </td>
                                                     <td class="px-6 py-5 text-right">
                                                         <div class="flex items-center justify-end gap-2">
@@ -248,189 +263,234 @@
                                                             <form method="POST" action="${pageContext.request.contextPath}/merchant/promotions" class="inline">
                                                                 <input type="hidden" name="action" value="togglePublish"/>
                                                                 <input type="hidden" name="voucherId" value="${v.id}"/>
-                                                                <button type="submit" 
-                                                                        title="${v.isPublished() ? 'Ẩn khỏi khách' : 'Hiển thị cho khách'}"
-                                                                        class="p-2 rounded-xl border border-gray-100 hover:bg-gray-100 transition-colors ${v.isPublished() ? 'text-primary bg-primary/5' : 'text-gray-400'}">
-                                                                    <span class="material-symbols-outlined text-[20px]">${v.isPublished() ? 'visibility' : 'visibility_off'}</span>
-                                                                </button>
-                                                            </form>
-
-                                                            <%-- Toggle Status (Play/Pause) --%>
-                                                            <form method="POST" action="${pageContext.request.contextPath}/merchant/promotions" class="inline">
-                                                                <input type="hidden" name="action" value="toggleStatus"/>
-                                                                <input type="hidden" name="voucherId" value="${v.id}"/>
-                                                                <button type="submit" 
-                                                                        title="${v.status == 'ACTIVE' ? 'Tạm dừng' : 'Kích hoạt'}"
-                                                                        class="p-2 rounded-xl border border-gray-100 hover:bg-gray-100 transition-colors ${v.status == 'ACTIVE' ? 'text-green-600 bg-green-50' : 'text-orange-500 bg-orange-50'}">
-                                                                    <span class="material-symbols-outlined text-[20px]">${v.status == 'ACTIVE' ? 'pause_circle' : 'play_circle'}</span>
-                                                                </button>
-                                                            </form>
-
-                                                            <%-- Edit --%>
-                                                            <button onclick="openEditModal(${v.id}, '${v.code}', '${fn:escapeXml(v.title)}', '${v.discountType}', ${v.discountValue}, ${v.minOrderAmount}, ${v.maxUsesTotal}, '<fmt:formatDate value="${v.startAt}" pattern="yyyy-MM-dd"/>', '<fmt:formatDate value="${v.endAt}" pattern="yyyy-MM-dd"/>')"
-                                                                    class="p-2 rounded-xl border border-gray-100 hover:bg-gray-100 transition-colors text-blue-600">
-                                                                <span class="material-symbols-outlined text-[20px]">edit</span>
+                                                                <button type="submit"
+                                                                title="${v.published ? 'Ẩn khỏi khách' : 'Hiển thị cho khách'}"
+                                                                class="p-2 rounded-xl border border-gray-100 hover:bg-gray-100 transition-colors ${v.published ? 'text-primary bg-primary/5' : 'text-gray-400'}">
+                                                                <span class="material-symbols-outlined text-[20px]">${v.published ? 'visibility' : 'visibility_off'}</span>
                                                             </button>
+                                                        </form>
 
-                                                            <%-- Archive (Soft Delete) --%>
-                                                            <form method="POST" action="${pageContext.request.contextPath}/merchant/promotions" class="inline" onsubmit="return confirm('Bạn có chắc muốn lưu trữ (xóa tạm) voucher này?')">
-                                                                <input type="hidden" name="action" value="archive"/>
-                                                                <input type="hidden" name="voucherId" value="${v.id}"/>
-                                                                <button type="submit" class="p-2 rounded-xl border border-gray-100 hover:bg-red-50 text-red-500 transition-colors">
-                                                                    <span class="material-symbols-outlined text-[20px]">archive</span>
-                                                                </button>
-                                                            </form>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            </c:forEach>
-                                        </c:otherwise>
-                                    </c:choose>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </main>
-        </div>
+                                                        <%-- Toggle Status (Play/Pause) --%>
+                                                        <form method="POST" action="${pageContext.request.contextPath}/merchant/promotions" class="inline">
+                                                            <input type="hidden" name="action" value="toggleStatus"/>
+                                                            <input type="hidden" name="voucherId" value="${v.id}"/>
+                                                            <button type="submit"
+                                                            title="${v.status == 'ACTIVE' ? 'Tạm dừng' : 'Kích hoạt'}"
+                                                            class="p-2 rounded-xl border border-gray-100 hover:bg-gray-100 transition-colors ${v.status == 'ACTIVE' ? 'text-green-600 bg-green-50' : 'text-orange-500 bg-orange-50'}">
+                                                            <span class="material-symbols-outlined text-[20px]">${v.status == 'ACTIVE' ? 'pause_circle' : 'play_circle'}</span>
+                                                        </button>
+                                                    </form>
 
-        <%-- Create Modal --%>
-        <div id="createModal" class="hidden fixed inset-0 z-[100] overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-            <div class="bg-white rounded-[2rem] w-full max-w-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-                <div class="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                    <div>
-                        <h3 class="text-xl font-black text-gray-900">Tạo Voucher mới</h3>
-                        <p class="text-xs text-gray-500 font-bold uppercase mt-1">Cấu hình ưu đãi cho khách hàng</p>
-                    </div>
-                    <button onclick="closeModal('createModal')" class="p-2 hover:bg-gray-200 rounded-full transition-colors"><span class="material-symbols-outlined">close</span></button>
+                                                    <%-- Edit --%>
+                                                    <button type="button"
+                                                            onclick="openEditModalFromButton(this)"
+                                                            data-id="${v.id}"
+                                                            data-code="${fn:escapeXml(v.code)}"
+                                                            data-title="${fn:escapeXml(v.title)}"
+                                                            data-discount-type="${v.discountType}"
+                                                            data-discount-value="${v.discountValue}"
+                                                            data-min-order="${v.minOrderAmount}"
+                                                            data-max-uses="${v.maxUsesTotal}"
+                                                            data-start-date="<fmt:formatDate value='${v.startAt}' pattern='yyyy-MM-dd'/>"
+                                                            data-end-date="<fmt:formatDate value='${v.endAt}' pattern='yyyy-MM-dd'/>"
+                                                            class="p-2 rounded-xl border border-gray-100 hover:bg-gray-100 transition-colors text-blue-600">
+                                                        <span class="material-symbols-outlined text-[20px]">edit</span>
+                                                    </button>
+
+                                                    <%-- Archive (Soft Delete) --%>
+                                                    <form method="POST" action="${pageContext.request.contextPath}/merchant/promotions" class="inline" onsubmit="return confirm('Bạn có chắc muốn lưu trữ (xóa tạm) voucher này?')">
+                                                        <input type="hidden" name="action" value="archive"/>
+                                                        <input type="hidden" name="voucherId" value="${v.id}"/>
+                                                        <button type="submit" class="p-2 rounded-xl border border-gray-100 hover:bg-red-50 text-red-500 transition-colors">
+                                                            <span class="material-symbols-outlined text-[20px]">archive</span>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </c:forEach>
+                                </c:otherwise>
+                            </c:choose>
+                        </tbody>
+                    </table>
                 </div>
-                <form method="POST" action="${pageContext.request.contextPath}/merchant/promotions" class="p-8 space-y-5">
-                    <input type="hidden" name="action" value="create"/>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-xs font-black text-gray-500 uppercase mb-2">Mã Voucher</label>
-                            <input type="text" name="code" placeholder="VD: Giam10" required 
-                                   class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all font-bold"/>
-                        </div>
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-xs font-black text-gray-500 uppercase mb-2">Tiêu đề hiển thị</label>
-                            <input type="text" name="title" placeholder="VD: Giảm ngay 10% cho đơn đầu" required 
-                                   class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all font-bold"/>
-                        </div>
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-xs font-black text-gray-500 uppercase mb-2">Loại giảm giá</label>
-                            <select name="type" required class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all font-bold appearance-none">
-                                <option value="PERCENT">Giảm theo %</option>
-                                <option value="FIXED">Số tiền cố định (VNĐ)</option>
-                            </select>
-                        </div>
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-xs font-black text-gray-500 uppercase mb-2">Giá trị giảm</label>
-                            <input type="number" name="value" placeholder="VD: 10 hoặc 20000" required 
-                                   class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all font-bold"/>
-                        </div>
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-xs font-black text-gray-500 uppercase mb-2">Đơn tối thiểu</label>
-                            <input type="number" name="minOrder" placeholder="0" required 
-                                   class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all font-bold"/>
-                        </div>
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-xs font-black text-gray-500 uppercase mb-2">Tổng lượt dùng</label>
-                            <input type="number" name="maxUses" placeholder="VD: 100" required 
-                                   class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all font-bold"/>
-                        </div>
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-xs font-black text-gray-500 uppercase mb-2">Ngày bắt đầu</label>
-                            <input type="date" name="startDate" required 
-                                   class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all font-bold"/>
-                        </div>
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-xs font-black text-gray-500 uppercase mb-2">Ngày kết thúc</label>
-                            <input type="date" name="endDate" required 
-                                   class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all font-bold"/>
-                        </div>
-                    </div>
-                    <div class="pt-4 flex gap-3">
-                        <button type="button" onclick="closeModal('createModal')" class="flex-1 px-4 py-3 rounded-2xl border border-gray-200 font-bold text-gray-600 hover:bg-gray-50 transition-all">Hủy bỏ</button>
-                        <button type="submit" class="flex-1 px-4 py-3 rounded-2xl bg-primary text-white font-bold hover:bg-primary-dark shadow-lg shadow-primary/20 transition-all">Xác nhận tạo</button>
-                    </div>
-                </form>
             </div>
         </div>
+    </main>
+</div>
 
-        <%-- Edit Modal --%>
-        <div id="editModal" class="hidden fixed inset-0 z-[100] overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-            <div class="bg-white rounded-[2rem] w-full max-w-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-                <div class="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                    <div>
-                        <h3 class="text-xl font-black text-gray-900">Chỉnh sửa Voucher</h3>
-                        <p class="text-xs text-gray-500 font-bold uppercase mt-1">Cập nhật thông tin ưu đãi</p>
-                    </div>
-                    <button onclick="closeModal('editModal')" class="p-2 hover:bg-gray-200 rounded-full transition-colors"><span class="material-symbols-outlined">close</span></button>
-                </div>
-                <form id="editForm" method="POST" action="${pageContext.request.contextPath}/merchant/promotions" class="p-8 space-y-5">
-                    <input type="hidden" name="action" value="edit"/>
-                    <input type="hidden" name="voucherId" id="editVoucherId"/>
-                    <div class="grid grid-cols-2 gap-4">
-                        <%-- Same fields as create form but with IDs for JS population --%>
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-xs font-black text-gray-500 uppercase mb-2">Mã Voucher</label>
-                            <input type="text" name="code" id="editCode" readonly class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-100 text-gray-500 font-bold cursor-not-allowed"/>
-                        </div>
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-xs font-black text-gray-500 uppercase mb-2">Tiêu đề hiển thị</label>
-                            <input type="text" name="title" id="editTitle" required class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 font-bold"/>
-                        </div>
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-xs font-black text-gray-500 uppercase mb-2">Loại giảm giá</label>
-                            <select name="type" id="editType" required class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 font-bold appearance-none">
-                                <option value="PERCENT">Giảm theo %</option>
-                                <option value="FIXED">Số tiền cố định (VNĐ)</option>
-                            </select>
-                        </div>
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-xs font-black text-gray-500 uppercase mb-2">Giá trị giảm</label>
-                            <input type="number" name="value" id="editValue" required class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 font-bold"/>
-                        </div>
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-xs font-black text-gray-500 uppercase mb-2">Đơn tối thiểu</label>
-                            <input type="number" name="minOrder" id="editMinOrder" required class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 font-bold"/>
-                        </div>
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-xs font-black text-gray-500 uppercase mb-2">Tổng lượt dùng</label>
-                            <input type="number" name="maxUses" id="editMaxUses" required class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 font-bold"/>
-                        </div>
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-xs font-black text-gray-500 uppercase mb-2">Ngày bắt đầu</label>
-                            <input type="date" name="startDate" id="editStartDate" required class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 font-bold"/>
-                        </div>
-                        <div class="col-span-2 md:col-span-1">
-                            <label class="block text-xs font-black text-gray-500 uppercase mb-2">Ngày kết thúc</label>
-                            <input type="date" name="endDate" id="editEndDate" required class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 font-bold"/>
-                        </div>
-                    </div>
-                    <div class="pt-4 flex gap-3">
-                        <button type="button" onclick="closeModal('editModal')" class="flex-1 px-4 py-3 rounded-2xl border border-gray-200 font-bold text-gray-600 hover:bg-gray-50 transition-all">Quay lại</button>
-                        <button type="submit" class="flex-1 px-4 py-3 rounded-2xl bg-primary text-white font-bold hover:bg-primary-dark shadow-lg shadow-primary/20 transition-all">Lưu thay đổi</button>
-                    </div>
-                </form>
+<%-- Create Modal --%>
+<div id="createModal" class="hidden fixed inset-0 z-[100] overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-[2rem] w-full max-w-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div class="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+            <div>
+                <h3 class="text-xl font-black text-gray-900">Tạo Voucher mới</h3>
+                <p class="text-xs text-gray-500 font-bold uppercase mt-1">Cấu hình ưu đãi cho khách hàng</p>
             </div>
+            <button onclick="closeModal('createModal')" class="p-2 hover:bg-gray-200 rounded-full transition-colors"><span class="material-symbols-outlined">close</span></button>
         </div>
+        <form method="POST" action="${pageContext.request.contextPath}/merchant/promotions" class="p-8 space-y-5">
+            <input type="hidden" name="action" value="create"/>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-2 md:col-span-1">
+                    <label class="block text-xs font-black text-gray-500 uppercase mb-2">Mã Voucher</label>
+                    <input type="text" name="code" placeholder="VD: Giam10" required
+                    class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all font-bold"/>
+                </div>
+                <div class="col-span-2 md:col-span-1">
+                    <label class="block text-xs font-black text-gray-500 uppercase mb-2">Tiêu đề hiển thị</label>
+                    <input type="text" name="title" placeholder="VD: Giảm ngay 10% cho đơn đầu" required
+                    class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all font-bold"/>
+                </div>
+                <div class="col-span-2 md:col-span-1">
+                    <label class="block text-xs font-black text-gray-500 uppercase mb-2">Loại giảm giá</label>
+                    <select name="type" required class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all font-bold appearance-none">
+                        <option value="PERCENT">Giảm theo %</option>
+                        <option value="FIXED">Số tiền cố định (VNĐ)</option>
+                    </select>
+                </div>
+                <div class="col-span-2 md:col-span-1">
+                    <label class="block text-xs font-black text-gray-500 uppercase mb-2">Giá trị giảm</label>
+                    <input type="number" name="value" placeholder="VD: 10 hoặc 20000" required
+                    class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all font-bold"/>
+                </div>
+                <div class="col-span-2 md:col-span-1">
+                    <label class="block text-xs font-black text-gray-500 uppercase mb-2">Đơn tối thiểu</label>
+                    <input type="number" name="minOrder" placeholder="0" required
+                    class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all font-bold"/>
+                </div>
+                <div class="col-span-2 md:col-span-1">
+                    <label class="block text-xs font-black text-gray-500 uppercase mb-2">Tổng lượt dùng</label>
+                    <input type="number" name="maxUses" placeholder="VD: 100" required
+                    class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all font-bold"/>
+                </div>
+                <div class="col-span-2 md:col-span-1">
+                    <label class="block text-xs font-black text-gray-500 uppercase mb-2">Ngày bắt đầu</label>
+                    <input type="date" name="startDate" required
+                    class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all font-bold"/>
+                </div>
+                <div class="col-span-2 md:col-span-1">
+                    <label class="block text-xs font-black text-gray-500 uppercase mb-2">Ngày kết thúc</label>
+                    <input type="date" name="endDate" required
+                    class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all font-bold"/>
+                </div>
+            </div>
+            <div class="pt-4 flex gap-3">
+                <button type="button" onclick="closeModal('createModal')" class="flex-1 px-4 py-3 rounded-2xl border border-gray-200 font-bold text-gray-600 hover:bg-gray-50 transition-all">Hủy bỏ</button>
+                <button type="submit" class="flex-1 px-4 py-3 rounded-2xl bg-primary text-white font-bold hover:bg-primary-dark shadow-lg shadow-primary/20 transition-all">Xác nhận tạo</button>
+            </div>
+        </form>
+    </div>
+</div>
 
-        <script>
-            function openModal(id) {
-                document.getElementById(id).classList.remove('hidden');
-                document.body.classList.add('modal-active');
-            }
-            function closeModal(id) {
-                document.getElementById(id).classList.add('hidden');
-                document.body.classList.remove('modal-active');
-            }
+<%-- Edit Modal --%>
+<div id="editModal" class="hidden fixed inset-0 z-[100] overflow-y-auto bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-[2rem] w-full max-w-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div class="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+            <div>
+                <h3 class="text-xl font-black text-gray-900">Chỉnh sửa Voucher</h3>
+                <p class="text-xs text-gray-500 font-bold uppercase mt-1">Cập nhật thông tin ưu đãi</p>
+            </div>
+            <button onclick="closeModal('editModal')" class="p-2 hover:bg-gray-200 rounded-full transition-colors"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <form id="editForm" method="POST" action="${pageContext.request.contextPath}/merchant/promotions" class="p-8 space-y-5">
+            <input type="hidden" name="action" value="edit"/>
+            <input type="hidden" name="voucherId" id="editVoucherId"/>
+            <div class="grid grid-cols-2 gap-4">
+                <%-- Same fields as create form but with IDs for JS population --%>
+                <div class="col-span-2 md:col-span-1">
+                    <label class="block text-xs font-black text-gray-500 uppercase mb-2">Mã Voucher</label>
+                    <input type="text" name="code" id="editCode" readonly class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-100 text-gray-500 font-bold cursor-not-allowed"/>
+                </div>
+                <div class="col-span-2 md:col-span-1">
+                    <label class="block text-xs font-black text-gray-500 uppercase mb-2">Tiêu đề hiển thị</label>
+                    <input type="text" name="title" id="editTitle" required class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 font-bold"/>
+                </div>
+                <div class="col-span-2 md:col-span-1">
+                    <label class="block text-xs font-black text-gray-500 uppercase mb-2">Loại giảm giá</label>
+                    <select name="type" id="editType" required class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 font-bold appearance-none">
+                        <option value="PERCENT">Giảm theo %</option>
+                        <option value="FIXED">Số tiền cố định (VNĐ)</option>
+                    </select>
+                </div>
+                <div class="col-span-2 md:col-span-1">
+                    <label class="block text-xs font-black text-gray-500 uppercase mb-2">Giá trị giảm</label>
+                    <input type="number" name="value" id="editValue" required class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 font-bold"/>
+                </div>
+                <div class="col-span-2 md:col-span-1">
+                    <label class="block text-xs font-black text-gray-500 uppercase mb-2">Đơn tối thiểu</label>
+                    <input type="number" name="minOrder" id="editMinOrder" required class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 font-bold"/>
+                </div>
+                <div class="col-span-2 md:col-span-1">
+                    <label class="block text-xs font-black text-gray-500 uppercase mb-2">Tổng lượt dùng</label>
+                    <input type="number" name="maxUses" id="editMaxUses" required class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 font-bold"/>
+                </div>
+                <div class="col-span-2 md:col-span-1">
+                    <label class="block text-xs font-black text-gray-500 uppercase mb-2">Ngày bắt đầu</label>
+                    <input type="date" name="startDate" id="editStartDate" required class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 font-bold"/>
+                </div>
+                <div class="col-span-2 md:col-span-1">
+                    <label class="block text-xs font-black text-gray-500 uppercase mb-2">Ngày kết thúc</label>
+                    <input type="date" name="endDate" id="editEndDate" required class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 font-bold"/>
+                </div>
+            </div>
+            <div class="pt-4 flex gap-3">
+                <button type="button" onclick="closeModal('editModal')" class="flex-1 px-4 py-3 rounded-2xl border border-gray-200 font-bold text-gray-600 hover:bg-gray-50 transition-all">Quay lại</button>
+                <button type="submit" class="flex-1 px-4 py-3 rounded-2xl bg-primary text-white font-bold hover:bg-primary-dark shadow-lg shadow-primary/20 transition-all">Lưu thay đổi</button>
+            </div>
+        </form>
+    </div>
+</div>
 
-            document.getElementById('createModal').addEventListener('click', function (e) {
-                if (e.target === this)
-                closeCreate();
-            });
-        </script>
-    </body>
+<script>
+    function openModal(id) {
+        document.getElementById(id).classList.remove('hidden');
+        document.body.classList.add('modal-active');
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).classList.add('hidden');
+        document.body.classList.remove('modal-active');
+    }
+
+    function openEditModal(id, code, title, discountType, discountValue, minOrder, maxUses, startDate, endDate) {
+        document.getElementById('editVoucherId').value = id || '';
+        document.getElementById('editCode').value = code || '';
+        document.getElementById('editTitle').value = title || '';
+        document.getElementById('editType').value = discountType || 'PERCENT';
+        document.getElementById('editValue').value = discountValue || 0;
+        document.getElementById('editMinOrder').value = minOrder || 0;
+        document.getElementById('editMaxUses').value = maxUses || 0;
+        document.getElementById('editStartDate').value = startDate || '';
+        document.getElementById('editEndDate').value = endDate || '';
+        openModal('editModal');
+    }
+
+    function openEditModalFromButton(button) {
+        openEditModal(
+            button.dataset.id,
+            button.dataset.code,
+            button.dataset.title,
+            button.dataset.discountType,
+            parseFloat(button.dataset.discountValue || '0'),
+            parseFloat(button.dataset.minOrder || '0'),
+            parseInt(button.dataset.maxUses || '0', 10),
+            button.dataset.startDate,
+            button.dataset.endDate
+        );
+    }
+    
+    document.getElementById('createModal').addEventListener('click', function (e) {
+        if (e.target === this) {
+            closeModal('createModal');
+        }
+    });
+
+    document.getElementById('editModal').addEventListener('click', function (e) {
+        if (e.target === this) {
+            closeModal('editModal');
+        }
+    });
+</script>
+</body>
 </html>

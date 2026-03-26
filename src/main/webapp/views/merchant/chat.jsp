@@ -1,6 +1,6 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
 
 <!DOCTYPE html>
 <html lang="vi">
@@ -59,6 +59,12 @@
                 <div class="px-4 py-4 border-b border-gray-100">
                     <h2 class="font-bold text-gray-900 text-base">Tin nhắn</h2>
                 </div>
+
+                <c:if test="${not empty chatInfo}">
+                    <div class="mx-3 mt-3 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium">
+                        ${chatInfo}
+                    </div>
+                </c:if>
 
                 <div class="flex-1 overflow-y-auto">
 
@@ -154,11 +160,17 @@
 
 
                         <!-- MESSAGE LIST -->
-                        <div class="flex-1 overflow-y-auto px-4 py-4 space-y-4" id="messagesList">
+                            <div class="flex-1 overflow-y-auto px-4 py-4 space-y-4"
+                                id="messagesList"
+                                data-context-path="${pageContext.request.contextPath}"
+                                data-active-with="${activeWithId}"
+                                data-current-user="${account.id}">
 
                             <c:forEach var="m" items="${history}">
 
-                                <div class="flex w-full ${m.senderId == account.id ? 'justify-end' : 'justify-start'}">
+                                  <div class="flex w-full ${m.senderId == account.id ? 'justify-end' : 'justify-start'}"
+                                      data-message-id="${m.id}"
+                                      data-sender-id="${m.senderId}">
 
                                     <div class="max-w-[70%] px-4 py-3 shadow-sm text-[14px]
                                          ${m.senderId == account.id
@@ -183,11 +195,12 @@
                         <!-- INPUT -->
                         <div class="px-3 py-3 bg-white border-t border-gray-200">
 
-                            <form method="POST"
+                                <form method="POST"
+                                    id="chatForm"
                                   action="${pageContext.request.contextPath}/merchant/chat"
                                   class="flex items-end gap-2">
 
-                                <input type="hidden" name="receiverId" value="${activeWithId}"/>
+                                <input type="hidden" id="receiverId" name="receiverId" value="${activeWithId}"/>
 
                                 <div class="flex-1 bg-gray-100 rounded-3xl px-5 py-3 focus-within:bg-white focus-within:ring-2 focus-within:ring-primary/20 transition">
 
@@ -225,7 +238,6 @@
 
 
         <script>
-
             function scrollToBottom() {
                 const el = document.getElementById("messagesList");
                 if (el) {
@@ -233,8 +245,149 @@
                 }
             }
 
-            window.onload = scrollToBottom;
+            function escapeHtml(text) {
+                return String(text || "")
+                        .replace(/&/g, "&amp;")
+                        .replace(/</g, "&lt;")
+                        .replace(/>/g, "&gt;")
+                        .replace(/\"/g, "&quot;")
+                        .replace(/'/g, "&#39;");
+            }
 
+            function createMessageNode(message, currentUserId) {
+                const mine = Number(message.senderId) === Number(currentUserId);
+                const row = document.createElement("div");
+                row.className = "flex w-full " + (mine ? "justify-end" : "justify-start");
+                row.dataset.messageId = String(message.id || 0);
+                row.dataset.senderId = String(message.senderId || 0);
+
+                const bubble = document.createElement("div");
+                bubble.className = "max-w-[70%] px-4 py-3 shadow-sm text-[14px] "
+                        + (mine
+                                ? "bg-primary text-white rounded-[20px] rounded-br-sm"
+                                : "bg-white text-gray-900 rounded-[20px] rounded-bl-sm");
+
+                const content = document.createElement("p");
+                content.innerHTML = escapeHtml(message.content);
+
+                const time = document.createElement("div");
+                time.className = "flex items-center justify-end gap-1 mt-1 opacity-70 text-[10px]";
+                time.textContent = message.time || "";
+
+                bubble.appendChild(content);
+                bubble.appendChild(time);
+                row.appendChild(bubble);
+                return row;
+            }
+
+            (function initMerchantChatRealtime() {
+                const listEl = document.getElementById("messagesList");
+                const formEl = document.getElementById("chatForm");
+                const inputEl = document.getElementById("msgInput");
+                const receiverEl = document.getElementById("receiverId");
+
+                if (!listEl || !formEl || !inputEl || !receiverEl || !receiverEl.value) {
+                    scrollToBottom();
+                    return;
+                }
+
+                const contextPath = listEl.dataset.contextPath || "";
+                const currentUserId = Number(listEl.dataset.currentUser || "0");
+                const withId = receiverEl.value;
+                const endpoint = contextPath + "/merchant/chat/realtime";
+
+                const lastRendered = listEl.querySelector("[data-message-id]:last-of-type");
+                let lastMessageId = lastRendered ? Number(lastRendered.dataset.messageId || "0") : 0;
+                let sending = false;
+
+                async function fetchNewMessages() {
+                    try {
+                        const res = await fetch(endpoint + "?with=" + encodeURIComponent(withId) + "&since=" + encodeURIComponent(lastMessageId), {
+                            credentials: "same-origin"
+                        });
+                        if (!res.ok) {
+                            return;
+                        }
+                        const data = await res.json();
+                        if (data && data.error === "chat_closed") {
+                            window.location.href = contextPath + "/merchant/chat";
+                            return;
+                        }
+                        if (!data || !data.success || !Array.isArray(data.messages) || data.messages.length === 0) {
+                            return;
+                        }
+
+                        data.messages.forEach(function (message) {
+                            if (Number(message.id || 0) <= lastMessageId) {
+                                return;
+                            }
+                            const node = createMessageNode(message, currentUserId);
+                            listEl.appendChild(node);
+                            lastMessageId = Math.max(lastMessageId, Number(message.id || 0));
+                        });
+
+                        scrollToBottom();
+                    } catch (e) {
+                    }
+                }
+
+                formEl.addEventListener("submit", async function (event) {
+                    event.preventDefault();
+                    if (sending) {
+                        return;
+                    }
+
+                    const message = (inputEl.value || "").trim();
+                    if (!message) {
+                        return;
+                    }
+
+                    sending = true;
+                    try {
+                        const body = new URLSearchParams();
+                        body.set("with", withId);
+                        body.set("message", message);
+
+                        const res = await fetch(endpoint, {
+                            method: "POST",
+                            credentials: "same-origin",
+                            headers: {
+                                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
+                            },
+                            body: body.toString()
+                        });
+
+                        if (!res.ok) {
+                            throw new Error("send-failed");
+                        }
+
+                        const data = await res.json();
+                        if (data && data.error === "chat_closed") {
+                            window.location.href = contextPath + "/merchant/chat";
+                            return;
+                        }
+                        if (data && data.success && Array.isArray(data.messages) && data.messages.length > 0) {
+                            data.messages.forEach(function (msg) {
+                                const node = createMessageNode(msg, currentUserId);
+                                listEl.appendChild(node);
+                                lastMessageId = Math.max(lastMessageId, Number(msg.id || 0));
+                            });
+                            inputEl.value = "";
+                            inputEl.focus();
+                            scrollToBottom();
+                        } else {
+                            throw new Error("invalid-send-response");
+                        }
+                    } catch (e) {
+                        formEl.submit();
+                    } finally {
+                        sending = false;
+                    }
+                });
+
+                scrollToBottom();
+                setInterval(fetchNewMessages, 2500);
+            })();
         </script>
 
     </body>

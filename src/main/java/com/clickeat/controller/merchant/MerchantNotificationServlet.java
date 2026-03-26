@@ -17,11 +17,17 @@ import jakarta.servlet.http.HttpServletResponse;
 @WebServlet(name = "MerchantNotificationServlet", urlPatterns = {"/merchant/notifications"})
 public class MerchantNotificationServlet extends HttpServlet {
 
+    private boolean isMerchant(User account) {
+        return account != null
+                && account.getRole() != null
+                && "MERCHANT".equalsIgnoreCase(account.getRole().trim());
+    }
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         User account = (User) request.getSession().getAttribute("account");
-        if (account == null || !"MERCHANT".equals(account.getRole())) {
+        if (!isMerchant(account)) {
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
@@ -39,7 +45,7 @@ public class MerchantNotificationServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         User account = (User) request.getSession().getAttribute("account");
-        if (account == null || !"MERCHANT".equals(account.getRole())) {
+        if (!isMerchant(account)) {
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
@@ -63,8 +69,8 @@ public class MerchantNotificationServlet extends HttpServlet {
                 sb.append(',');
             }
             String content = m.getOtherPartyName() == null || m.getOtherPartyName().trim().isEmpty()
-                    ? m.getContent()
-                    : (m.getOtherPartyName() + ": " + m.getContent());
+                    ? String.valueOf(m.getContent() == null ? "" : m.getContent())
+                    : (m.getOtherPartyName() + ": " + String.valueOf(m.getContent() == null ? "" : m.getContent()));
             String time = m.getCreatedAt() == null ? "" : formatter.format(m.getCreatedAt());
 
             sb.append("{\"content\":\"").append(escapeJson(content))

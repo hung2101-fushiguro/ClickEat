@@ -1,7 +1,11 @@
 package com.clickeat.controller.web;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.clickeat.dal.impl.CartDAO;
 import com.clickeat.dal.impl.CartItemDAO;
@@ -158,7 +162,12 @@ public class CartServlet extends HttpServlet {
                     }
                 }
 
-                CartItem existItem = cartItemDAO.checkItemExist(cart.getId(), foodId);
+                FoodOptionSelection selection = resolveSelection(
+                        food,
+                        request.getParameter("selectedSize"),
+                        request.getParameter("selectedToppings")
+                );
+                CartItem existItem = cartItemDAO.checkItemExist(cart.getId(), foodId, selection.signature);
                 boolean isSuccess;
 
                 if (existItem != null) {
@@ -169,8 +178,12 @@ public class CartServlet extends HttpServlet {
                     newItem.setCartId(cart.getId());
                     newItem.setFoodItemId(foodId);
                     newItem.setQuantity(1);
-                    newItem.setUnitPriceSnapshot(food.getPrice());
+                    newItem.setUnitPriceSnapshot(food.getPrice() + selection.extraPrice);
                     newItem.setNote("");
+                    newItem.setSelectedSize(selection.selectedSize);
+                    newItem.setSelectedToppings(selection.selectedToppings);
+                    newItem.setOptionExtraPrice(selection.extraPrice);
+                    newItem.setOptionSignature(selection.signature);
                     isSuccess = (cartItemDAO.insert(newItem) > 0);
                 }
 
@@ -331,7 +344,12 @@ public class CartServlet extends HttpServlet {
                             }
                         }
                         if (cart != null) {
-                            CartItem exist = cartItemDAO.checkItemExist(cart.getId(), foodId);
+                            FoodOptionSelection selection = resolveSelection(
+                                    food,
+                                    request.getParameter("selectedSize"),
+                                    request.getParameter("selectedToppings")
+                            );
+                            CartItem exist = cartItemDAO.checkItemExist(cart.getId(), foodId, selection.signature);
                             boolean ok;
                             if (exist != null) {
                                 ok = cartItemDAO.updateQuantity(exist.getId(), exist.getQuantity() + qty);
@@ -340,8 +358,12 @@ public class CartServlet extends HttpServlet {
                                 ni.setCartId(cart.getId());
                                 ni.setFoodItemId(foodId);
                                 ni.setQuantity(qty);
-                                ni.setUnitPriceSnapshot(food.getPrice());
+                                ni.setUnitPriceSnapshot(food.getPrice() + selection.extraPrice);
                                 ni.setNote("");
+                                ni.setSelectedSize(selection.selectedSize);
+                                ni.setSelectedToppings(selection.selectedToppings);
+                                ni.setOptionExtraPrice(selection.extraPrice);
+                                ni.setOptionSignature(selection.signature);
                                 ok = cartItemDAO.insert(ni) > 0;
                             }
                             if (ok) {
@@ -481,6 +503,7 @@ public class CartServlet extends HttpServlet {
                             .append(",\"quantity\":").append(iv.getQuantity())
                             .append(",\"unitPrice\":").append((long) iv.getUnitPrice())
                             .append(",\"lineTotal\":").append((long) iv.getLineTotal())
+                            .append(",\"optionSummary\":\"").append(escJson(iv.getOptionSummary())).append("\"")
                             .append("}");
                 }
             }
@@ -499,5 +522,93 @@ public class CartServlet extends HttpServlet {
         }
         return s.replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
+    }
+
+    private FoodOptionSelection resolveSelection(FoodItem food, String selectedSize, String selectedToppingsRaw) {
+        FoodOptionSelection selection = new FoodOptionSelection();
+
+        Map<String, Double> sizePriceMap = parseOptionMap(food.getSizeOptions());
+        Map<String, Double> toppingPriceMap = parseOptionMap(food.getToppingOptions());
+
+        String normalizedSize = normalizeOptionName(selectedSize);
+        if (normalizedSize != null && !normalizedSize.isBlank() && sizePriceMap.containsKey(normalizedSize)) {
+            selection.selectedSize = normalizedSize;
+            selection.extraPrice += sizePriceMap.getOrDefault(normalizedSize, 0d);
+        }
+
+        List<String> selectedToppings = new ArrayList<>();
+        if (selectedToppingsRaw != null && !selectedToppingsRaw.isBlank()) {
+            String[] parts = selectedToppingsRaw.split(",");
+            for (String raw : parts) {
+                String normalized = normalizeOptionName(raw);
+                if (normalized != null && !normalized.isBlank() && toppingPriceMap.containsKey(normalized) && !selectedToppings.contains(normalized)) {
+                    selectedToppings.add(normalized);
+                    selection.extraPrice += toppingPriceMap.getOrDefault(normalized, 0d);
+                }
+            }
+        }
+
+        if (!selectedToppings.isEmpty()) {
+            selection.selectedToppings = String.join(", ", selectedToppings);
+        }
+
+        selection.signature = buildOptionSignature(selection.selectedSize, selection.selectedToppings);
+        return selection;
+    }
+
+    private Map<String, Double> parseOptionMap(String optionText) {
+        Map<String, Double> map = new LinkedHashMap<>();
+        if (optionText == null || optionText.isBlank()) {
+            return map;
+        }
+
+        String[] tokens = optionText.split(";");
+        for (String token : tokens) {
+            if (token == null || token.isBlank()) {
+                continue;
+            }
+            String[] pair = token.split(":", 2);
+            String name = normalizeOptionName(pair[0]);
+            if (name == null || name.isBlank()) {
+                continue;
+            }
+            double extra = 0;
+            if (pair.length > 1 && pair[1] != null && !pair[1].isBlank()) {
+                try {
+                    extra = Double.parseDouble(pair[1].trim());
+                } catch (NumberFormatException ignored) {
+                }
+            }
+            map.put(name, Math.max(0, extra));
+        }
+        return map;
+    }
+
+    private String normalizeOptionName(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        return raw.trim().replaceAll("\\s+", " ");
+    }
+
+    private String buildOptionSignature(String size, String toppings) {
+        String normalizedSize = size == null ? "" : size.trim();
+        String normalizedToppings = "";
+        if (toppings != null && !toppings.isBlank()) {
+            normalizedToppings = java.util.Arrays.stream(toppings.split(","))
+                    .map(this::normalizeOptionName)
+                    .filter(s -> s != null && !s.isBlank())
+                    .sorted(String.CASE_INSENSITIVE_ORDER)
+                    .collect(Collectors.joining("|"));
+        }
+        return "size=" + normalizedSize + ";tops=" + normalizedToppings;
+    }
+
+    private static class FoodOptionSelection {
+
+        String selectedSize = "";
+        String selectedToppings = "";
+        double extraPrice = 0;
+        String signature = "";
     }
 }

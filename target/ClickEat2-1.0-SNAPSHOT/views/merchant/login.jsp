@@ -1,5 +1,5 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <!DOCTYPE html>
 <html lang="vi">
     <head>
@@ -57,7 +57,7 @@
                 </div>
 
                 <!-- Form -->
-                <form method="POST" action="${pageContext.request.contextPath}/merchant/login" class="space-y-5">
+                <form method="POST" action="${pageContext.request.contextPath}/login" class="space-y-5">
 
                     <!-- Email -->
                     <div>
@@ -131,14 +131,18 @@
         <!-- Hidden form — JS fills credential then submits -->
         <form id="googleAuthForm" method="POST" action="${pageContext.request.contextPath}/merchant/auth/google">
             <input type="hidden" id="googleCredential" name="credential"/>
+            <input type="hidden" name="mode" value="login"/>
         </form>
         <div id="googleBtnContainer" class="flex justify-center"></div>
 
         <!-- Register link -->
-        <div class="text-center border-t border-gray-100 pt-6">
+        <div class="text-center border-t border-gray-100 pt-6 space-y-2">
             <p class="text-gray-500">Mới dùng ClickEat?
                 <a href="${pageContext.request.contextPath}/merchant/register"
                 class="text-[#c86601] font-semibold hover:underline">Đăng ký cửa hàng</a>
+            </p>
+            <p class="text-sm text-gray-400">
+                Bạn muốn <a href="${pageContext.request.contextPath}/shipper/register" class="text-[#c86601] font-semibold hover:underline">Trở thành shipper</a>?
             </p>
         </div>
 

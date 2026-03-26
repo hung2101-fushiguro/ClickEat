@@ -1,7 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ taglib prefix="c"   uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
-<%@ taglib prefix="fn"  uri="http://java.sun.com/jsp/jstl/functions" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
+<%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
 <% request.setAttribute("currentPage", "orders");%>
 <!DOCTYPE html>
 <html lang="vi" class="h-full">
@@ -117,6 +117,12 @@
                                                                         <fmt:formatNumber value="${item.unitPriceSnapshot * item.quantity}" type="number" groupingUsed="true"/>đ
                                                                         </span>
                                                                     </div>
+                                                                    <c:if test="${not empty item.selectedSize}">
+                                                                        <p class="ml-11 text-[11px] text-gray-500">Size: ${item.selectedSize}</p>
+                                                                    </c:if>
+                                                                    <c:if test="${not empty item.selectedToppings}">
+                                                                        <p class="ml-11 text-[11px] text-gray-500">Topping: ${item.selectedToppings}</p>
+                                                                    </c:if>
                                                                     <c:if test="${not empty item.note}">
                                                                         <p class="ml-11 text-red-500 text-xs italic">↳ ${item.note}</p>
                                                                     </c:if>

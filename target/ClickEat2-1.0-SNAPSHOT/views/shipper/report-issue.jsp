@@ -1,7 +1,7 @@
-<%-- 
-    Document   : report-issue
-    Created on : Mar 6, 2026, 1:58:38 PM
-    Author     : DELL
+<%--
+Document   : report-issue
+Created on : Mar 6, 2026, 1:58:38 PM
+Author     : DELL
 --%>
 
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
@@ -10,8 +10,21 @@
     <head>
         <meta charset="UTF-8">
         <title>Báo cáo sự cố - ClickEat Shipper</title>
+        <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/assets/images/shipperlogo.png">
         <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        fontFamily: {sans: ['Inter', 'sans-serif']},
+                        colors: {primary: '#c86601', 'primary-dark': '#a05201'}
+                    }
+                }
+            };
+        </script>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+        <style>body { font-family: 'Inter', sans-serif; }</style>
     </head>
     <body class="bg-gray-100 flex justify-center min-h-screen">
 

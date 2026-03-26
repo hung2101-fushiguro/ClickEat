@@ -71,6 +71,7 @@
                     </button>
                 </div>
                 <p id="location-status" class="text-xs text-gray-400 mt-2 font-medium"></p>
+                <p id="location-last-updated" class="text-[11px] text-gray-400 mt-1">Chưa có lần cập nhật vị trí nào</p>
             </div>
             <div class="p-6 border-t border-gray-100 bg-gray-50/50">
                 <div class="flex items-center justify-between mb-2">
@@ -513,225 +514,396 @@
                     }
                 }
                 
-                // AJAX Nút gạt Online / Offline
-                $('#toggle-online').change(function () {
-                    var isOnline = $(this).is(':checked');
-                    $.ajax({
-                        url: '${pageContext.request.contextPath}/shipper/toggle-status',
-                        type: 'POST',
-                        data: {isOnline: isOnline},
-                        success: function (response) {
-                            if (isOnline) {
-                                $('#status-dot').removeClass('bg-red-500').addClass('bg-green-500 animate-pulse');
-                                $('#status-text').removeClass('text-red-600').addClass('text-green-600').text('Trực tuyến');
-                                $('#offline-warning').addClass('hidden');
-                                $('#online-orders').removeClass('hidden');
-                                } else {
-                                    $('#status-dot').removeClass('bg-green-500 animate-pulse').addClass('bg-red-500');
-                                    $('#status-text').removeClass('text-green-600').addClass('text-red-600').text('Ngoại tuyến');
-                                    $('#offline-warning').removeClass('hidden');
-                                    $('#online-orders').addClass('hidden');
-                                }
-                            },
-                            error: function () {
-                                alert("Lỗi kết nối! Vui lòng thử lại.");
-                                $('#toggle-online').prop('checked', !isOnline); // Hoàn tác thao tác gạt nếu lỗi
-                            }
-                        });
-                    });
+                const shipperCtx = '${pageContext.request.contextPath}';
+                let locationWatchId = null;
+                let lastSentAt = 0;
+                let lastSentLat = null;
+                let lastSentLng = null;
+                let lastLocationUpdateAt = 0;
+                let locationTickerId = null;
+                
+                function setLocationStatus(html) {
+                    const statusText = document.getElementById('location-status');
+                    if (statusText) {
+                        statusText.innerHTML = html;
+                    }
+                }
+                
+                function renderLocationLastUpdated() {
+                    const label = document.getElementById('location-last-updated');
+                    if (!label) {
+                        return;
+                    }
+                    if (!lastLocationUpdateAt) {
+                        label.textContent = 'Chưa có lần cập nhật vị trí nào';
+                        return;
+                    }
                     
-                    // Hàm chuyển đổi Địa chỉ thành Tọa độ (Geocoding)
-                    function updateLocationFromAddress() {
-                        const address = document.getElementById('shipper-address').value.trim();
-                        const statusText = document.getElementById('location-status');
-                        
-                        if (!address) {
-                            statusText.innerHTML = '<span class="text-red-500"><i class="fa-solid fa-circle-exclamation"></i> Vui lòng nhập địa chỉ!</span>';
+                    const sec = Math.max(0, Math.floor((Date.now() - lastLocationUpdateAt) / 1000));
+                    if (sec < 60) {
+                        label.textContent = 'Cập nhật vị trí ' + sec + ' giây trước';
+                        return;
+                    }
+                    
+                    const min = Math.floor(sec / 60);
+                    label.textContent = 'Cập nhật vị trí ' + min + ' phút trước';
+                }
+                
+                function markLocationUpdatedNow() {
+                    lastLocationUpdateAt = Date.now();
+                    renderLocationLastUpdated();
+                }
+                
+                function toRad(value) {
+                    return value * (Math.PI / 180);
+                }
+                
+                function distanceMeters(lat1, lng1, lat2, lng2) {
+                    const earth = 6371000;
+                    const dLat = toRad(lat2 - lat1);
+                    const dLng = toRad(lng2 - lng1);
+                    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                    + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                    return earth * c;
+                }
+                
+                async function saveLocationToDatabase(lat, lng, source, force) {
+                    const now = Date.now();
+                    const minIntervalMs = 15000;
+                    const minMoveMeters = 25;
+                    
+                    if (!force) {
+                        if (now - lastSentAt < minIntervalMs) {
                             return;
                         }
-                        
-                        statusText.innerHTML = '<span class="text-blue-500"><i class="fa-solid fa-spinner fa-spin"></i> Đang tìm tọa độ...</span>';
-                        
-                        // Gọi API Nominatim của OpenStreetMap
-                        // Thêm đuôi "Vietnam" để API ưu tiên tìm ở VN cho chính xác
-                        const searchQuery = encodeURIComponent(address + ", Vietnam");
-                        const url = `https://nominatim.openstreetmap.org/search?format=json&q=\${searchQuery}&limit=1`;
-                        
-                        fetch(url)
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data && data.length > 0) {
-                                const lat = data[0].lat;
-                                const lng = data[0].lon;
-                                
-                                statusText.innerHTML = `<span class="text-green-500"><i class="fa-solid fa-circle-check"></i> Đã ghim: \${parseFloat(lat).toFixed(4)}, \${parseFloat(lng).toFixed(4)}</span>`;
-                                
-                                // TODO: Gửi tọa độ này về Backend để lưu vào Database
-                                // saveLocationToDatabase(lat, lng);
-                                
-                                alert(`Tuyệt vời! Hệ thống đã xác định bạn đang ở tọa độ:\nVĩ độ: \${lat}\nKinh độ: \${lng}`);
-                                } else {
-                                    statusText.innerHTML = '<span class="text-red-500"><i class="fa-solid fa-triangle-exclamation"></i> Không tìm thấy địa chỉ này!</span>';
-                                }
-                            })
-                            .catch(error => {
-                                console.error("Lỗi API: ", error);
-                                statusText.innerHTML = '<span class="text-red-500"><i class="fa-solid fa-wifi"></i> Lỗi kết nối mạng!</span>';
-                            });
-                        }
-                        // Hàm mở/đóng Modal Rút tiền
-                        function openWithdrawModal() {
-                            const balance = ${currentBalance != null ? currentBalance : 0};
-                            if (balance < 50000) {
-                                alert("Số dư phải từ 50.000đ trở lên mới có thể rút!");
+                        if (lastSentLat !== null && lastSentLng !== null) {
+                            const moved = distanceMeters(lastSentLat, lastSentLng, lat, lng);
+                            if (moved < minMoveMeters) {
                                 return;
                             }
-                            document.getElementById('withdraw-modal').classList.remove('hidden');
                         }
-                        function closeWithdrawModal() {
-                            document.getElementById('withdraw-modal').classList.add('hidden');
-                        }
-                    </script>
-                    <script>
-                        document.addEventListener('DOMContentLoaded', function () {
-                            const ctx = document.getElementById('incomeChart').getContext('2d');
-                            
-                            // Lấy dữ liệu từ Servlet truyền sang
-                            const labels = [${chartLabels}];
-                            const dataValues = [${chartValues}];
-                            
-                            new Chart(ctx, {
-                                type: 'bar',
-                                data: {
-                                    labels: labels,
-                                    datasets: [{
-                                        label: 'Thu nhập (VNĐ)',
-                                        data: dataValues,
-                                        backgroundColor: 'rgba(249, 115, 22, 0.8)', // Màu cam Tailwind
-                                        borderColor: 'rgb(234, 88, 12)',
-                                        borderWidth: 1,
-                                        borderRadius: 8,
-                                        barThickness: 30
-                                    }]
-                                },
-                                options: {
-                                    responsive: true,
-                                    maintainAspectRatio: false,
-                                    plugins: {
-                                        legend: {display: false},
-                                        tooltip: {
-                                            callbacks: {
-                                                label: function (context) {
-                                                    return context.parsed.y.toLocaleString('vi-VN') + ' đ';
-                                                }
-                                            }
-                                        }
-                                    },
-                                    scales: {
-                                        y: {
-                                            beginAtZero: true,
-                                            grid: {borderDash: [5, 5]},
-                                            ticks: {
-                                                callback: function (value) {
-                                                    if (value === 0)
-                                                    return '0đ';
-                                                    return (value / 1000) + 'k'; // Hiển thị 15k, 20k cho gọn
-                                                }
-                                            }
-                                        },
-                                        x: {grid: {display: false}}
-                                    }
-                                }
-                            });
+                    }
+                    
+                    const body = new URLSearchParams();
+                    body.set('latitude', String(lat));
+                    body.set('longitude', String(lng));
+                    
+                    const res = await fetch(shipperCtx + '/shipper/update-location', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                        },
+                        credentials: 'same-origin',
+                        body: body.toString()
+                    });
+                    
+                    if (!res.ok) {
+                        throw new Error('save-location-failed');
+                    }
+                    
+                    lastSentAt = now;
+                    lastSentLat = lat;
+                    lastSentLng = lng;
+                    markLocationUpdatedNow();
+                    
+                    setLocationStatus('<span class="text-green-600"><i class="fa-solid fa-circle-check"></i> ' + (source || 'GPS')
+                    + ': ' + Number(lat).toFixed(5) + ', ' + Number(lng).toFixed(5) + '</span>');
+                }
+                
+                function stopLocationWatcher() {
+                    if (locationWatchId !== null && navigator.geolocation) {
+                        navigator.geolocation.clearWatch(locationWatchId);
+                        locationWatchId = null;
+                    }
+                }
+                
+                function startLocationWatcher() {
+                    if (!navigator.geolocation) {
+                        setLocationStatus('<span class="text-red-500"><i class="fa-solid fa-triangle-exclamation"></i> Trình duyệt không hỗ trợ GPS.</span>');
+                        return;
+                    }
+                    
+                    stopLocationWatcher();
+                    setLocationStatus('<span class="text-blue-500"><i class="fa-solid fa-spinner fa-spin"></i> Đang theo dõi vị trí...</span>');
+                    
+                    locationWatchId = navigator.geolocation.watchPosition(function (position) {
+                        const lat = Number(position.coords.latitude);
+                        const lng = Number(position.coords.longitude);
+                        saveLocationToDatabase(lat, lng, 'GPS realtime', false).catch(function () {
+                            setLocationStatus('<span class="text-red-500"><i class="fa-solid fa-wifi"></i> Không gửi được vị trí lên máy chủ.</span>');
                         });
-                        let knownOrderCount = ${availableOrders != null ? availableOrders.size() : 0};
+                        }, function () {
+                            setLocationStatus('<span class="text-red-500"><i class="fa-solid fa-location-crosshairs-slash"></i> Không lấy được vị trí GPS.</span>');
+                            }, {
+                                enableHighAccuracy: true,
+                                maximumAge: 10000,
+                                timeout: 15000
+                            });
+                        }
                         
-                        // Cài đặt vòng lặp: Cứ mỗi 5 giây (5000 mili-giây) lại chạy hàm này 1 lần
-                        setInterval(function () {
-                            // CHỈ chạy radar quét khi Shipper đang bật "Trực tuyến"
-                            if ($('#toggle-online').is(':checked')) {
-                                
-                                $.ajax({
-                                    url: '${pageContext.request.contextPath}/shipper/check-new-orders',
-                                    type: 'GET',
-                                    dataType: 'json',
-                                    success: function (data) {
-                                        // Nếu số đơn hàng trên Server NHIỀU HƠN số đơn bạn đang thấy
-                                        if (data.count > knownOrderCount) {
-                                            
-                                            // 1. Bật âm thanh "Ting Ting"
-                                            const audio = document.getElementById('newOrderSound');
-                                            audio.play().catch(e => console.log("Trình duyệt chặn phát âm thanh tự động"));
-                                            
-                                            // 2. Hiển thị cái Popup rớt từ trên xuống
-                                            document.getElementById('new-order-popup').classList.remove('translate-y-[-150%]');
-                                            document.getElementById('new-order-popup').classList.add('translate-y-0');
-                                            
-                                            // 3. Cập nhật lại biến đếm để nó không kêu réo liên tục
-                                            knownOrderCount = data.count;
-                                            
-                                            } else if (data.count < knownOrderCount) {
-                                                // Nếu số đơn ít đi (do tài xế khác nhanh tay nhận mất) -> âm thầm cập nhật lại
-                                                knownOrderCount = data.count;
-                                            }
-                                        }
+                        function getGPSLocation() {
+                            if (!navigator.geolocation) {
+                                setLocationStatus('<span class="text-red-500"><i class="fa-solid fa-triangle-exclamation"></i> Trình duyệt không hỗ trợ GPS.</span>');
+                                return;
+                            }
+                            
+                            setLocationStatus('<span class="text-blue-500"><i class="fa-solid fa-spinner fa-spin"></i> Đang định vị GPS...</span>');
+                            navigator.geolocation.getCurrentPosition(function (position) {
+                                const lat = Number(position.coords.latitude);
+                                const lng = Number(position.coords.longitude);
+                                saveLocationToDatabase(lat, lng, 'GPS', true).catch(function () {
+                                    setLocationStatus('<span class="text-red-500"><i class="fa-solid fa-wifi"></i> Không gửi được vị trí lên máy chủ.</span>');
+                                });
+                                }, function () {
+                                    setLocationStatus('<span class="text-red-500"><i class="fa-solid fa-location-crosshairs-slash"></i> Vui lòng bật quyền vị trí.</span>');
+                                    }, {
+                                        enableHighAccuracy: true,
+                                        maximumAge: 0,
+                                        timeout: 12000
                                     });
                                 }
-                            }, 5000);
-                        </script>
-                        <script>
-                            let targetAction = null; // Biến lưu trữ hành động đang chờ xác nhận
-                            
-                            // Hàm gọi Popblock hiện lên
-                            function confirmAction(event, message, element) {
-                                event.preventDefault(); // Chặn hành động mặc định ngay lập tức (chặn form submit / chặn link)
                                 
-                                // Xác định xem người dùng đang bấm vào Form hay thẻ Link <a>
-                                if (element.tagName === 'A') {
-                                    targetAction = {type: 'link', data: element.href};
-                                    } else if (element.form) {
-                                        targetAction = {type: 'form', data: element.form}; // Dùng cho <button type="submit">
-                                        } else if (element.tagName === 'FORM') {
-                                            targetAction = {type: 'form', data: element};
-                                        }
-                                        
-                                        // Cập nhật câu chữ và tạo hiệu ứng bật lên
-                                        document.getElementById('confirm-message').innerText = message;
-                                        const modal = document.getElementById('custom-confirm-modal');
-                                        const content = document.getElementById('confirm-modal-content');
-                                        
-                                        modal.classList.remove('hidden');
-                                        setTimeout(() => {
-                                            content.classList.remove('scale-95', 'opacity-0');
-                                            content.classList.add('scale-100', 'opacity-100');
-                                        }, 10);
-                                    }
+                                window.getGPSLocation = getGPSLocation;
+                                
+                                // Hàm chuyển đổi Địa chỉ thành Tọa độ (Geocoding)
+                                function updateLocationFromAddress() {
+                                    const address = document.getElementById('shipper-address').value.trim();
                                     
-                                    // Hàm tắt Popblock
-                                    function closeConfirmModal() {
-                                        const modal = document.getElementById('custom-confirm-modal');
-                                        const content = document.getElementById('confirm-modal-content');
-                                        
-                                        content.classList.remove('scale-100', 'opacity-100');
-                                        content.classList.add('scale-95', 'opacity-0');
-                                        
-                                        setTimeout(() => {
-                                            modal.classList.add('hidden');
-                                            targetAction = null; // Xóa dữ liệu chờ
-                                        }, 200);
-                                    }
-                                    
-                                    // Hàm thực thi khi người dùng bấm "Xác nhận"
-                                    function executeConfirm() {
-                                        if (!targetAction)
+                                    if (!address) {
+                                        setLocationStatus('<span class="text-red-500"><i class="fa-solid fa-circle-exclamation"></i> Vui lòng nhập địa chỉ!</span>');
                                         return;
-                                        
-                                        if (targetAction.type === 'form') {
-                                            targetAction.data.submit(); // Cho phép form gửi đi
-                                            } else if (targetAction.type === 'link') {
-                                                window.location.href = targetAction.data; // Cho phép link chuyển hướng
-                                            }
+                                    }
+                                    
+                                    setLocationStatus('<span class="text-blue-500"><i class="fa-solid fa-spinner fa-spin"></i> Đang tìm tọa độ...</span>');
+                                    
+                                    const searchQuery = encodeURIComponent(address + ', Vietnam');
+                                    const url = 'https://nominatim.openstreetmap.org/search?format=json&q=' + searchQuery + '&limit=1';
+                                    
+                                    fetch(url)
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        if (data && data.length > 0) {
+                                            const lat = Number(data[0].lat);
+                                            const lng = Number(data[0].lon);
+                                            
+                                            return saveLocationToDatabase(lat, lng, 'Địa chỉ', true);
                                         }
+                                        throw new Error('not-found');
+                                    })
+                                    .catch(error => {
+                                        if (error && error.message === 'not-found') {
+                                            setLocationStatus('<span class="text-red-500"><i class="fa-solid fa-triangle-exclamation"></i> Không tìm thấy địa chỉ này!</span>');
+                                            return;
+                                        }
+                                        console.error('Lỗi API: ', error);
+                                        setLocationStatus('<span class="text-red-500"><i class="fa-solid fa-wifi"></i> Lỗi kết nối mạng!</span>');
+                                    });
+                                }
+                                
+                                window.updateLocationFromAddress = updateLocationFromAddress;
+                                
+                                // AJAX Nút gạt Online / Offline
+                                $('#toggle-online').change(function () {
+                                    var isOnline = $(this).is(':checked');
+                                    $.ajax({
+                                        url: '${pageContext.request.contextPath}/shipper/toggle-status',
+                                        type: 'POST',
+                                        data: {isOnline: isOnline},
+                                        success: function () {
+                                            if (isOnline) {
+                                                $('#status-dot').removeClass('bg-red-500').addClass('bg-green-500 animate-pulse');
+                                                $('#status-text').removeClass('text-red-600').addClass('text-green-600').text('Trực tuyến');
+                                                $('#offline-warning').addClass('hidden');
+                                                $('#online-orders').removeClass('hidden');
+                                                startLocationWatcher();
+                                                getGPSLocation();
+                                                } else {
+                                                    $('#status-dot').removeClass('bg-green-500 animate-pulse').addClass('bg-red-500');
+                                                    $('#status-text').removeClass('text-green-600').addClass('text-red-600').text('Ngoại tuyến');
+                                                    $('#offline-warning').removeClass('hidden');
+                                                    $('#online-orders').addClass('hidden');
+                                                    stopLocationWatcher();
+                                                    setLocationStatus('<span class="text-gray-500"><i class="fa-solid fa-pause"></i> Đã dừng cập nhật vị trí.</span>');
+                                                }
+                                            },
+                                            error: function () {
+                                                alert('Lỗi kết nối! Vui lòng thử lại.');
+                                                $('#toggle-online').prop('checked', !isOnline);
+                                            }
+                                        });
+                                    });
+                                    
+                                    if ($('#toggle-online').is(':checked')) {
+                                        startLocationWatcher();
+                                        getGPSLocation();
+                                    }
+                                    
+                                    if (locationTickerId === null) {
+                                        locationTickerId = setInterval(renderLocationLastUpdated, 1000);
+                                    }
+                                    renderLocationLastUpdated();
+                                    
+                                    window.addEventListener('beforeunload', function () {
+                                        stopLocationWatcher();
+                                        if (locationTickerId !== null) {
+                                            clearInterval(locationTickerId);
+                                            locationTickerId = null;
+                                        }
+                                    });
+                                    // Hàm mở/đóng Modal Rút tiền
+                                    function openWithdrawModal() {
+                                        const balance = ${currentBalance != null ? currentBalance : 0};
+                                        if (balance < 50000) {
+                                            alert("Số dư phải từ 50.000đ trở lên mới có thể rút!");
+                                            return;
+                                        }
+                                        document.getElementById('withdraw-modal').classList.remove('hidden');
+                                    }
+                                    function closeWithdrawModal() {
+                                        document.getElementById('withdraw-modal').classList.add('hidden');
+                                    }
+                                </script>
+                                <script>
+                                    document.addEventListener('DOMContentLoaded', function () {
+                                        const ctx = document.getElementById('incomeChart').getContext('2d');
+                                        
+                                        // Lấy dữ liệu từ Servlet truyền sang
+                                        const labels = [${chartLabels}];
+                                        const dataValues = [${chartValues}];
+                                        
+                                        new Chart(ctx, {
+                                            type: 'bar',
+                                            data: {
+                                                labels: labels,
+                                                datasets: [{
+                                                    label: 'Thu nhập (VNĐ)',
+                                                    data: dataValues,
+                                                    backgroundColor: 'rgba(249, 115, 22, 0.8)', // Màu cam Tailwind
+                                                    borderColor: 'rgb(234, 88, 12)',
+                                                    borderWidth: 1,
+                                                    borderRadius: 8,
+                                                    barThickness: 30
+                                                }]
+                                            },
+                                            options: {
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                plugins: {
+                                                    legend: {display: false},
+                                                    tooltip: {
+                                                        callbacks: {
+                                                            label: function (context) {
+                                                                return context.parsed.y.toLocaleString('vi-VN') + ' đ';
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                scales: {
+                                                    y: {
+                                                        beginAtZero: true,
+                                                        grid: {borderDash: [5, 5]},
+                                                        ticks: {
+                                                            callback: function (value) {
+                                                                if (value === 0)
+                                                                return '0đ';
+                                                                return (value / 1000) + 'k'; // Hiển thị 15k, 20k cho gọn
+                                                            }
+                                                        }
+                                                    },
+                                                    x: {grid: {display: false}}
+                                                }
+                                            }
+                                        });
+                                    });
+                                    let knownOrderCount = ${availableOrders != null ? availableOrders.size() : 0};
+                                    
+                                    // Cài đặt vòng lặp: Cứ mỗi 5 giây (5000 mili-giây) lại chạy hàm này 1 lần
+                                    setInterval(function () {
+                                        // CHỈ chạy radar quét khi Shipper đang bật "Trực tuyến"
+                                        if ($('#toggle-online').is(':checked')) {
+                                            
+                                            $.ajax({
+                                                url: '${pageContext.request.contextPath}/shipper/check-new-orders',
+                                                type: 'GET',
+                                                dataType: 'json',
+                                                success: function (data) {
+                                                    // Nếu số đơn hàng trên Server NHIỀU HƠN số đơn bạn đang thấy
+                                                    if (data.count > knownOrderCount) {
+                                                        
+                                                        // 1. Bật âm thanh "Ting Ting"
+                                                        const audio = document.getElementById('newOrderSound');
+                                                        audio.play().catch(e => console.log("Trình duyệt chặn phát âm thanh tự động"));
+                                                        
+                                                        // 2. Hiển thị cái Popup rớt từ trên xuống
+                                                        document.getElementById('new-order-popup').classList.remove('translate-y-[-150%]');
+                                                        document.getElementById('new-order-popup').classList.add('translate-y-0');
+                                                        
+                                                        // 3. Cập nhật lại biến đếm để nó không kêu réo liên tục
+                                                        knownOrderCount = data.count;
+                                                        
+                                                        } else if (data.count < knownOrderCount) {
+                                                            // Nếu số đơn ít đi (do tài xế khác nhanh tay nhận mất) -> âm thầm cập nhật lại
+                                                            knownOrderCount = data.count;
+                                                        }
+                                                    }
+                                                });
+                                            }
+                                        }, 5000);
                                     </script>
-                                </body>
-                            </html>
+                                    <script>
+                                        let targetAction = null; // Biến lưu trữ hành động đang chờ xác nhận
+                                        
+                                        // Hàm gọi Popblock hiện lên
+                                        function confirmAction(event, message, element) {
+                                            event.preventDefault(); // Chặn hành động mặc định ngay lập tức (chặn form submit / chặn link)
+                                            
+                                            // Xác định xem người dùng đang bấm vào Form hay thẻ Link <a>
+                                            if (element.tagName === 'A') {
+                                                targetAction = {type: 'link', data: element.href};
+                                                } else if (element.form) {
+                                                    targetAction = {type: 'form', data: element.form}; // Dùng cho <button type="submit">
+                                                    } else if (element.tagName === 'FORM') {
+                                                        targetAction = {type: 'form', data: element};
+                                                    }
+                                                    
+                                                    // Cập nhật câu chữ và tạo hiệu ứng bật lên
+                                                    document.getElementById('confirm-message').innerText = message;
+                                                    const modal = document.getElementById('custom-confirm-modal');
+                                                    const content = document.getElementById('confirm-modal-content');
+                                                    
+                                                    modal.classList.remove('hidden');
+                                                    setTimeout(() => {
+                                                        content.classList.remove('scale-95', 'opacity-0');
+                                                        content.classList.add('scale-100', 'opacity-100');
+                                                    }, 10);
+                                                }
+                                                
+                                                // Hàm tắt Popblock
+                                                function closeConfirmModal() {
+                                                    const modal = document.getElementById('custom-confirm-modal');
+                                                    const content = document.getElementById('confirm-modal-content');
+                                                    
+                                                    content.classList.remove('scale-100', 'opacity-100');
+                                                    content.classList.add('scale-95', 'opacity-0');
+                                                    
+                                                    setTimeout(() => {
+                                                        modal.classList.add('hidden');
+                                                        targetAction = null; // Xóa dữ liệu chờ
+                                                    }, 200);
+                                                }
+                                                
+                                                // Hàm thực thi khi người dùng bấm "Xác nhận"
+                                                function executeConfirm() {
+                                                    if (!targetAction)
+                                                    return;
+                                                    
+                                                    if (targetAction.type === 'form') {
+                                                        targetAction.data.submit(); // Cho phép form gửi đi
+                                                        } else if (targetAction.type === 'link') {
+                                                            window.location.href = targetAction.data; // Cho phép link chuyển hướng
+                                                        }
+                                                    }
+                                                </script>
+                                            </body>
+                                        </html>

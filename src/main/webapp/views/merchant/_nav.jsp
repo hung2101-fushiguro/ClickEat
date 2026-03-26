@@ -1,5 +1,5 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%
     String currentPage = (String) request.getAttribute("currentPage");
     if (currentPage == null) currentPage = "";
@@ -60,34 +60,36 @@
         (function () {
             var ctx = '<%= request.getContextPath()%>';
 
-        function fetchNotifs() {
-            fetch(ctx + '/merchant/notifications', {credentials:'same-origin'})
-                .then(function(r){ return r.json(); })
-                .then(function(data){
-                    updateBadge('notifBadge', data.unread);
-                    updateBadge('mobileNotifBadge', data.unread);
-                    renderList(data.items, 'notifList');
-                    renderList(data.items, 'mobileNotifList');
-                })
-                .catch(function(){});
-        }
+            function escHtml(s) {
+                return String(s == null ? '' : s)
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;');
+            }
 
-        function renderList(items, listId) {
-            var list = document.getElementById(listId);
-            if (!list) return;
-            if (!items || items.length === 0) {
-                list.innerHTML = '<p class="text-xs text-gray-400 text-center py-6">Không có thông báo</p>';
-                return;
+            function updateBadge(id, unread) {
+                var badge = document.getElementById(id);
+                if (!badge)
+                    return;
+                if (unread > 0) {
+                    badge.textContent = unread > 99 ? '99+' : unread;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
             }
 
             function renderList(items, listId) {
                 var list = document.getElementById(listId);
                 if (!list)
                     return;
+
                 if (!items || items.length === 0) {
                     list.innerHTML = '<p class="text-xs text-gray-400 text-center py-6">Không có thông báo</p>';
                     return;
                 }
+
                 var html = '';
                 for (var i = 0; i < items.length; i++) {
                     var n = items[i];
@@ -103,76 +105,41 @@
                 list.innerHTML = html;
             }
 
-        function updateBadge(id, unread) {
-            var badge = document.getElementById(id);
-            if (!badge) return;
-            if (unread > 0) {
-                badge.textContent = unread > 99 ? '99+' : unread;
-                badge.classList.remove('hidden');
-            } else {
-                badge.classList.add('hidden');
+            function fetchNotifs() {
+                fetch(ctx + '/merchant/notifications', {credentials: 'same-origin'})
+                        .then(function (r) {
+                            if (!r.ok) {
+                                throw new Error('notif-fetch-failed');
+                            }
+                            return r.json();
+                        })
+                        .then(function (data) {
+                            updateBadge('notifBadge', data.unread || 0);
+                            updateBadge('mobileNotifBadge', data.unread || 0);
+                            renderList(data.items || [], 'notifList');
+                            renderList(data.items || [], 'mobileNotifList');
+                        })
+                        .catch(function () {
+                        });
             }
-        }
 
-        function escHtml(s) {
-            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-        }
-
-            function escHtml(s) {
-                return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-            }
-
-        window.markAllRead = function() {
-            fetch(ctx + '/merchant/notifications', {method:'POST', credentials:'same-origin'})
-                .then(function(){ fetchNotifs(); })
-                .catch(function(){});
-        };
-
-        window.toggleMobileMenu = function(forceOpen) {
-            var overlay = document.getElementById('mobileMenuOverlay');
-            var sheet = document.getElementById('mobileMenuSheet');
-            if (!overlay || !sheet) return;
-
-            var shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : overlay.classList.contains('hidden');
-            if (shouldOpen) {
-                overlay.classList.remove('hidden');
-                sheet.classList.remove('translate-y-full');
-                document.body.classList.add('overflow-hidden');
-            } else {
-                sheet.classList.add('translate-y-full');
-                document.body.classList.remove('overflow-hidden');
-                setTimeout(function() {
-                    overlay.classList.add('hidden');
-                }, 180);
-            }
-        };
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function(e) {
-            var container = document.getElementById('notifContainer');
-            if (container && !container.contains(e.target)) {
+            window.toggleNotifDropdown = function () {
                 var dd = document.getElementById('notifDropdown');
-                if (dd) dd.classList.add('hidden');
-            }
-
-            var overlay = document.getElementById('mobileMenuOverlay');
-            if (overlay && e.target === overlay) {
-                window.toggleMobileMenu(false);
-            }
-        });
-
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                window.toggleMobileMenu(false);
-            }
-        });
+                if (!dd)
+                    return;
+                dd.classList.toggle('hidden');
+            };
 
             window.markAllRead = function () {
                 fetch(ctx + '/merchant/notifications', {method: 'POST', credentials: 'same-origin'})
-                        .then(function () {
+                        .then(function (r) {
+                            if (!r.ok) {
+                                throw new Error('notif-mark-failed');
+                            }
                             fetchNotifs();
                         })
-                        .catch(function () {});
+                        .catch(function () {
+                        });
             };
 
             window.toggleMobileMenu = function (forceOpen) {
@@ -195,7 +162,6 @@
                 }
             };
 
-            // Close dropdown when clicking outside
             document.addEventListener('click', function (e) {
                 var container = document.getElementById('notifContainer');
                 if (container && !container.contains(e.target)) {
@@ -216,9 +182,8 @@
                 }
             });
 
-            // Initial fetch + poll every 60 seconds
             fetchNotifs();
-            setInterval(fetchNotifs, 60000);
+            setInterval(fetchNotifs, 15000);
         })();
     </script>
 

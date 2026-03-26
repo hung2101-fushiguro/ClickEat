@@ -22,7 +22,15 @@ import jakarta.servlet.http.HttpSession;
 public class AuthFilter implements Filter {
 
     private static final Set<String> CUSTOMER_PROTECTED = new HashSet<>(Arrays.asList(
-            "/my-orders", "/my-account", "/track-order", "/rate-order", "/checkout"
+            "/my-orders", "/my-account", "/track-order", "/rate-order", "/checkout",
+            "/customer/profile", "/customer/orders", "/customer/vouchers", "/customer/register-role"
+    ));
+
+    private static final Set<String> CUSTOMER_UI_ROUTES = new HashSet<>(Arrays.asList(
+            "/home", "/menu", "/promotion", "/promotions", "/store", "/store-detail",
+            "/cart", "/checkout", "/payment-success", "/guest-checkout",
+            "/my-orders", "/my-account", "/track-order", "/rate-order",
+            "/customer/profile", "/customer/orders", "/customer/vouchers", "/customer/register-role"
     ));
 
     @Override
@@ -35,6 +43,11 @@ public class AuthFilter implements Filter {
         String path = request.getServletPath();
         HttpSession session = request.getSession(false);
         User account = (session != null) ? (User) session.getAttribute("account") : null;
+
+        if (account != null && isBackOfficeRole(account.getRole()) && isCustomerUiPath(path)) {
+            response.sendRedirect(request.getContextPath() + getDashboardPathByRole(account.getRole()));
+            return;
+        }
 
         // Merchant portal (except public register page)
         if (path.startsWith("/merchant/")
@@ -58,7 +71,7 @@ public class AuthFilter implements Filter {
             }
         } // Customer-only paths
         else if (CUSTOMER_PROTECTED.contains(path)) {
-            if (account == null) {
+            if (account == null || !"CUSTOMER".equalsIgnoreCase(account.getRole())) {
                 response.sendRedirect(request.getContextPath() + "/login");
                 return;
             }
@@ -73,5 +86,28 @@ public class AuthFilter implements Filter {
 
     @Override
     public void destroy() {
+    }
+
+    private boolean isBackOfficeRole(String role) {
+        return "MERCHANT".equalsIgnoreCase(role)
+                || "ADMIN".equalsIgnoreCase(role)
+                || "SHIPPER".equalsIgnoreCase(role);
+    }
+
+    private boolean isCustomerUiPath(String path) {
+        return CUSTOMER_UI_ROUTES.contains(path) || path.startsWith("/customer/");
+    }
+
+    private String getDashboardPathByRole(String role) {
+        if ("MERCHANT".equalsIgnoreCase(role)) {
+            return "/merchant/dashboard";
+        }
+        if ("ADMIN".equalsIgnoreCase(role)) {
+            return "/admin/dashboard";
+        }
+        if ("SHIPPER".equalsIgnoreCase(role)) {
+            return "/shipper/dashboard";
+        }
+        return "/home";
     }
 }

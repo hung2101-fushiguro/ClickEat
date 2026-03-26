@@ -1,9 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <web-app version="6.0" xmlns="https://jakarta.ee/xml/ns/jakartaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd">
-    <context-param>
-        <param-name>google.client.id</param-name>
-        <param-value>791985931467-agv6l5lr044fihqsqbba65dp028cvdqc.apps.googleusercontent.com</param-value>
-    </context-param>
     <session-config>
         <session-timeout>
             30

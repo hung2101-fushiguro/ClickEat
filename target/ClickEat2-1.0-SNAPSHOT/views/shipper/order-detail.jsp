@@ -6,10 +6,23 @@
     <head>
         <meta charset="UTF-8">
         <title>Chi tiết Đơn hàng - ClickEat</title>
+        <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/assets/images/shipperlogo.png">
         <script src="https://cdn.tailwindcss.com"></script>
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        fontFamily: {sans: ['Inter', 'sans-serif']},
+                        colors: {primary: '#c86601', 'primary-dark': '#a05201'}
+                    }
+                }
+            };
+        </script>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/vendor/leaflet/leaflet.css" />
+        <script src="${pageContext.request.contextPath}/assets/vendor/leaflet/leaflet.js"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+        <style>body { font-family: 'Inter', sans-serif; }</style>
     </head>
     <body class="bg-gray-100 flex justify-center min-h-screen">
 
@@ -135,108 +148,108 @@
                 // Lấy tọa độ
                 const shopLat = ${not empty merchant.latitude ? merchant.latitude : 10.7769};
                 const shopLng = ${not empty merchant.longitude ? merchant.longitude : 106.7009};
-
+                
                 const customerLat = ${not empty order.latitude && order.latitude != 0.0 ? order.latitude : 10.7926};
                 const customerLng = ${not empty order.longitude && order.longitude != 0.0 ? order.longitude : 106.6853};
-
+                
                 const map = L.map('map').setView([shopLat, shopLng], 14);
-
+                
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '© OpenStreetMap',
                     maxZoom: 19
                 }).addTo(map);
-
+                
                 const shopIcon = L.divIcon({
                     html: '<div class="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center border-2 border-white shadow-md"><i class="fa-solid fa-store text-xs"></i></div>',
                     className: '', iconSize: [24, 24], iconAnchor: [12, 12]
                 });
-
+                
                 const customerIcon = L.divIcon({
                     html: '<div class="w-6 h-6 bg-orange-500 text-white rounded-full flex items-center justify-center border-2 border-white shadow-md"><i class="fa-solid fa-house text-xs"></i></div>',
                     className: '', iconSize: [24, 24], iconAnchor: [12, 12]
                 });
-
+                
                 L.marker([shopLat, shopLng], {icon: shopIcon}).addTo(map);
                 L.marker([customerLat, customerLng], {icon: customerIcon}).addTo(map);
-
+                
                 const osrmUrl = `https://router.project-osrm.org/route/v1/driving/\${shopLng},\${shopLat};\${customerLng},\${customerLat}?overview=full&geometries=geojson`;
-
+                
                 fetch(osrmUrl)
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.routes && data.routes.length > 0) {
-                                const route = data.routes[0];
-                                const distanceKm = (route.distance / 1000).toFixed(1);
-                                const durationMin = Math.round(route.duration / 60);
-                                document.getElementById('distance-text').innerHTML = `\${distanceKm} km • \${durationMin} phút`;
-
-                                const coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-                                const polyline = L.polyline(coordinates, {
-                                    color: '#f97316', // Cam
-                                    weight: 4,
-                                    opacity: 0.8,
-                                    dashArray: '8, 8'
-                                }).addTo(map);
-
-                                map.fitBounds(polyline.getBounds(), {padding: [20, 20]});
-                            }
-                        });
+                .then(response => response.json())
+                .then(data => {
+                    if (data.routes && data.routes.length > 0) {
+                        const route = data.routes[0];
+                        const distanceKm = (route.distance / 1000).toFixed(1);
+                        const durationMin = Math.round(route.duration / 60);
+                        document.getElementById('distance-text').innerHTML = `\${distanceKm} km • \${durationMin} phút`;
+                        
+                        const coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                        const polyline = L.polyline(coordinates, {
+                            color: '#f97316', // Cam
+                            weight: 4,
+                            opacity: 0.8,
+                            dashArray: '8, 8'
+                        }).addTo(map);
+                        
+                        map.fitBounds(polyline.getBounds(), {padding: [20, 20]});
+                    }
+                });
             });
         </script>
         <script>
             
             let targetAction = null; // Biến lưu trữ hành động đang chờ xác nhận
-
+            
             // Hàm gọi Popblock hiện lên
             function confirmAction(event, message, element) {
                 event.preventDefault(); // Chặn hành động mặc định ngay lập tức (chặn form submit / chặn link)
-
+                
                 // Xác định xem người dùng đang bấm vào Form hay thẻ Link <a>
                 if (element.tagName === 'A') {
                     targetAction = {type: 'link', data: element.href};
-                } else if (element.form) {
-                    targetAction = {type: 'form', data: element.form}; // Dùng cho <button type="submit">
-                } else if (element.tagName === 'FORM') {
-                    targetAction = {type: 'form', data: element};
-                }
-
-                // Cập nhật câu chữ và tạo hiệu ứng bật lên
-                document.getElementById('confirm-message').innerText = message;
-                const modal = document.getElementById('custom-confirm-modal');
-                const content = document.getElementById('confirm-modal-content');
-
-                modal.classList.remove('hidden');
-                setTimeout(() => {
-                    content.classList.remove('scale-95', 'opacity-0');
-                    content.classList.add('scale-100', 'opacity-100');
-                }, 10);
-            }
-
-            // Hàm tắt Popblock
-            function closeConfirmModal() {
-                const modal = document.getElementById('custom-confirm-modal');
-                const content = document.getElementById('confirm-modal-content');
-
-                content.classList.remove('scale-100', 'opacity-100');
-                content.classList.add('scale-95', 'opacity-0');
-
-                setTimeout(() => {
-                    modal.classList.add('hidden');
-                    targetAction = null; // Xóa dữ liệu chờ
-                }, 200);
-            }
-
-            // Hàm thực thi khi người dùng bấm "Xác nhận"
-            function executeConfirm() {
-                if (!targetAction)
-                    return;
-
-                if (targetAction.type === 'form') {
-                    targetAction.data.submit(); // Cho phép form gửi đi
-                } else if (targetAction.type === 'link') {
-                    window.location.href = targetAction.data; // Cho phép link chuyển hướng
-                }
-            }
-        </script>
-    </body>
-</html>
+                    } else if (element.form) {
+                        targetAction = {type: 'form', data: element.form}; // Dùng cho <button type="submit">
+                        } else if (element.tagName === 'FORM') {
+                            targetAction = {type: 'form', data: element};
+                        }
+                        
+                        // Cập nhật câu chữ và tạo hiệu ứng bật lên
+                        document.getElementById('confirm-message').innerText = message;
+                        const modal = document.getElementById('custom-confirm-modal');
+                        const content = document.getElementById('confirm-modal-content');
+                        
+                        modal.classList.remove('hidden');
+                        setTimeout(() => {
+                            content.classList.remove('scale-95', 'opacity-0');
+                            content.classList.add('scale-100', 'opacity-100');
+                        }, 10);
+                    }
+                    
+                    // Hàm tắt Popblock
+                    function closeConfirmModal() {
+                        const modal = document.getElementById('custom-confirm-modal');
+                        const content = document.getElementById('confirm-modal-content');
+                        
+                        content.classList.remove('scale-100', 'opacity-100');
+                        content.classList.add('scale-95', 'opacity-0');
+                        
+                        setTimeout(() => {
+                            modal.classList.add('hidden');
+                            targetAction = null; // Xóa dữ liệu chờ
+                        }, 200);
+                    }
+                    
+                    // Hàm thực thi khi người dùng bấm "Xác nhận"
+                    function executeConfirm() {
+                        if (!targetAction)
+                        return;
+                        
+                        if (targetAction.type === 'form') {
+                            targetAction.data.submit(); // Cho phép form gửi đi
+                            } else if (targetAction.type === 'link') {
+                                window.location.href = targetAction.data; // Cho phép link chuyển hướng
+                            }
+                        }
+                    </script>
+                </body>
+            </html>

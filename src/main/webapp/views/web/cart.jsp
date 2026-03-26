@@ -69,6 +69,9 @@
                                                     <div class="flex items-start justify-between gap-3">
                                                         <div>
                                                             <div class="text-lg font-extrabold text-gray-900">${it.name}</div>
+                                                            <c:if test="${not empty it.optionSummary}">
+                                                                <div class="text-xs text-[#9d7d68] mt-0.5">${it.optionSummary}</div>
+                                                            </c:if>
                                                             <div class="text-orange-500 font-extrabold text-lg">
                                                                 <fmt:formatNumber value="${it.unitPrice}" type="number" />đ
                                                             </div>
@@ -305,6 +308,7 @@
                                 + '<div class="flex items-start justify-between gap-3">'
                                 + '<div>'
                                 + '<div class="text-lg font-extrabold text-gray-900">' + escHtml(it.name) + '</div>'
+                                + (it.optionSummary ? '<div class="text-xs text-[#9d7d68] mt-0.5">' + escHtml(it.optionSummary) + '</div>' : '')
                                 + '<div class="text-orange-500 font-extrabold text-lg">' + fmtPriceVnd(lineTotal) + '</div>'
                                 + '</div>'
                                 + '<button type="button" class="text-gray-500 hover:text-red-500" onclick="removeItem(' + itemId + ')" aria-label="Xóa">'
@@ -406,6 +410,9 @@
 
                                             <div class="flex-grow">
                                                 <h3 class="text-lg font-bold text-gray-900">${item.name}</h3>
+                                                <c:if test="${not empty item.optionSummary}">
+                                                    <p class="text-xs text-[#9d7d68] mt-0.5">${item.optionSummary}</p>
+                                                </c:if>
                                                 <p class="text-orange-500 font-bold">
                                                     <fmt:formatNumber value="${item.unitPrice}" type="number" />đ
                                                 </p>

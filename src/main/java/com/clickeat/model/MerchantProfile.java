@@ -22,11 +22,11 @@ public class MerchantProfile {
     private String shopAvatar;
     private String businessHours;
     private String shopDescription;
+    private String sourcePlatform;
     private String notificationSettings;
     private Double minOrderAmount;
     private Boolean isOpen;
     private String rejectionReason;
-    private String sourcePlatform;
     // Transient stats – populated by JOIN queries
     private double avgRating;
     private int totalRatings;
@@ -44,6 +44,7 @@ public class MerchantProfile {
     private String voucherTitle;
     private String deliveryTime;
     private String distance;
+    private Double shippingFee;
 
     public Boolean getIsDefault() {
         return isDefault;
@@ -139,6 +140,14 @@ public class MerchantProfile {
 
     public void setDistance(String distance) {
         this.distance = distance;
+    }
+
+    public Double getShippingFee() {
+        return shippingFee;
+    }
+
+    public void setShippingFee(Double shippingFee) {
+        this.shippingFee = shippingFee;
     }
 
     public void setOpen(boolean open) {
@@ -316,6 +325,14 @@ public class MerchantProfile {
         this.shopDescription = shopDescription;
     }
 
+    public String getSourcePlatform() {
+        return sourcePlatform;
+    }
+
+    public void setSourcePlatform(String sourcePlatform) {
+        this.sourcePlatform = sourcePlatform;
+    }
+
     public String getNotificationSettings() {
         return notificationSettings;
     }
@@ -346,13 +363,5 @@ public class MerchantProfile {
 
     public void setRejectionReason(String rejectionReason) {
         this.rejectionReason = rejectionReason;
-    }
-
-    public String getSourcePlatform() {
-        return sourcePlatform;
-    }
-
-    public void setSourcePlatform(String sourcePlatform) {
-        this.sourcePlatform = sourcePlatform;
     }
 }

@@ -1,5 +1,5 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -10,6 +10,8 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/vendor/leaflet/leaflet.css"/>
+    <script src="${pageContext.request.contextPath}/assets/vendor/leaflet/leaflet.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -26,6 +28,7 @@
         /* File upload drag zone */
         .upload-zone:hover { border-color: #c86601; background: #fff7ed; }
         .upload-zone:hover .upload-icon { color: #c86601; }
+        #leafletMap { height: 280px; border-radius: 0.75rem; }
     </style>
 </head>
 <body class="min-h-screen bg-gray-50 font-sans">
@@ -153,6 +156,16 @@
                                 <option value="other">Khác</option>
                             </select>
                         </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-800 mb-2">Đang bán trên nền tảng</label>
+                            <select id="sourcePlatform"
+                                    class="w-full h-12 px-4 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 focus:bg-white focus:ring-4 focus:ring-orange-100 focus:border-primary outline-none transition-all">
+                                <option value="NONE">Chưa bán trên nền tảng khác</option>
+                                <option value="GRABFOOD">GrabFood</option>
+                                <option value="SHOPEEFOOD">ShopeeFood</option>
+                                <option value="OTHER">Nền tảng khác</option>
+                            </select>
+                        </div>
                         <c:choose>
                         <c:when test="${not empty sessionScope.googleSignup_sub}">
                         <!-- Google sign-up — no password needed (spans 2 cols) -->
@@ -169,6 +182,7 @@
                             <label class="block text-sm font-semibold text-gray-800 mb-2">Mật khẩu *</label>
                             <div class="relative">
                                 <input type="password" id="regPassword" placeholder="Ít nhất 6 ký tự"
+                                        form="step3"
                                        class="w-full h-12 px-4 pr-12 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 focus:bg-white focus:ring-4 focus:ring-orange-100 focus:border-primary outline-none transition-all placeholder:text-gray-400"/>
                                 <button type="button" onclick="togglePw('regPassword','eye1')" tabindex="-1"
                                         class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors">
@@ -181,6 +195,7 @@
                             <label class="block text-sm font-semibold text-gray-800 mb-2">Xác nhận mật khẩu *</label>
                             <div class="relative">
                                 <input type="password" id="regConfirm" placeholder="Nhập lại mật khẩu"
+                                        form="step3"
                                        class="w-full h-12 px-4 pr-12 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 focus:bg-white focus:ring-4 focus:ring-orange-100 focus:border-primary outline-none transition-all placeholder:text-gray-400"/>
                                 <button type="button" onclick="togglePw('regConfirm','eye2')" tabindex="-1"
                                         class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors">
@@ -214,6 +229,7 @@
                     <!-- Hidden form — JS fills credential then submits -->
                     <form id="googleAuthForm" method="POST" action="${pageContext.request.contextPath}/merchant/auth/google">
                         <input type="hidden" id="googleCredential" name="credential"/>
+                        <input type="hidden" name="mode" value="register"/>
                     </form>
                     <div id="googleBtnContainer" class="flex justify-center"></div>
 
@@ -240,8 +256,20 @@
                     <!-- Address -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-800 mb-2">Địa chỉ cửa hàng *</label>
-                        <input type="text" id="shopAddress" placeholder="Số nhà, đường, phường/xã, quận/huyện, thành phố"
-                               class="w-full h-12 px-4 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 focus:bg-white focus:ring-4 focus:ring-orange-100 focus:border-primary outline-none transition-all placeholder:text-gray-400"/>
+                        <div class="relative flex gap-2">
+                            <div class="flex-1 relative">
+                                <input type="text" id="shopAddress" placeholder="Số nhà, đường, phường/xã, quận/huyện, thành phố"
+                                       autocomplete="off"
+                                       class="w-full h-12 px-4 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 focus:bg-white focus:ring-4 focus:ring-orange-100 focus:border-primary outline-none transition-all placeholder:text-gray-400"/>
+                                <div id="addressSuggestBox" class="hidden absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-56 overflow-auto"></div>
+                            </div>
+                            <button type="button" id="searchAddressBtn"
+                                    class="h-12 px-4 bg-primary hover:bg-primary-dark text-white rounded-xl font-semibold transition-all whitespace-nowrap">
+                                Tìm trên bản đồ
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2">Gõ địa chỉ để hiện gợi ý ngay, hoặc bấm “Tìm trên bản đồ”, hoặc kéo thả ghim để chỉnh chính xác vị trí.</p>
+                        <div id="leafletMap" class="w-full mt-3 border border-gray-200"></div>
                     </div>
 
                     <!-- Shop phone -->
@@ -311,7 +339,16 @@
                     <input type="hidden" name="shopAddress" id="fShopAddress"/>
                     <input type="hidden" name="password"  id="fPassword"/>
                     <input type="hidden" name="businessType" id="fBusinessType"/>
+                    <input type="hidden" name="sourcePlatform" id="fSourcePlatform"/>
                     <input type="hidden" name="viaGoogle"   id="fViaGoogle"/>
+                    <input type="hidden" name="latitude" id="fLatitude"/>
+                    <input type="hidden" name="longitude" id="fLongitude"/>
+                    <input type="hidden" name="provinceCode" id="fProvinceCode"/>
+                    <input type="hidden" name="provinceName" id="fProvinceName"/>
+                    <input type="hidden" name="districtCode" id="fDistrictCode"/>
+                    <input type="hidden" name="districtName" id="fDistrictName"/>
+                    <input type="hidden" name="wardCode" id="fWardCode"/>
+                    <input type="hidden" name="wardName" id="fWardName"/>
 
                     <!-- Info summary card -->
                     <div class="bg-orange-50 border border-orange-100 rounded-xl p-4 space-y-2">
@@ -325,6 +362,8 @@
                             <span class="font-semibold text-gray-900 truncate" id="sumEmail">—</span>
                             <span class="text-gray-500">Địa chỉ</span>
                             <span class="font-semibold text-gray-900 truncate" id="sumAddr">—</span>
+                            <span class="text-gray-500">Nền tảng tham chiếu</span>
+                            <span class="font-semibold text-gray-900 truncate" id="sumPlatform">—</span>
                         </div>
                     </div>
 
@@ -409,7 +448,7 @@
                             <li>• Sau khi duyệt, bạn có thể đăng nhập và thiết lập cửa hàng</li>
                         </ul>
                     </div>
-                    <a href="${pageContext.request.contextPath}/merchant/login"
+                    <a href="${pageContext.request.contextPath}/login"
                        class="block w-full h-14 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl shadow-lg shadow-orange-200 transition-all flex items-center justify-center gap-2">
                         Quay lại Đăng nhập
                     </a>
@@ -421,8 +460,258 @@
 
 <script>
     // ── Step definitions ────────────────────────────────────────────
+    const REGISTER_DRAFT_KEY = 'merchant_register_draft_v1';
     let currentStep = 1;
     const IS_GOOGLE_SIGNUP = ${not empty sessionScope.googleSignup_sub};
+    let leafletMap = null;
+    let leafletMarker = null;
+    let selectedLat = 0;
+    let selectedLng = 0;
+    let selectedAddressParts = {
+        provinceCode: 'N/A', provinceName: 'N/A',
+        districtCode: 'N/A', districtName: 'N/A',
+        wardCode: 'N/A', wardName: 'N/A'
+    };
+    let addressSuggestTimer = null;
+    let addressSuggestSeq = 0;
+
+    function saveRegisterDraft() {
+        try {
+            const draft = {
+                step: currentStep,
+                ownerName: (document.getElementById('ownerName') || {}).value || '',
+                shopName: (document.getElementById('shopName') || {}).value || '',
+                regEmail: (document.getElementById('regEmail') || {}).value || '',
+                regPhone: (document.getElementById('regPhone') || {}).value || '',
+                regPassword: (document.getElementById('regPassword') || {}).value || '',
+                regConfirm: (document.getElementById('regConfirm') || {}).value || '',
+                shopAddress: (document.getElementById('shopAddress') || {}).value || '',
+                shopPhone: (document.getElementById('shopPhone') || {}).value || '',
+                businessType: (document.getElementById('businessType') || {}).value || '',
+                sourcePlatform: (document.getElementById('sourcePlatform') || {}).value || 'NONE',
+                agreeTerms: !!((document.getElementById('agreeTerms') || {}).checked),
+                selectedLat: selectedLat || 0,
+                selectedLng: selectedLng || 0,
+                selectedAddressParts: selectedAddressParts
+            };
+            sessionStorage.setItem(REGISTER_DRAFT_KEY, JSON.stringify(draft));
+        } catch (e) {
+            // ignore storage errors
+        }
+    }
+
+    function clearRegisterDraft() {
+        try {
+            sessionStorage.removeItem(REGISTER_DRAFT_KEY);
+        } catch (e) {
+            // ignore storage errors
+        }
+    }
+
+    function restoreRegisterDraft() {
+        try {
+            const raw = sessionStorage.getItem(REGISTER_DRAFT_KEY);
+            if (!raw) return;
+            const draft = JSON.parse(raw);
+            if (!draft || typeof draft !== 'object') return;
+
+            const setValue = function(id, value) {
+                const el = document.getElementById(id);
+                if (!el || value === undefined || value === null) return;
+                el.value = String(value);
+            };
+
+            setValue('ownerName', draft.ownerName);
+            setValue('shopName', draft.shopName);
+            setValue('regEmail', draft.regEmail);
+            setValue('regPhone', draft.regPhone);
+            if (!IS_GOOGLE_SIGNUP) {
+                setValue('regPassword', draft.regPassword);
+                setValue('regConfirm', draft.regConfirm);
+            }
+            setValue('shopAddress', draft.shopAddress);
+            setValue('shopPhone', draft.shopPhone);
+            setValue('businessType', draft.businessType);
+            setValue('sourcePlatform', draft.sourcePlatform || 'NONE');
+
+            const agreeTerms = document.getElementById('agreeTerms');
+            if (agreeTerms) agreeTerms.checked = !!draft.agreeTerms;
+
+            selectedLat = Number(draft.selectedLat || 0);
+            selectedLng = Number(draft.selectedLng || 0);
+            if (draft.selectedAddressParts && typeof draft.selectedAddressParts === 'object') {
+                selectedAddressParts = {
+                    provinceCode: draft.selectedAddressParts.provinceCode || 'N/A',
+                    provinceName: draft.selectedAddressParts.provinceName || 'N/A',
+                    districtCode: draft.selectedAddressParts.districtCode || 'N/A',
+                    districtName: draft.selectedAddressParts.districtName || 'N/A',
+                    wardCode: draft.selectedAddressParts.wardCode || 'N/A',
+                    wardName: draft.selectedAddressParts.wardName || 'N/A'
+                };
+            }
+
+            if (selectedLat && selectedLng) {
+                const shopAddress = (document.getElementById('shopAddress') || {}).value || 'Vị trí đã chọn';
+                updateMapMarker(selectedLat, selectedLng, shopAddress, selectedAddressParts);
+            }
+
+            const restoredStep = Number(draft.step || 1);
+            if (restoredStep >= 1 && restoredStep <= 3) {
+                goStep(restoredStep);
+                if (restoredStep >= 3) {
+                    populateStep3Summary();
+                }
+            }
+        } catch (e) {
+            // ignore broken draft
+        }
+    }
+
+    function bindDraftAutoSave() {
+        const ids = [
+            'ownerName', 'shopName', 'regEmail', 'regPhone', 'regPassword', 'regConfirm',
+            'shopAddress', 'shopPhone', 'businessType', 'sourcePlatform', 'agreeTerms'
+        ];
+        ids.forEach(function(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const eventName = (el.type === 'checkbox' || el.tagName === 'SELECT') ? 'change' : 'input';
+            el.addEventListener(eventName, saveRegisterDraft);
+        });
+    }
+
+    function populateStep3Summary() {
+        const addr = (document.getElementById('shopAddress') || {}).value || '';
+        const owner = ((document.getElementById('ownerName') || {}).value || '').trim();
+        const shop = ((document.getElementById('shopName') || {}).value || '').trim();
+        const email = ((document.getElementById('regEmail') || {}).value || '').trim();
+
+        document.getElementById('sumOwner').textContent = owner || '—';
+        document.getElementById('sumShop').textContent = shop || '—';
+        document.getElementById('sumEmail').textContent = email || '—';
+        document.getElementById('sumAddr').textContent = addr.trim() || '—';
+
+        const platformMap = {
+            NONE: 'Chưa có',
+            GRABFOOD: 'GrabFood',
+            SHOPEEFOOD: 'ShopeeFood',
+            OTHER: 'Khác'
+        };
+        const selectedPlatform = (document.getElementById('sourcePlatform') || {}).value || 'NONE';
+        document.getElementById('sumPlatform').textContent = platformMap[selectedPlatform] || 'Chưa có';
+    }
+
+    function firstNonEmpty() {
+        for (let i = 0; i < arguments.length; i++) {
+            const value = String(arguments[i] || '').trim();
+            if (value) return value;
+        }
+        return '';
+    }
+
+    function normalizeAddressToken(value) {
+        return String(value || '')
+            .replace(/\s+/g, ' ')
+            .replace(/^(Vietnam|Viet Nam|Việt Nam)$/i, '')
+            .trim();
+    }
+
+    function makeFallbackCode(name) {
+        const normalized = normalizeAddressToken(name)
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/đ/g, 'd')
+            .replace(/Đ/g, 'D')
+            .replace(/[^A-Za-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '')
+            .toUpperCase();
+        return normalized || 'N/A';
+    }
+
+    function parseDisplayNameFallback(displayName) {
+        const parts = String(displayName || '')
+            .split(',')
+            .map(normalizeAddressToken)
+            .filter(Boolean)
+            .filter(function(part) { return !/^(Vietnam|Viet Nam|Việt Nam)$/i.test(part); });
+
+        if (parts.length === 0) {
+            return { provinceName: 'N/A', districtName: 'N/A', wardName: 'N/A' };
+        }
+
+        const lowerParts = parts.map(function(part) { return part.toLowerCase(); });
+
+        const wardIndex = lowerParts.findIndex(function(part) {
+            return /\b(ward|phường|xã|xã|thị trấn|thị trấn|quarter|neighbourhood|village|hamlet)\b/.test(part);
+        });
+
+        const districtIndex = lowerParts.findIndex(function(part) {
+            return /\b(district|quận|huyện|thị xã|city district|city_district|county)\b/.test(part);
+        });
+
+        let provinceName = parts.length >= 1 ? parts[parts.length - 1] : 'N/A';
+        let districtName = districtIndex >= 0 ? parts[districtIndex] : (parts.length >= 2 ? parts[parts.length - 2] : 'N/A');
+        let wardName = wardIndex >= 0 ? parts[wardIndex] : (parts.length >= 3 ? parts[parts.length - 3] : 'N/A');
+
+        if (districtName === provinceName) {
+            districtName = 'N/A';
+        }
+        if (wardName === districtName || wardName === provinceName) {
+            wardName = 'N/A';
+        }
+
+        return {
+            provinceName: normalizeAddressToken(provinceName) || 'N/A',
+            districtName: normalizeAddressToken(districtName) || 'N/A',
+            wardName: normalizeAddressToken(wardName) || 'N/A'
+        };
+    }
+
+    function extractAddressParts(item) {
+        const address = item && item.address ? item.address : {};
+        const fallback = parseDisplayNameFallback(item && item.display_name ? item.display_name : '');
+
+        const provinceName = normalizeAddressToken(firstNonEmpty(
+            address.state,
+            address.province,
+            address.region,
+            address.state_district,
+            address.city,
+            fallback.provinceName,
+            'N/A'
+        )) || 'N/A';
+
+        const districtName = normalizeAddressToken(firstNonEmpty(
+            address.city_district,
+            address.district,
+            address.county,
+            address.municipality,
+            address.town,
+            address.suburb,
+            fallback.districtName,
+            'N/A'
+        )) || 'N/A';
+
+        const wardName = normalizeAddressToken(firstNonEmpty(
+            address.city_block,
+            address.quarter,
+            address.neighbourhood,
+            address.village,
+            address.hamlet,
+            address.suburb,
+            fallback.wardName,
+            'N/A'
+        )) || 'N/A';
+
+        return {
+            provinceCode: makeFallbackCode(provinceName),
+            provinceName: provinceName,
+            districtCode: makeFallbackCode(districtName),
+            districtName: districtName,
+            wardCode: makeFallbackCode(wardName),
+            wardName: wardName
+        };
+    }
 
     // ── Check for server-side success (redirect after POST) ─────────
     <c:if test="${param.success == 'true'}">
@@ -474,8 +763,12 @@
             el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
         currentStep = n;
+        saveRegisterDraft();
         renderSidebar();
         updateMobileBars();
+        if (n === 2 && leafletMap) {
+            setTimeout(function() { leafletMap.invalidateSize(); }, 80);
+        }
     }
 
     // ── Step 1 validation ────────────────────────────────────────────
@@ -513,7 +806,7 @@
     }
 
     // ── Step 2 validation ────────────────────────────────────────────
-    function goStep3() {
+    async function goStep3() {
         const addr   = document.getElementById('shopAddress').value.trim();
         const errEl  = document.getElementById('step2Error');
         const errMsg = document.getElementById('step2ErrorMsg');
@@ -525,13 +818,221 @@
             return;
         }
 
+        if (!selectedLat || !selectedLng || selectedAddressParts.provinceName === 'N/A') {
+            try {
+                const fallbackResults = await fetchAddressResults(addr, 1);
+                if (Array.isArray(fallbackResults) && fallbackResults.length > 0) {
+                    const first = fallbackResults[0];
+                    const lat = Number.parseFloat(first.lat);
+                    const lng = Number.parseFloat(first.lon);
+                    if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+                        selectedAddressParts = extractAddressParts(first);
+                        updateMapMarker(lat, lng, first.display_name || addr, selectedAddressParts);
+                    }
+                }
+            } catch (e) {
+                // giữ nguyên dữ liệu đã nhập tay
+            }
+        }
+
         // Populate summary
-        document.getElementById('sumOwner').textContent = document.getElementById('ownerName').value.trim();
-        document.getElementById('sumShop').textContent  = document.getElementById('shopName').value.trim();
-        document.getElementById('sumEmail').textContent = document.getElementById('regEmail').value.trim();
-        document.getElementById('sumAddr').textContent  = addr;
+        populateStep3Summary();
 
         goStep(3);
+    }
+
+    async function searchAddressOnMap() {
+        const input = document.getElementById('shopAddress');
+        const query = input.value.trim();
+        if (!query) return;
+
+        const btn = document.getElementById('searchAddressBtn');
+        const prev = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Đang tìm...';
+
+        try {
+            const data = await fetchAddressResults(query, 1);
+            if (!Array.isArray(data) || data.length === 0) {
+                alert('Không tìm thấy địa chỉ phù hợp. Bạn thử nhập chi tiết hơn nhé.');
+                return;
+            }
+            const first = data[0];
+            const lat = parseFloat(first.lat);
+            const lng = parseFloat(first.lon);
+            if (Number.isNaN(lat) || Number.isNaN(lng)) {
+                alert('Không lấy được tọa độ từ kết quả tìm kiếm.');
+                return;
+            }
+            selectedLat = lat;
+            selectedLng = lng;
+            selectedAddressParts = extractAddressParts(first);
+            if (first.display_name) {
+                input.value = first.display_name;
+            }
+            updateMapMarker(lat, lng, input.value || query, selectedAddressParts);
+        } catch (e) {
+            alert('Không thể tìm địa chỉ lúc này. Vui lòng thử lại.');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = prev;
+        }
+    }
+
+    async function fetchAddressResults(query, limit) {
+        const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=' + encodeURIComponent(String(limit || 1)) + '&q=' + encodeURIComponent(query);
+        const res = await fetch(url, {
+            headers: { 'Accept': 'application/json' }
+        });
+        return res.json();
+    }
+
+    function hideAddressSuggestions() {
+        const box = document.getElementById('addressSuggestBox');
+        if (!box) return;
+        box.classList.add('hidden');
+        box.innerHTML = '';
+    }
+
+    function renderAddressSuggestions(items) {
+        const box = document.getElementById('addressSuggestBox');
+        if (!box) return;
+        if (!Array.isArray(items) || items.length === 0) {
+            hideAddressSuggestions();
+            return;
+        }
+
+        box.innerHTML = items.map(function(item, index) {
+            const lat = Number.parseFloat(item.lat);
+            const lng = Number.parseFloat(item.lon);
+            if (Number.isNaN(lat) || Number.isNaN(lng)) return '';
+            const label = (item.display_name || '').replace(/"/g, '&quot;');
+            return '<button type="button" class="w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-orange-50 border-b border-gray-100 last:border-b-0" '
+                + 'data-idx="' + index + '" data-lat="' + lat + '" data-lng="' + lng + '" data-label="' + label + '">'
+                + label
+                + '</button>';
+        }).join('');
+
+        if (!box.innerHTML.trim()) {
+            hideAddressSuggestions();
+            return;
+        }
+
+        box.classList.remove('hidden');
+        box.querySelectorAll('button[data-lat][data-lng]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const lat = Number.parseFloat(btn.getAttribute('data-lat'));
+                const lng = Number.parseFloat(btn.getAttribute('data-lng'));
+                const label = btn.getAttribute('data-label') || '';
+                const index = Number.parseInt(btn.getAttribute('data-idx'), 10);
+                const rawItem = Number.isNaN(index) ? null : items[index];
+                if (Number.isNaN(lat) || Number.isNaN(lng)) return;
+                const addressInput = document.getElementById('shopAddress');
+                addressInput.value = label;
+                selectedAddressParts = extractAddressParts(rawItem);
+                updateMapMarker(lat, lng, label, selectedAddressParts);
+                hideAddressSuggestions();
+            });
+        });
+    }
+
+    function bindAddressAutocomplete() {
+        const input = document.getElementById('shopAddress');
+        if (!input) return;
+
+        input.addEventListener('input', function() {
+            const query = input.value.trim();
+            if (addressSuggestTimer) clearTimeout(addressSuggestTimer);
+            if (query.length < 3) {
+                hideAddressSuggestions();
+                return;
+            }
+
+            addressSuggestTimer = setTimeout(async function() {
+                const seq = ++addressSuggestSeq;
+                try {
+                    const results = await fetchAddressResults(query, 5);
+                    if (seq !== addressSuggestSeq) return;
+                    renderAddressSuggestions(results);
+                } catch (e) {
+                    if (seq !== addressSuggestSeq) return;
+                    hideAddressSuggestions();
+                }
+            }, 350);
+        });
+
+        input.addEventListener('focus', function() {
+            if (input.value.trim().length >= 3) {
+                input.dispatchEvent(new Event('input'));
+            }
+        });
+
+        input.addEventListener('blur', function() {
+            setTimeout(hideAddressSuggestions, 150);
+        });
+    }
+
+    function updateMapMarker(lat, lng, label, addressParts) {
+        if (!leafletMap) return;
+        if (!leafletMarker) {
+            leafletMarker = L.marker([lat, lng], { draggable: true }).addTo(leafletMap);
+            leafletMarker.on('dragend', function(evt) {
+                const point = evt.target.getLatLng();
+                selectedLat = point.lat;
+                selectedLng = point.lng;
+            });
+        } else {
+            leafletMarker.setLatLng([lat, lng]);
+        }
+        selectedLat = lat;
+        selectedLng = lng;
+        if (addressParts && typeof addressParts === 'object') {
+            selectedAddressParts = {
+                provinceCode: addressParts.provinceCode || 'N/A',
+                provinceName: addressParts.provinceName || 'N/A',
+                districtCode: addressParts.districtCode || 'N/A',
+                districtName: addressParts.districtName || 'N/A',
+                wardCode: addressParts.wardCode || 'N/A',
+                wardName: addressParts.wardName || 'N/A'
+            };
+        }
+        leafletMap.setView([lat, lng], 16);
+        if (label) {
+            leafletMarker.bindPopup(label).openPopup();
+        }
+    }
+
+    function initLeafletMap() {
+        const mapEl = document.getElementById('leafletMap');
+        if (!mapEl || leafletMap) return;
+
+        leafletMap = L.map('leafletMap');
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(leafletMap);
+
+        leafletMap.setView([10.762622, 106.660172], 13);
+        setTimeout(function() { leafletMap.invalidateSize(); }, 50);
+
+        leafletMap.on('click', function(e) {
+            updateMapMarker(e.latlng.lat, e.latlng.lng, 'Vị trí đã chọn');
+        });
+
+        const searchBtn = document.getElementById('searchAddressBtn');
+        const addressInput = document.getElementById('shopAddress');
+        if (searchBtn) {
+            searchBtn.addEventListener('click', searchAddressOnMap);
+        }
+        if (addressInput) {
+            addressInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    searchAddressOnMap();
+                }
+            });
+        }
+        bindAddressAutocomplete();
     }
 
     // ── Prepare hidden fields before final submit ────────────────────
@@ -546,19 +1047,31 @@
         document.getElementById('fPhone').value        = document.getElementById('regPhone').value.trim();
         document.getElementById('fShopPhone').value    = document.getElementById('shopPhone').value.trim();
         document.getElementById('fShopAddress').value  = document.getElementById('shopAddress').value.trim();
-        document.getElementById('fPassword').value     = document.getElementById('regPassword').value;
+        const pwInput = document.getElementById('regPassword');
+        document.getElementById('fPassword').value     = pwInput ? pwInput.value : '';
         document.getElementById('fBusinessType').value = document.getElementById('businessType').value;
+        document.getElementById('fSourcePlatform').value = document.getElementById('sourcePlatform').value;
         document.getElementById('fViaGoogle').value    = IS_GOOGLE_SIGNUP ? 'true' : '';
+        document.getElementById('fLatitude').value     = String(selectedLat || 0);
+        document.getElementById('fLongitude').value    = String(selectedLng || 0);
+        document.getElementById('fProvinceCode').value = selectedAddressParts.provinceCode || 'N/A';
+        document.getElementById('fProvinceName').value = selectedAddressParts.provinceName || 'N/A';
+        document.getElementById('fDistrictCode').value = selectedAddressParts.districtCode || 'N/A';
+        document.getElementById('fDistrictName').value = selectedAddressParts.districtName || 'N/A';
+        document.getElementById('fWardCode').value     = selectedAddressParts.wardCode || 'N/A';
+        document.getElementById('fWardName').value     = selectedAddressParts.wardName || 'N/A';
 
         // Show loading state
         const btn = document.getElementById('submitBtn');
         btn.disabled = true;
         btn.innerHTML = '<span class="material-symbols-outlined animate-spin text-xl">progress_activity</span><span>Đang gửi...</span>';
+        saveRegisterDraft();
         return true;
     }
 
     // ── Show success screen ──────────────────────────────────────────
     function showSuccess() {
+        clearRegisterDraft();
         ['step1','step2','step3'].forEach(id => document.getElementById(id).classList.add('hidden'));
         document.getElementById('successScreen').classList.remove('hidden');
         currentStep = 4;
@@ -598,6 +1111,11 @@
     // ── Init ─────────────────────────────────────────────────────────
     renderSidebar();
     updateMobileBars();
+    initLeafletMap();
+    bindDraftAutoSave();
+    if (!new URLSearchParams(window.location.search).has('success')) {
+        restoreRegisterDraft();
+    }
 
     // ── Google Sign-In (Step 1 quick-register) ────────────────────
     function handleGoogleSignIn(response) {

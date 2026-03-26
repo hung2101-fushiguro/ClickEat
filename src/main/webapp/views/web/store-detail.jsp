@@ -49,7 +49,9 @@
                            border:1px dashed #f2b895; border-radius:18px; padding:14px 16px;
                            display:flex; align-items:center; gap:12px; cursor:pointer;
                            transition:box-shadow .18s; }
-        .voucher-card-sm:hover { box-shadow:0 8px 24px rgba(255,122,26,.12); }
+        .voucher-card-sm:hover { box-shadow:0 8px 24px rgba(255,122,26,.12); transform:translateY(-2px); }
+        .badge-voucher { position:absolute; right:12px; top:12px; background:#fff4ec; color:#e36a00;
+                 border:1px solid #ffd8be; font-size:10px; font-weight:900; padding:4px 8px; border-radius:999px; }
 
         /* Modal */
         #foodModal { position:fixed; inset:0; z-index:9999; display:flex; align-items:flex-end;
@@ -184,6 +186,7 @@
                                         <i class="fa-regular fa-copy text-[10px]"></i>
                                         <span class="voucher-code-txt">${fn:escapeXml(v.code)}</span>
                                     </div>
+                                    <div class="mt-1 text-[11px] font-bold text-orange-500">Chạm để copy & dùng ngay</div>
                                     <c:if test="${v.minOrderAmount != null}">
                                         <div class="mt-1 text-xs text-gray-400">
                                             Đơn từ <fmt:formatNumber value="${v.minOrderAmount}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ
@@ -309,6 +312,8 @@
                                      data-image="${fn:escapeXml(f.imageUrl)}"
                                      data-cat="${fn:escapeXml(f.categoryName)}"
                                      data-calories="${f.calories}"
+                                     data-size-options="${fn:escapeXml(f.sizeOptions)}"
+                                     data-topping-options="${fn:escapeXml(f.toppingOptions)}"
                                      onclick="openFoodModal(this)">
 
                                 <div class="food-img-wrap">
@@ -328,6 +333,10 @@
 
                                     <c:if test="${f.discountPercent > 0}">
                                         <span class="badge-discount">-${f.discountPercent}%</span>
+                                    </c:if>
+
+                                    <c:if test="${not empty storeVouchers}">
+                                        <span class="badge-voucher"><i class="fa-solid fa-ticket mr-1"></i>Voucher</span>
                                     </c:if>
 
                                     <button type="button" class="btn-add-cart"
@@ -428,6 +437,9 @@
                                     <div class="cart-item-row" data-item-id="${it.cartItemId}">
                                         <div class="flex-1 min-w-0">
                                             <div class="font-bold text-sm text-gray-900 line-clamp-2">${fn:escapeXml(it.name)}</div>
+                                            <c:if test="${not empty it.optionSummary}">
+                                                <div class="text-[11px] text-[#9d7d68] mt-0.5">${fn:escapeXml(it.optionSummary)}</div>
+                                            </c:if>
                                             <div class="text-xs text-[#9d7d68] mt-0.5">x${it.quantity}</div>
                                         </div>
                                         <div class="text-right shrink-0">
@@ -552,6 +564,16 @@
                 </div>
             </div>
 
+            <div id="modalSizeWrap" class="hidden mt-4" data-extra="0">
+                <div class="text-xs font-bold uppercase tracking-[.08em] text-gray-500 mb-2">Chọn size</div>
+                <div id="modalSizeOptions" class="flex flex-wrap gap-2"></div>
+            </div>
+
+            <div id="modalToppingWrap" class="hidden mt-4" data-extra="0">
+                <div class="text-xs font-bold uppercase tracking-[.08em] text-gray-500 mb-2">Chọn topping thêm</div>
+                <div id="modalToppingOptions" class="flex flex-wrap gap-2"></div>
+            </div>
+
             <div class="mt-5 flex items-end justify-between gap-4">
                 <div>
                     <div id="modalPrice" class="text-3xl font-black text-orange-500 leading-none"></div>
@@ -589,10 +611,119 @@
     const ctx = '${ctx}';
     let currentFoodId = null;
     let modalQty = 1;
+    let modalBasePrice = 0;
+    let modalSelectedSize = '';
+    let modalSelectedToppings = [];
 
     /* ============ FORMAT HELPERS ============ */
     function fmtPrice(n) {
         return new Intl.NumberFormat('vi-VN').format(Math.round(n)) + 'đ';
+    }
+
+    function parseOptionDefs(raw) {
+        if (!raw || !raw.trim()) {
+            return [];
+        }
+        return raw.split(';').map(function (token) {
+            const part = token.trim();
+            if (!part) {
+                return null;
+            }
+            const pair = part.split(':');
+            const name = (pair[0] || '').trim();
+            const extra = Number((pair[1] || '0').trim());
+            if (!name) {
+                return null;
+            }
+            return {name: name, extra: Number.isNaN(extra) ? 0 : Math.max(0, extra)};
+        }).filter(Boolean);
+    }
+
+    function updateModalComputedPrice() {
+        const sizeExtra = Number((document.getElementById('modalSizeWrap').dataset.extra || '0'));
+        const toppingExtra = Number((document.getElementById('modalToppingWrap').dataset.extra || '0'));
+        const totalUnit = modalBasePrice + (Number.isNaN(sizeExtra) ? 0 : sizeExtra) + (Number.isNaN(toppingExtra) ? 0 : toppingExtra);
+        document.getElementById('modalPrice').textContent = fmtPrice(totalUnit);
+    }
+
+    function renderSizeOptions(raw) {
+        const wrap = document.getElementById('modalSizeWrap');
+        const list = document.getElementById('modalSizeOptions');
+        const defs = parseOptionDefs(raw);
+        modalSelectedSize = '';
+        wrap.dataset.extra = '0';
+
+        if (!defs.length) {
+            wrap.classList.add('hidden');
+            list.innerHTML = '';
+            return;
+        }
+
+        wrap.classList.remove('hidden');
+        list.innerHTML = defs.map(function (opt, index) {
+            const active = index === 0;
+            if (active) {
+                modalSelectedSize = opt.name;
+                wrap.dataset.extra = String(opt.extra || 0);
+            }
+            return '<button type="button" data-name="' + escHtml(opt.name) + '" data-extra="' + (opt.extra || 0)
+                    + '" onclick="pickModalSize(this)" class="px-3 py-1.5 rounded-full text-sm font-bold border '
+                    + (active ? 'bg-orange-500 border-orange-500 text-white' : 'bg-white border-[#eadfd7] text-[#8b6b52]')
+                    + '">' + escHtml(opt.name) + (opt.extra > 0 ? ' (+' + fmtPrice(opt.extra) + ')' : '') + '</button>';
+        }).join('');
+    }
+
+    function pickModalSize(button) {
+        document.querySelectorAll('#modalSizeOptions button').forEach(function (btn) {
+            btn.className = 'px-3 py-1.5 rounded-full text-sm font-bold border bg-white border-[#eadfd7] text-[#8b6b52]';
+        });
+        button.className = 'px-3 py-1.5 rounded-full text-sm font-bold border bg-orange-500 border-orange-500 text-white';
+        modalSelectedSize = button.getAttribute('data-name') || '';
+        document.getElementById('modalSizeWrap').dataset.extra = button.getAttribute('data-extra') || '0';
+        updateModalComputedPrice();
+    }
+
+    function renderToppingOptions(raw) {
+        const wrap = document.getElementById('modalToppingWrap');
+        const list = document.getElementById('modalToppingOptions');
+        const defs = parseOptionDefs(raw);
+        modalSelectedToppings = [];
+        wrap.dataset.extra = '0';
+
+        if (!defs.length) {
+            wrap.classList.add('hidden');
+            list.innerHTML = '';
+            return;
+        }
+
+        wrap.classList.remove('hidden');
+        list.innerHTML = defs.map(function (opt) {
+            return '<label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold border border-[#eadfd7] bg-white cursor-pointer">'
+                    + '<input type="checkbox" data-name="' + escHtml(opt.name) + '" data-extra="' + (opt.extra || 0)
+                    + '" onchange="pickModalTopping()" class="accent-orange-500">'
+                    + '<span>' + escHtml(opt.name) + (opt.extra > 0 ? ' (+' + fmtPrice(opt.extra) + ')' : '') + '</span>'
+                    + '</label>';
+        }).join('');
+    }
+
+    function pickModalTopping() {
+        const selected = document.querySelectorAll('#modalToppingOptions input[type="checkbox"]:checked');
+        modalSelectedToppings = [];
+        let extra = 0;
+
+        selected.forEach(function (checkbox) {
+            const toppingName = checkbox.getAttribute('data-name') || '';
+            if (toppingName) {
+                modalSelectedToppings.push(toppingName);
+            }
+            const value = Number(checkbox.getAttribute('data-extra') || '0');
+            if (!Number.isNaN(value)) {
+                extra += Math.max(0, value);
+            }
+        });
+
+        document.getElementById('modalToppingWrap').dataset.extra = String(extra);
+        updateModalComputedPrice();
     }
 
     /* ============ TOAST ============ */
@@ -614,7 +745,7 @@
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
 
         try {
-            const body = new URLSearchParams({ action: 'ajax-add', id: foodId, qty });
+            const body = new URLSearchParams({ action: 'ajax-add', id: foodId, qty, selectedSize: '', selectedToppings: '' });
             const resp = await fetch(ctx + '/cart', { method: 'POST', body });
             const data = await resp.json();
 
@@ -676,6 +807,7 @@
                 return '<div class="cart-item-row" data-item-id="' + it.id + '">'
                         + '<div class="flex-1 min-w-0">'
                         + '<div class="font-bold text-sm text-gray-900 line-clamp-2">' + escHtml(it.name) + '</div>'
+                        + (it.optionSummary ? '<div class="text-[11px] text-[#9d7d68] mt-0.5">' + escHtml(it.optionSummary) + '</div>' : '')
                         + '<div class="text-xs text-[#9d7d68] mt-0.5">x' + it.quantity + '</div>'
                         + '</div>'
                         + '<div class="text-right shrink-0">'
@@ -722,6 +854,12 @@
         const imgRaw   = card.dataset.image    || '';
         const cat      = card.dataset.cat      || '';
         const calories = card.dataset.calories;
+        const sizeOptions = card.dataset.sizeOptions || '';
+        const toppingOptions = card.dataset.toppingOptions || '';
+
+        modalBasePrice = price;
+        modalSelectedSize = '';
+        modalSelectedToppings = [];
 
         const img = imgRaw.startsWith('http') ? imgRaw : (imgRaw ? ctx + imgRaw : ctx + '/assets/images/default-store-cover.jpg');
         document.getElementById('modalImg').src = img;
@@ -759,6 +897,10 @@
             nutRow.classList.add('hidden');
         }
 
+        renderSizeOptions(sizeOptions);
+        renderToppingOptions(toppingOptions);
+        updateModalComputedPrice();
+
         document.getElementById('foodModal').classList.add('open');
         document.body.style.overflow = 'hidden';
     }
@@ -783,7 +925,13 @@
         btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
 
         try {
-            const body = new URLSearchParams({ action: 'ajax-add', id: currentFoodId, qty: modalQty });
+            const body = new URLSearchParams({
+                action: 'ajax-add',
+                id: currentFoodId,
+                qty: modalQty,
+                selectedSize: modalSelectedSize,
+                selectedToppings: modalSelectedToppings.join(',')
+            });
             const resp = await fetch(ctx + '/cart', { method: 'POST', body });
             const data = await resp.json();
 

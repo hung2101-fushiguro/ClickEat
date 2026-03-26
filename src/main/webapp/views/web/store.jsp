@@ -26,6 +26,8 @@
                     <form action="${ctx}/store" method="get" class="max-w-4xl mx-auto relative" autocomplete="off">
                         <input type="hidden" name="district" value="${district}">
                         <input type="hidden" name="sort" value="${sort}">
+                        <input type="hidden" name="shippingLat" value="${customerLat}">
+                        <input type="hidden" name="shippingLng" value="${customerLng}">
 
                         <div class="bg-white rounded-2xl border border-gray-200 h-16 px-5 flex items-center gap-4 shadow-sm">
                             <div class="relative shrink-0">
@@ -119,6 +121,9 @@
                                 <c:param name="province" value="${province}" />
                                 <c:param name="keyword" value="${keyword}" />
                                 <c:param name="district" value="${district}" />
+                                <c:param name="sort" value="near" />
+                                <c:param name="shippingLat" value="${customerLat}" />
+                                <c:param name="shippingLng" value="${customerLng}" />
                             </c:url>
 
                             <c:url var="ratingUrl" value="/store">
@@ -126,6 +131,8 @@
                                 <c:param name="keyword" value="${keyword}" />
                                 <c:param name="district" value="${district}" />
                                 <c:param name="sort" value="rating" />
+                                <c:param name="shippingLat" value="${customerLat}" />
+                                <c:param name="shippingLng" value="${customerLng}" />
                             </c:url>
 
                             <c:url var="priceUrl" value="/store">
@@ -133,6 +140,8 @@
                                 <c:param name="keyword" value="${keyword}" />
                                 <c:param name="district" value="${district}" />
                                 <c:param name="sort" value="price" />
+                                <c:param name="shippingLat" value="${customerLat}" />
+                                <c:param name="shippingLng" value="${customerLng}" />
                             </c:url>
 
                             <c:url var="latestUrl" value="/store">
@@ -140,6 +149,8 @@
                                 <c:param name="keyword" value="${keyword}" />
                                 <c:param name="district" value="${district}" />
                                 <c:param name="sort" value="latest" />
+                                <c:param name="shippingLat" value="${customerLat}" />
+                                <c:param name="shippingLng" value="${customerLng}" />
                             </c:url>
 
                             <a href="${nearUrl}"
@@ -164,6 +175,8 @@
                             <input type="hidden" name="province" value="${province}">
                             <input type="hidden" name="keyword" value="${keyword}">
                             <input type="hidden" name="sort" value="${sort}">
+                            <input type="hidden" name="shippingLat" value="${customerLat}">
+                            <input type="hidden" name="shippingLng" value="${customerLng}">
                             <select name="district"
                                     onchange="this.form.submit()"
                                     class="bg-white border border-[#eadfd7] rounded-full h-11 px-5 min-w-[220px] outline-none font-semibold text-[#8b6b52]">
@@ -243,8 +256,14 @@
                                                     <span class="bg-[#f6f1ec] px-4 py-2 rounded-full text-sm font-bold">
                                                         <i class="fa-solid fa-location-dot text-[#9d7d68]"></i> ${s.distance}
                                                     </span>
-                                                    <span class="bg-[#f6f1ec] px-4 py-2 rounded-full text-sm font-bold">
-                                                        <i class="fa-solid fa-motorcycle text-orange-500"></i> Giao nhanh
+                                                    <span class="bg-[#fff1e8] px-4 py-2 rounded-full text-sm font-bold text-[#d66b1f]">
+                                                        <i class="fa-solid fa-motorcycle text-orange-500"></i>
+                                                        <c:choose>
+                                                            <c:when test="${s.shippingFee != null}">
+                                                                <fmt:formatNumber value="${s.shippingFee}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ
+                                                            </c:when>
+                                                            <c:otherwise>Phí ship linh hoạt</c:otherwise>
+                                                        </c:choose>
                                                     </span>
                                                 </div>
 
