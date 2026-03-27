@@ -27,6 +27,8 @@ public class FoodItem {
     private double rating;
     private String badgeText;
     private String outOfStockReason;
+    private String sizeOptions;
+    private String toppingOptions;
 
     public FoodItem() {
     }
@@ -205,5 +207,21 @@ public class FoodItem {
 
     public void setOutOfStockReason(String outOfStockReason) {
         this.outOfStockReason = outOfStockReason;
+    }
+
+    public String getSizeOptions() {
+        return sizeOptions;
+    }
+
+    public void setSizeOptions(String sizeOptions) {
+        this.sizeOptions = sizeOptions;
+    }
+
+    public String getToppingOptions() {
+        return toppingOptions;
+    }
+
+    public void setToppingOptions(String toppingOptions) {
+        this.toppingOptions = toppingOptions;
     }
 }

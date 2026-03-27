@@ -54,8 +54,8 @@ public class MerchantDashboardServlet extends HttpServlet {
         }
 
         Map<String, Object> summary = hasValidRange
-                ? orderDAO.getDashboardSummaryByDateRange(account.getId(), fromDate, toDate)
-                : orderDAO.getDashboardSummary(account.getId());
+            ? orderDAO.getDashboardSummaryByDateRange(account.getId(), fromDate, toDate)
+            : orderDAO.getDashboardSummary(account.getId());
 
         request.setAttribute("todayRevenue", summary.getOrDefault("revenueToday", 0d));
         request.setAttribute("yesterdayRevenue", summary.getOrDefault("revenueYesterday", 0d));
@@ -66,8 +66,8 @@ public class MerchantDashboardServlet extends HttpServlet {
         request.setAttribute("voucherUsed7d", summary.getOrDefault("voucherUsed7d", 0));
         request.setAttribute("voucherNotUsed7d", summary.getOrDefault("voucherNotUsed7d", 0));
         request.setAttribute("topFoods", hasValidRange
-                ? orderDAO.getTopSellingFoodsInRange(account.getId(), 5, fromDate, toDate)
-                : orderDAO.getTopSellingFoods(account.getId(), 5));
+            ? orderDAO.getTopSellingFoodsInRange(account.getId(), 5, fromDate, toDate)
+            : orderDAO.getTopSellingFoods(account.getId(), 5));
         request.setAttribute("hourlyOrders", hasValidRange
                 ? orderDAO.getOrderCountByHourInRange(account.getId(), fromDate, toDate)
                 : orderDAO.getOrderCountByHourToday(account.getId()));

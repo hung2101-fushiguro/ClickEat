@@ -4,16 +4,15 @@
  */
 package com.clickeat.controller.shipper;
 
-import com.clickeat.dal.impl.OrderDAO;
-import com.clickeat.dal.impl.ShipperWalletDAO;
-import com.clickeat.model.Order;
-import com.clickeat.model.User;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+
+import com.clickeat.dal.impl.NotificationDAO;
+import com.clickeat.dal.impl.OrderDAO;
+import com.clickeat.model.Order;
+import com.clickeat.model.User;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
@@ -44,57 +43,50 @@ public class ShipperProofServlet extends HttpServlet {
             throws ServletException, IOException {
 
         User account = (User) request.getSession().getAttribute("account");
+        if (account == null || !"SHIPPER".equals(account.getRole())) {
+            response.sendRedirect(request.getContextPath() + "/login");
+            return;
+        }
+
         int orderId = Integer.parseInt(request.getParameter("orderId"));
 
         try {
             Part filePart = request.getPart("proofImage");
             String fileName = Paths.get(filePart.getSubmittedFileName()).getFileName().toString();
-
-            String savedFileName = "";
-            if (fileName != null && !fileName.isEmpty()) {
-
-                savedFileName = "proof_ord" + orderId + "_" + System.currentTimeMillis() + ".jpg";
-                String uploadPath = getServletContext().getRealPath("") + File.separator + "uploads";
-                File uploadDir = new File(uploadPath);
-                if (!uploadDir.exists()) {
-                    uploadDir.mkdir();
-                }
-
-                String tempFilePath = uploadPath + File.separator + savedFileName;
-                filePart.write(tempFilePath);
-
-                // Copy file lưu vĩnh viễn vào source code
-                try {
-                    String realPath = getServletContext().getRealPath("");
-                    String dynamicSourcePath = realPath.replace("target\\ClickEat2-1.0-SNAPSHOT", "src\\main\\webapp")
-                            .replace("target/ClickEat2-1.0-SNAPSHOT", "src/main/webapp");
-
-                    String projectSourcePath = dynamicSourcePath + File.separator + "uploads";
-
-                    File sourceUploadFolder = new File(projectSourcePath);
-                    if (!sourceUploadFolder.exists()) {
-                        sourceUploadFolder.mkdirs();
-                    }
-
-                    Path sourceFile = Paths.get(projectSourcePath, savedFileName);
-                    Path tempFile = Paths.get(tempFilePath);
-                    Files.copy(tempFile, sourceFile, StandardCopyOption.REPLACE_EXISTING);
-                    System.out.println("Đã lưu bằng chứng giao hàng an toàn vào: " + sourceFile.toString());
-                } catch (Exception ex) {
-                    System.out.println("Lỗi copy file sang source: " + ex.getMessage());
-                }
+            if (fileName == null || fileName.trim().isEmpty()) {
+                request.getSession().setAttribute("toastError", "Vui lòng tải lên ảnh bằng chứng giao hàng.");
+                response.sendRedirect(request.getContextPath() + "/shipper/proof?orderId=" + orderId);
+                return;
             }
+
+            String savedFileName = "proof_ord" + orderId + "_" + System.currentTimeMillis() + ".jpg";
+            String uploadPath = getServletContext().getRealPath("") + File.separator + "uploads";
+            File uploadDir = new File(uploadPath);
+            if (!uploadDir.exists()) {
+                uploadDir.mkdir();
+            }
+
+            String tempFilePath = uploadPath + File.separator + savedFileName;
+            filePart.write(tempFilePath);
 
             OrderDAO orderDAO = new OrderDAO();
-            orderDAO.updateOrderStatus(orderId, "DELIVERED");
-
-            String sqlUpdateImage = "UPDATE Orders SET proof_image_url = ? WHERE id = ?";
-            orderDAO.update(sqlUpdateImage, "uploads/" + savedFileName, orderId);
-            Order completedOrder = orderDAO.findById(orderId);
-            if (completedOrder != null) {
-                ShipperWalletDAO walletDAO = new ShipperWalletDAO();
-                walletDAO.addBalance(account.getId(), completedOrder.getDeliveryFee());
+            String proofUrl = "uploads/" + savedFileName;
+            boolean settled = orderDAO.completeDeliveryWithProofAndSettlement(orderId, account.getId(), proofUrl);
+            if (!settled) {
+                request.getSession().setAttribute("toastError", "Không thể hoàn tất giao đơn. Vui lòng thử lại.");
+                response.sendRedirect(request.getContextPath() + "/shipper/order-tracking?id=" + orderId);
+                return;
             }
+
+            Order deliveredOrder = orderDAO.findById(orderId);
+            NotificationDAO notificationDAO = new NotificationDAO();
+            if (deliveredOrder != null && deliveredOrder.getCustomerUserId() > 0) {
+                notificationDAO.createForUser(deliveredOrder.getCustomerUserId(), "ORDER", "Đơn #" + deliveredOrder.getOrderCode() + " đã giao thành công.");
+            }
+            if (deliveredOrder != null && deliveredOrder.getMerchantId() > 0) {
+                notificationDAO.createForUser(deliveredOrder.getMerchantId(), "ORDER", "Đơn #" + deliveredOrder.getOrderCode() + " đã được giao thành công.");
+            }
+            notificationDAO.createForUser(account.getId(), "WALLET", "Bạn vừa hoàn tất đơn giao. Số dư ví đã được cập nhật.");
 
             request.getSession().setAttribute("toastMsg", "Đã giao hàng, lưu ảnh và cộng tiền vào ví thành công!");
         } catch (Exception e) {

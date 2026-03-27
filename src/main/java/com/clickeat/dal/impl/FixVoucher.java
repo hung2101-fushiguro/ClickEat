@@ -4,7 +4,6 @@ import com.clickeat.model.Voucher;
 import java.util.List;
 
 public class FixVoucher {
-
     public static void main(String[] args) {
         System.out.println("--- FIXING VOUCHERS ---");
         VoucherDAO vDao = new VoucherDAO();

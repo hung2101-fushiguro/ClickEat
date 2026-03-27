@@ -5,6 +5,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 
+
 public class CategoryDAO extends AbstractDAO<Category> {
 
     @Override
@@ -15,12 +16,16 @@ public class CategoryDAO extends AbstractDAO<Category> {
         c.setMerchantUserId(rs.getInt("merchant_user_id"));
         c.setName(rs.getString("name"));
 
-        c.setActive(rs.getBoolean("is_active"));
-        c.setSortOrder(rs.getInt("sort_order"));
+        try {
+            c.setActive(rs.getBoolean("is_active"));
+        } catch (Exception e) {
+            c.setActive(true);
+        }
 
         try {
-            c.setShopName(rs.getString("shop_name"));
-        } catch (Exception ignored) {
+            c.setSortOrder(rs.getInt("sort_order"));
+        } catch (Exception e) {
+            c.setSortOrder(0);
         }
 
         return c;
@@ -29,30 +34,46 @@ public class CategoryDAO extends AbstractDAO<Category> {
     @Override
     public List<Category> findAll() {
         String sql = "SELECT * FROM Categories ORDER BY merchant_user_id ASC, sort_order ASC, id ASC";
-        return query("SELECT * FROM Categories ORDER BY sort_order ASC");
+        return query(sql);
     }
 
     @Override
     public Category findById(int id) {
         String sql = "SELECT * FROM Categories WHERE id = ?";
-        return queryOne("SELECT * FROM Categories WHERE id = ?", id);
+        return queryOne(sql, id);
     }
 
     @Override
     public int insert(Category c) {
-        String sql = "INSERT INTO Categories (merchant_user_id, name, is_active, sort_order) VALUES (?, ?, ?, ?)";
-        return update(sql, c.getMerchantUserId(), c.getName(), c.isActive(), c.getSortOrder());
+        String sql = """
+            INSERT INTO Categories (merchant_user_id, name, is_active, sort_order)
+            VALUES (?, ?, ?, ?)
+        """;
+        return update(sql,
+                c.getMerchantUserId(),
+                c.getName(),
+                c.isActive(),
+                c.getSortOrder());
     }
 
     @Override
     public boolean update(Category c) {
-        String sql = "UPDATE Categories SET name = ?, is_active = ?, sort_order = ? WHERE id = ?";
-        return update(sql, c.getName(), c.isActive(), c.getSortOrder(), c.getId()) > 0;
+        String sql = """
+            UPDATE Categories
+            SET name = ?, is_active = ?, sort_order = ?
+            WHERE id = ?
+        """;
+        return update(sql,
+                c.getName(),
+                c.isActive(),
+                c.getSortOrder(),
+                c.getId()) > 0;
     }
 
     @Override
     public boolean delete(int id) {
-        return update("DELETE FROM Categories WHERE id = ?", id) > 0;
+        String sql = "UPDATE Categories SET is_active = 0 WHERE id = ?";
+        return update(sql, id) > 0;
     }
 
     public List<Category> getActiveByMerchant(int merchantUserId) {
@@ -75,30 +96,35 @@ public class CategoryDAO extends AbstractDAO<Category> {
         """;
         return query(sql, merchantUserId);
     }
-
+    
     public List<Category> getByMerchantId(int merchantId) {
         String sql = "SELECT * FROM Categories WHERE merchant_user_id = ? ORDER BY sort_order ASC";
         return query(sql, merchantId);
     }
 
+    public List<Category> findAllWithMerchantName() {
+        String sql = "SELECT c.* FROM Categories c ORDER BY c.merchant_user_id ASC, c.sort_order ASC, c.id ASC";
+        return query(sql);
+    }
+
     public Category findByMerchantAndName(int merchantId, String name) {
-        String sql = "SELECT TOP 1 * FROM Categories WHERE merchant_user_id = ? AND UPPER(name) = UPPER(?)";
+        String sql = "SELECT * FROM Categories WHERE merchant_user_id = ? AND LOWER(LTRIM(RTRIM(name))) = LOWER(LTRIM(RTRIM(?)))";
         return queryOne(sql, merchantId, name);
     }
 
     public int getNextSortOrderByMerchant(int merchantId) {
-        String sql = "SELECT ISNULL(MAX(sort_order), 0) + 1 AS next_sort_order FROM Categories WHERE merchant_user_id = ?";
-        List<Object[]> rows = queryRaw(sql, merchantId);
-        if (rows.isEmpty() || rows.get(0).length == 0 || rows.get(0)[0] == null) {
+        String sql = "SELECT ISNULL(MAX(sort_order), 0) + 1 FROM Categories WHERE merchant_user_id = ?";
+        try (java.sql.Connection conn = getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, merchantId);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (Exception e) {
             return 1;
         }
-        return ((Number) rows.get(0)[0]).intValue();
-    }
-
-    public List<Category> findAllWithMerchantName() {
-        String sql = "SELECT c.*, ISNULL(mp.shop_name, 'Chưa xác định') AS shop_name "
-                + "FROM Categories c LEFT JOIN MerchantProfiles mp ON c.merchant_user_id = mp.user_id "
-                + "ORDER BY mp.shop_name, c.sort_order";
-        return query(sql);
+        return 1;
     }
 }

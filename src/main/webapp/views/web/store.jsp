@@ -13,7 +13,7 @@
         <script src="https://cdn.tailwindcss.com"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     </head>
-    <body class="bg-[#f7f5f3] text-gray-900">
+    <body class="bg-[#f4f5f7] text-gray-900">
         <c:set var="ctx" value="${pageContext.request.contextPath}" />
 
         <jsp:include page="header.jsp">
@@ -21,152 +21,158 @@
         </jsp:include>
 
         <main class="pb-20">
-            <section class="pt-8">
+
+            <!-- PAGE HEADER -->
+            <section class="pt-10">
                 <div class="max-w-7xl mx-auto px-6">
-                    <form action="${ctx}/store" method="get" class="max-w-4xl mx-auto relative" autocomplete="off">
+                    <div class="max-w-4xl">
+                        <h1 class="text-5xl font-black tracking-tight">Cửa hàng</h1>
+                        <p class="mt-3 text-lg text-gray-500">
+                            Chọn quán bạn thích — đặt nhanh trong vài giây.
+                        </p>
+                    </div>
+
+                    <!-- SEARCH BAR -->
+                    <form action="${ctx}/store" method="get" class="w-full mt-8 relative" autocomplete="off">
                         <input type="hidden" name="district" value="${district}">
                         <input type="hidden" name="sort" value="${sort}">
+                        <input type="hidden" name="province" value="${province}">
 
-                        <div class="bg-white rounded-2xl border border-gray-200 h-16 px-5 flex items-center gap-4 shadow-sm">
-                            <div class="relative shrink-0">
-                                <select name="province"
-                                        onchange="this.form.submit()"
-                                        class="appearance-none bg-transparent text-orange-500 font-bold pl-7 pr-8 h-11 rounded-full outline-none cursor-pointer">
-                                    <c:forEach var="p" items="${provinces}">
-                                        <option value="${p}" ${province == p ? 'selected' : ''}>${p}</option>
-                                    </c:forEach>
-                                </select>
+                        <div class="bg-white rounded-[32px] border border-gray-200 min-h-[72px] px-5 md:px-6 flex flex-col md:flex-row md:items-center gap-3 md:gap-4 shadow-[0_10px_30px_rgba(15,23,42,.06)]">
+                            <div class="relative shrink-0 flex items-center min-w-0">
                                 <i class="fa-solid fa-location-dot absolute left-2 top-1/2 -translate-y-1/2 text-orange-500"></i>
+
+                                <div class="pl-7 pr-3 min-h-[44px] flex items-center">
+                                    <span class="text-orange-500 font-extrabold text-[15px] break-words">
+                                        <c:out value="${empty province ? 'Khu vực hiện tại' : province}" />
+                                    </span>
+                                </div>
                             </div>
 
-                            <div class="w-px h-7 bg-gray-200"></div>
+                            <div class="hidden md:block w-px h-8 bg-gray-200"></div>
 
-                            <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
+                            <div class="flex items-center gap-3 flex-1 min-w-0">
+                                <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
 
-                            <input type="text"
-                                   id="storeKeyword"
-                                   name="keyword"
-                                   value="${keyword}"
-                                   placeholder="Tìm kiếm quán ăn..."
-                                   class="flex-1 outline-none bg-transparent text-[15px] h-full leading-none" />
+                                <input type="text"
+                                       id="storeKeyword"
+                                       name="keyword"
+                                       value="${keyword}"
+                                       placeholder="Tìm kiếm quán ăn..."
+                                       class="flex-1 outline-none bg-transparent text-[15px] h-11 leading-none placeholder:text-gray-400 min-w-0" />
 
-                            <c:choose>
-                                <c:when test="${not empty keyword}">
-                                    <c:url var="clearSearchUrl" value="/store">
-                                        <c:param name="province" value="${province}" />
-                                        <c:param name="district" value="${district}" />
-                                        <c:param name="sort" value="${sort}" />
-                                    </c:url>
+                                <c:choose>
+                                    <c:when test="${not empty keyword}">
+                                        <c:url var="clearSearchUrl" value="/store">
+                                            <c:param name="province" value="${province}" />
+                                            <c:param name="district" value="${district}" />
+                                            <c:param name="sort" value="${sort}" />
+                                        </c:url>
 
-                                    <a href="${clearSearchUrl}"
-                                       class="shrink-0 inline-flex items-center justify-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold px-8 h-11 rounded-full leading-none">
-                                        Huỷ
-                                    </a>
-                                </c:when>
-                                <c:otherwise>
-                                    <button type="submit"
-                                            class="shrink-0 inline-flex items-center justify-center bg-orange-500 hover:bg-orange-600 text-white font-bold px-8 h-11 rounded-full leading-none">
-                                        Tìm kiếm
-                                    </button>
-                                </c:otherwise>
-                            </c:choose>
+                                        <a href="${clearSearchUrl}"
+                                           class="shrink-0 inline-flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-6 h-11 rounded-full leading-none transition whitespace-nowrap">
+                                            Huỷ
+                                        </a>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <button type="submit"
+                                                class="shrink-0 inline-flex items-center justify-center bg-orange-500 hover:bg-orange-600 text-white font-extrabold px-8 h-11 rounded-full leading-none transition shadow-sm whitespace-nowrap">
+                                            Tìm kiếm
+                                        </button>
+                                    </c:otherwise>
+                                </c:choose>
+                            </div>
+                        </div>
+
+                        <div class="mt-3 flex flex-wrap items-center gap-3">
+                            <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-50 text-orange-600 font-bold text-sm">
+                                <i class="fa-solid fa-lock"></i>
+                                Khu vực đang theo vị trí giao hàng hiện tại
+                            </span>
+
+                            <span class="text-sm text-gray-500 font-medium leading-6">
+                                <c:out value="${provinceLockedMessage}" />
+                            </span>
                         </div>
 
                         <div id="storeSuggestionBox"
-                             class="hidden absolute left-0 right-0 top-[72px] bg-white border border-gray-200 rounded-2xl shadow-lg z-50 overflow-hidden">
+                             class="hidden absolute left-0 right-0 top-[126px] bg-white border border-gray-200 rounded-[24px] shadow-[0_18px_40px_rgba(15,23,42,.12)] z-50 overflow-hidden">
                         </div>
                     </form>
-                </div>
-            </section>
 
-            <section class="pt-10">
-                <div class="max-w-7xl mx-auto px-6">
-                    <h1 class="text-[56px] font-black tracking-[-0.04em] leading-none">Cửa hàng</h1>
-                    <p class="text-lg text-[#9a7b66] mt-3">Chọn quán bạn thích — đặt nhanh trong vài giây.</p>
-
-                    <div class="mt-8 flex flex-wrap gap-3">
+                    <!-- DISTRICT TABS -->
+                    <div class="mt-6 flex flex-wrap gap-3">
                         <c:url var="allStoreUrl" value="/store">
-                            <c:param name="province" value="${province}" />
                             <c:param name="keyword" value="${keyword}" />
                             <c:param name="sort" value="${sort}" />
                         </c:url>
 
                         <a href="${allStoreUrl}"
-                           class="px-7 h-12 rounded-full border font-bold inline-flex items-center justify-center
-                           ${empty district ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-[#8b6b52] border-[#eadfd7]'}">
+                           class="px-7 h-12 rounded-full border font-bold inline-flex items-center justify-center transition
+                           ${empty district ? 'bg-orange-500 text-white border-orange-500 shadow-sm' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}">
                             ALL
                         </a>
 
                         <c:forEach var="d" items="${districts}">
                             <c:url var="districtUrl" value="/store">
-                                <c:param name="province" value="${province}" />
                                 <c:param name="district" value="${d}" />
                                 <c:param name="keyword" value="${keyword}" />
                                 <c:param name="sort" value="${sort}" />
                             </c:url>
 
                             <a href="${districtUrl}"
-                               class="px-7 h-12 rounded-full border font-bold inline-flex items-center justify-center
-                               ${district == d ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-[#8b6b52] border-[#eadfd7]'}">
+                               class="px-7 h-12 rounded-full border font-bold inline-flex items-center justify-center transition
+                               ${district == d ? 'bg-orange-500 text-white border-orange-500 shadow-sm' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}">
                                 ${d}
                             </a>
                         </c:forEach>
                     </div>
 
-                    <div class="mt-8 flex flex-wrap items-center justify-between gap-4">
+                    <!-- SORT + DISTRICT DROPDOWN -->
+                    <div class="mt-6 flex flex-wrap items-center justify-between gap-4">
                         <div class="flex flex-wrap gap-3">
                             <c:url var="nearUrl" value="/store">
-                                <c:param name="province" value="${province}" />
                                 <c:param name="keyword" value="${keyword}" />
                                 <c:param name="district" value="${district}" />
                             </c:url>
 
                             <c:url var="ratingUrl" value="/store">
-                                <c:param name="province" value="${province}" />
                                 <c:param name="keyword" value="${keyword}" />
                                 <c:param name="district" value="${district}" />
                                 <c:param name="sort" value="rating" />
                             </c:url>
 
-                            <c:url var="priceUrl" value="/store">
-                                <c:param name="province" value="${province}" />
+                            <c:url var="nameUrl" value="/store">
                                 <c:param name="keyword" value="${keyword}" />
                                 <c:param name="district" value="${district}" />
-                                <c:param name="sort" value="price" />
-                            </c:url>
-
-                            <c:url var="latestUrl" value="/store">
-                                <c:param name="province" value="${province}" />
-                                <c:param name="keyword" value="${keyword}" />
-                                <c:param name="district" value="${district}" />
-                                <c:param name="sort" value="latest" />
+                                <c:param name="sort" value="name" />
                             </c:url>
 
                             <a href="${nearUrl}"
-                               class="px-6 h-11 rounded-full border bg-white border-[#eadfd7] font-semibold inline-flex items-center gap-2">
+                               class="px-6 h-11 rounded-full border font-semibold inline-flex items-center gap-2 transition
+                               ${empty sort || sort == 'nearest' || sort == 'distance' ? 'bg-orange-500 text-white border-orange-500 shadow-sm' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}">
                                 <i class="fa-regular fa-paper-plane"></i> Gần tôi
                             </a>
+
                             <a href="${ratingUrl}"
-                               class="px-6 h-11 rounded-full border bg-white border-[#eadfd7] font-semibold inline-flex items-center gap-2">
-                                <i class="fa-solid fa-arrow-trend-up"></i> Bán chạy
+                               class="px-6 h-11 rounded-full border font-semibold inline-flex items-center gap-2 transition
+                               ${sort == 'rating' ? 'bg-orange-500 text-white border-orange-500 shadow-sm' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}">
+                                <i class="fa-solid fa-star"></i> Đánh giá cao
                             </a>
-                            <a href="${priceUrl}"
-                               class="px-6 h-11 rounded-full border bg-white border-[#eadfd7] font-semibold inline-flex items-center gap-2">
-                                <i class="fa-regular fa-star"></i> Giá tốt
-                            </a>
-                            <a href="${latestUrl}"
-                               class="px-6 h-11 rounded-full border bg-white border-[#eadfd7] font-semibold inline-flex items-center gap-2">
-                                <i class="fa-solid fa-bolt"></i> Mới lên
+
+                            <a href="${nameUrl}"
+                               class="px-6 h-11 rounded-full border font-semibold inline-flex items-center gap-2 transition
+                               ${sort == 'name' ? 'bg-orange-500 text-white border-orange-500 shadow-sm' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}">
+                                <i class="fa-solid fa-arrow-down-a-z"></i> Tên quán
                             </a>
                         </div>
 
                         <form action="${ctx}/store" method="get">
-                            <input type="hidden" name="province" value="${province}">
                             <input type="hidden" name="keyword" value="${keyword}">
                             <input type="hidden" name="sort" value="${sort}">
                             <select name="district"
                                     onchange="this.form.submit()"
-                                    class="bg-white border border-[#eadfd7] rounded-full h-11 px-5 min-w-[220px] outline-none font-semibold text-[#8b6b52]">
+                                    class="bg-white border border-gray-200 rounded-full h-11 px-5 min-w-[220px] outline-none font-semibold text-gray-700 hover:border-gray-300 transition">
                                 <option value="">Chọn Quận / huyện</option>
                                 <c:forEach var="d" items="${districts}">
                                     <option value="${d}" ${district == d ? 'selected' : ''}>${d}</option>
@@ -175,13 +181,15 @@
                         </form>
                     </div>
 
+                    <!-- EMPTY -->
                     <c:if test="${empty stores}">
-                        <div class="mt-10 bg-white rounded-[28px] border border-dashed border-[#eadfd7] p-14 text-center">
+                        <div class="mt-10 bg-white rounded-[30px] border border-dashed border-gray-300 p-14 text-center shadow-[0_10px_30px_rgba(15,23,42,.06)]">
                             <i class="fa-solid fa-store text-5xl text-gray-300 mb-4"></i>
                             <p class="text-lg font-semibold text-gray-500">Không tìm thấy cửa hàng phù hợp.</p>
                         </div>
                     </c:if>
 
+                    <!-- STORES GRID -->
                     <c:if test="${not empty stores}">
                         <div class="mt-8 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-7 items-stretch">
                             <c:forEach var="s" items="${stores}">
@@ -193,81 +201,90 @@
                                     <c:param name="sort" value="${sort}" />
                                 </c:url>
 
-                                <article class="bg-white rounded-[28px] overflow-hidden border border-[#eee4dc] shadow-sm hover:shadow-lg transition h-full">
+                                <article class="group bg-white rounded-[30px] overflow-hidden border border-gray-200 shadow-[0_10px_30px_rgba(15,23,42,.06)] hover:shadow-[0_18px_40px_rgba(15,23,42,.10)] hover:border-orange-400 transition h-full">
                                     <a href="${storeDetailUrl}" class="block h-full">
                                         <div class="h-full flex flex-col">
+
+                                            <!-- IMAGE -->
                                             <div class="relative h-[240px] overflow-hidden">
                                                 <c:choose>
                                                     <c:when test="${not empty s.imageUrl}">
-                                                        <img src="${ctx}${s.imageUrl}" alt="${s.shopName}" class="w-full h-full object-cover">
+                                                        <img src="${ctx}${s.imageUrl}" alt="${s.shopName}" class="w-full h-full object-cover transition duration-300 hover:scale-105">
                                                     </c:when>
                                                     <c:otherwise>
-                                                        <img src="${ctx}/assets/images/default-store.jpg" alt="${s.shopName}" class="w-full h-full object-cover">
+                                                        <img src="${ctx}/assets/images/default-store.jpg" alt="${s.shopName}" class="w-full h-full object-cover transition duration-300 hover:scale-105">
                                                     </c:otherwise>
                                                 </c:choose>
 
-                                                <div class="absolute top-4 left-4 flex gap-2">
-                                                    <span class="bg-red-500 text-white text-xs font-extrabold px-3 py-2 rounded-full">
+                                                <div class="absolute top-4 left-4 flex gap-2 flex-wrap">
+                                                    <span class="bg-red-500 text-white text-xs font-extrabold px-3 py-2 rounded-full shadow-sm">
                                                         <i class="fa-solid fa-bolt"></i> Hot Deal
                                                     </span>
                                                     <c:if test="${not empty s.voucherTitle}">
-                                                        <span class="bg-orange-500 text-white text-xs font-extrabold px-3 py-2 rounded-full">
+                                                        <span class="bg-orange-500 text-white text-xs font-extrabold px-3 py-2 rounded-full shadow-sm">
                                                             Ưu đãi
                                                         </span>
                                                     </c:if>
                                                 </div>
                                             </div>
 
+                                            <!-- BODY -->
                                             <div class="p-6 flex flex-col flex-1">
-                                                <div class="flex items-start justify-between gap-4 min-h-[50px]">
-                                                    <h3 class="text-[32px] leading-none tracking-[-0.03em] font-black line-clamp-2">
+                                                <div class="flex items-start justify-between gap-4">
+                                                    <h3 class="text-[26px] md:text-[28px] leading-[1.05] tracking-[-0.03em] font-black text-gray-900 line-clamp-2">
                                                         ${s.shopName}
                                                     </h3>
-                                                    <div class="text-right shrink-0">
+
+                                                    <div class="text-right shrink-0 pt-1">
                                                         <div class="text-orange-500 font-black text-sm">${s.itemCount} món</div>
                                                     </div>
                                                 </div>
 
-                                                <p class="text-sm text-[#9d7d68] mt-3 leading-6 min-h-[30px] line-clamp-2">
+                                                <p class="text-sm text-gray-500 mt-3 leading-6 min-h-[44px] line-clamp-2">
                                                     ${s.shopAddressLine}, ${s.districtName}, ${s.provinceName}
                                                 </p>
 
-                                                <div class="flex flex-wrap gap-3 mt-6 min-h-[92px] content-start">
-                                                    <span class="bg-[#f6f1ec] px-4 py-2 rounded-full text-sm font-bold">
+                                                <div class="flex flex-wrap gap-3 mt-6">
+                                                    <span class="bg-[#f6f1ec] px-4 py-2 rounded-full text-sm font-bold text-gray-800">
                                                         <i class="fa-solid fa-star text-orange-400"></i>
                                                         <fmt:formatNumber value="${s.rating}" type="number" minFractionDigits="1" maxFractionDigits="1"/>
                                                     </span>
-                                                    <span class="bg-[#f6f1ec] px-4 py-2 rounded-full text-sm font-bold">
+
+                                                    <span class="bg-[#f6f1ec] px-4 py-2 rounded-full text-sm font-bold text-gray-800">
                                                         <i class="fa-regular fa-clock text-[#9d7d68]"></i> ${s.deliveryTime}
                                                     </span>
-                                                    <span class="bg-[#f6f1ec] px-4 py-2 rounded-full text-sm font-bold">
+
+                                                    <span class="bg-[#f6f1ec] px-4 py-2 rounded-full text-sm font-bold text-gray-800">
                                                         <i class="fa-solid fa-location-dot text-[#9d7d68]"></i> ${s.distance}
                                                     </span>
-                                                    <span class="bg-[#f6f1ec] px-4 py-2 rounded-full text-sm font-bold">
+
+                                                    <span class="bg-[#f6f1ec] px-4 py-2 rounded-full text-sm font-bold text-gray-800">
                                                         <i class="fa-solid fa-motorcycle text-orange-500"></i> Giao nhanh
                                                     </span>
                                                 </div>
 
-                                                <div class="mt-4 min-h-[74px] flex items-end justify-between gap-4">
+                                                <div class="mt-6 flex items-end justify-between gap-4">
                                                     <div>
-                                                        <div class="text-sm text-[#9d7d68]">Danh mục nổi bật</div>
-                                                        <div class="font-bold text-lg line-clamp-1">
+                                                        <div class="text-sm text-gray-500">Danh mục nổi bật</div>
+                                                        <div class="font-black text-lg text-gray-900 line-clamp-1">
                                                             ${empty s.categoryName ? 'Món ngon' : s.categoryName}
                                                         </div>
                                                     </div>
+
                                                     <div class="text-right shrink-0">
-                                                        <div class="text-sm text-[#9d7d68]">Từ</div>
-                                                        <div class="text-orange-500 font-black text-2xl">
+                                                        <div class="text-sm text-gray-500">Từ</div>
+                                                        <div class="text-orange-500 font-black text-3xl leading-none">
                                                             <fmt:formatNumber value="${s.minPrice}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ
                                                         </div>
                                                     </div>
                                                 </div>
 
-                                                <div class="mt-auto pt-5 border-t border-[#f0e8e1] flex items-center justify-between gap-3 min-h-[68px]">
-                                                    <div class="text-sm text-[#9d7d68] line-clamp-1">
+                                                <div class="mt-auto pt-5 border-t border-gray-100 flex items-center justify-between gap-3">
+                                                    <div class="text-sm text-gray-500 line-clamp-1">
                                                         ${empty s.voucherTitle ? 'Đang mở bán hôm nay' : s.voucherTitle}
                                                     </div>
-                                                    <span class="inline-flex items-center gap-2 font-black text-orange-500 shrink-0">
+
+                                                    <span class="inline-flex items-center justify-center gap-2 px-4 h-11 rounded-full border-2 border-orange-500 bg-white text-orange-500 font-black shrink-0 transition group-hover:bg-orange-500 group-hover:text-white">
                                                         Xem quán <i class="fa-solid fa-arrow-right"></i>
                                                     </span>
                                                 </div>
@@ -317,8 +334,6 @@
                 const params = new URLSearchParams();
                 params.set('id', itemId);
 
-                if (currentProvince)
-                    params.set('province', currentProvince);
                 if (currentDistrict)
                     params.set('district', currentDistrict);
                 if (keywordValue)
@@ -356,7 +371,7 @@
 
                     return `
                 <a href="${href}"
-                   class="flex items-center justify-between px-4 py-3 hover:bg-orange-50 border-b last:border-b-0 border-gray-100">
+                   class="flex items-center justify-between px-4 py-3 hover:bg-orange-50 border-b last:border-b-0 border-gray-100 transition">
                     <div>
                         <div class="font-bold text-gray-900">${name}</div>
                         <div class="text-sm text-gray-500">${districtName}${districtName && provinceName ? ', ' : ''}${provinceName}</div>
@@ -374,8 +389,6 @@
                         + encodeURIComponent(currentProvince)
                         + '&keyword=' + encodeURIComponent(keyword);
 
-                console.log('Suggest URL:', url);
-
                 const res = await fetch(url, {
                     method: 'GET',
                     headers: {
@@ -383,14 +396,11 @@
                     }
                 });
 
-                console.log('Suggest status:', res.status);
-
                 if (!res.ok) {
                     throw new Error('HTTP ' + res.status);
                 }
 
                 const text = await res.text();
-                console.log('Suggest raw response:', text);
 
                 let data;
                 try {

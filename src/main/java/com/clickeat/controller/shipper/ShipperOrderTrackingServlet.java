@@ -4,12 +4,15 @@
  */
 package com.clickeat.controller.shipper;
 
+import java.io.IOException;
+
 import com.clickeat.dal.impl.MerchantProfileDAO;
+import com.clickeat.dal.impl.NotificationDAO;
 import com.clickeat.dal.impl.OrderDAO;
 import com.clickeat.model.MerchantProfile;
 import com.clickeat.model.Order;
 import com.clickeat.model.User;
-import java.io.IOException;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -69,6 +72,14 @@ public class ShipperOrderTrackingServlet extends HttpServlet {
         if ("picked_up".equals(action)) {
             success = orderDAO.updateOrderStatus(orderId, "PICKED_UP");
             if (success) {
+                Order changedOrder = orderDAO.findById(orderId);
+                NotificationDAO notificationDAO = new NotificationDAO();
+                if (changedOrder != null && changedOrder.getCustomerUserId() > 0) {
+                    notificationDAO.createForUser(changedOrder.getCustomerUserId(), "ORDER", "Đơn #" + changedOrder.getOrderCode() + " đã được shipper lấy và đang giao đến bạn.");
+                }
+                if (changedOrder != null && changedOrder.getMerchantId() > 0) {
+                    notificationDAO.createForUser(changedOrder.getMerchantId(), "ORDER", "Shipper đã lấy đơn #" + changedOrder.getOrderCode() + " khỏi quán.");
+                }
                 request.getSession().setAttribute("toastMsg", "Đã xác nhận lấy hàng! Vui lòng giao đến khách.");
             }
         } else if ("delivered".equals(action)) {

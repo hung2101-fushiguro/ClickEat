@@ -7,6 +7,8 @@
     <head>
         <meta charset="UTF-8">
         <title>Đặt đơn thành công - ClickEat</title>
+        <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/logo-icon.png?v=2">
+        <link rel="shortcut icon" href="${pageContext.request.contextPath}/logo-icon.png?v=2">
         <script src="https://cdn.tailwindcss.com"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     </head>

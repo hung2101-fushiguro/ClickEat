@@ -4,15 +4,17 @@
  */
 package com.clickeat.controller.merchant;
 
+import java.io.IOException;
+
 import com.clickeat.dal.impl.VoucherDAO;
 import com.clickeat.model.User;
 import com.clickeat.model.Voucher;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
 
 /**
  *
@@ -50,11 +52,6 @@ public class MerchantPromotionServlet extends HttpServlet {
 
         String action = request.getParameter("action");
         if (action != null) {
-            action = action.trim();
-        }
-        if (action == null || action.isEmpty()) {
-            action = "create";
-        }if (action != null) {
             action = action.trim();
         }
         if (action == null || action.isEmpty()) {
@@ -101,6 +98,7 @@ public class MerchantPromotionServlet extends HttpServlet {
             response.sendRedirect(request.getContextPath() + "/merchant/promotions");
             return;
         }
+
         if ("toggleStatus".equals(action)) {
             int voucherId = Integer.parseInt(request.getParameter("voucherId"));
             Voucher ownVoucher = voucherDAO.findById(voucherId);
@@ -225,7 +223,7 @@ public class MerchantPromotionServlet extends HttpServlet {
 
         Voucher v = new Voucher();
         v.setMerchantUserId((int) account.getId());
-         v.setTitle(titleParam);
+        v.setTitle(titleParam);
         v.setCode(codeParam.trim().toUpperCase());
         v.setDiscountType(normalizedType);
         try {
@@ -263,6 +261,7 @@ public class MerchantPromotionServlet extends HttpServlet {
         request.getSession().setAttribute(created > 0 ? "promotionSuccess" : "promotionError", created > 0 ? "Tạo voucher thành công ở trạng thái nháp (chưa hiển thị)." : "Không thể tạo voucher.");
         response.sendRedirect(request.getContextPath() + "/merchant/promotions");
     }
+
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
     }
@@ -283,4 +282,3 @@ public class MerchantPromotionServlet extends HttpServlet {
         return discountValue > 0 && minOrderAmount >= 0 && maxUses > 0;
     }
 }
-

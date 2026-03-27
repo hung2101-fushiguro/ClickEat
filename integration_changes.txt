@@ -1,0 +1,42 @@
+DANH SÁCH CÁC THAY ĐỔI TÍCH HỢP TỪ DỰ ÁN CLICK_EAT_2 (UPGRADE)
+============================================================
+
+1. CƠ SỞ DỮ LIỆU (SQL)
+----------------------
+- Tạo bảng mới: [dbo].[CustomerVouchers] - Lưu kho voucher cá nhân của khách hàng.
+- Thêm cột: [dbo].[Orders].[voucher_id] - Lưu vết voucher được sử dụng cho mỗi đơn hàng.
+- Thêm cột: [dbo].[MerchantProfiles].[image_url] - Hỗ trợ ảnh đại diện (thumbnail) riêng cho cửa hàng.
+- (Chi tiết trong file upgrade.sql tại thư mục gốc)
+
+2. MÔ HÌNH DỮ LIỆU (JAVA MODELS)
+--------------------------------
+- Thêm mới: com.clickeat.model.CustomerVoucher
+- Cập nhật: com.clickeat.model.Order (Thêm trường voucherId và các phương thức getter/setter)
+
+3. TẦNG TRUY XUẤT DỮ LIỆU (DAOs)
+--------------------------------
+- Thêm mới: com.clickeat.dal.impl.CustomerVoucherDAO - Xử lý lưu, kiểm tra và liệt kê voucher của khách.
+- Cập nhật: com.clickeat.dal.impl.OrderDAO - Bổ sung mapping cột voucher_id trong mapRow và insert.
+- Cập nhật: com.clickeat.dal.impl.VoucherDAO:
+    + Thêm phương thức searchPublicActiveVouchers: Tìm kiếm voucher công khai theo từ khóa và phân loại.
+    + Thêm phương thức findPublicActiveById: Tìm voucher đang hoạt động để thực hiện lưu kho.
+    + Cập nhật getAvailableVouchersForCustomer: Thêm cờ is_saved để hiển thị trạng thái đã lưu trên giao diện.
+
+4. BỘ ĐIỀU KHIỂN (CONTROLLERS)
+------------------------------
+- Thêm mới: com.clickeat.controller.web.PromotionServlet (Mapping: /promotion) - Trang khám phá voucher.
+- Thêm mới: com.clickeat.controller.web.CustomerVoucherServlet (Mapping: /customer/vouchers) - Quản lý kho voucher cá nhân.
+
+5. GIAO DIỆN (JSPs)
+-------------------
+- Thêm mới: src/main/webapp/views/web/promotions.jsp - Giao diện tìm kiếm và lưu voucher.
+- Cập nhật: src/main/webapp/views/web/vouchers.jsp - Nâng cấp giao diện "Kho voucher của tôi" với trạng thái Đã dùng/Sẵn sàng.
+- Cập nhật: src/main/webapp/views/web/header.jsp - Thêm liên kết "Kho Voucher của tôi" vào menu thả xuống của người dùng.
+
+6. DỮ LIỆU MẪU (OPTIONAL)
+-------------------------
+- Đã chuẩn bị sẵn các câu lệnh INSERT cho 10 Merchant và Food mới trong tài liệu phân tích (có thể áp dụng tùy mục đích).
+
+============================================================
+Hoàn tất tích hợp ngày: 27/03/2026
+Người thực hiện: Antigravity AI

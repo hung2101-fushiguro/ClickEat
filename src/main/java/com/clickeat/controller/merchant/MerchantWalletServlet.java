@@ -4,18 +4,20 @@
  */
 package com.clickeat.controller.merchant;
 
+import java.io.IOException;
+import java.util.List;
+
 import com.clickeat.dal.impl.MerchantWalletDAO;
 import com.clickeat.dal.impl.MerchantWithdrawalDAO;
 import com.clickeat.model.MerchantWallet;
 import com.clickeat.model.MerchantWithdrawal;
 import com.clickeat.model.User;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.List;
 
 @WebServlet(name = "MerchantWalletServlet", urlPatterns = {"/merchant/wallet"})
 public class MerchantWalletServlet extends HttpServlet {
@@ -32,6 +34,11 @@ public class MerchantWalletServlet extends HttpServlet {
         int merchantId = (int) account.getId();
         MerchantWalletDAO walletDAO = new MerchantWalletDAO();
         MerchantWithdrawalDAO withdrawDAO = new MerchantWithdrawalDAO();
+
+        // KHÔNG gọi synchronizeBalanceWithDeliveredIncome ở đây nữa:
+        // Hàm đó tính lại balance từ đầu (overwrite), sẽ xung đột với logic
+        // cộng tiền incremental được thực hiện ngay trong transaction giao hàng.
+        // Balance giờ được quản lý chuẩn xác trong completeDeliveryWithProofAndSettlement.
 
         // Lấy số dư ví
         MerchantWallet wallet = walletDAO.getWalletByMerchantId(merchantId);
@@ -61,30 +68,18 @@ public class MerchantWalletServlet extends HttpServlet {
             String bankName = request.getParameter("bankName");
             String accNum = request.getParameter("accNum");
 
-            MerchantWalletDAO walletDAO = new MerchantWalletDAO();
-            MerchantWallet wallet = walletDAO.getWalletByMerchantId(merchantId);
-
-            // Kiểm tra số dư có đủ để rút không
-            if (wallet != null && wallet.getBalance() >= amount && amount >= 50000) {
-                // 1. Trừ tiền trong ví
-                boolean deducted = walletDAO.deductBalance(merchantId, amount);
-
-                // 2. Nếu trừ tiền thành công, tạo lệnh Rút tiền
-                if (deducted) {
-                    MerchantWithdrawal w = new MerchantWithdrawal();
-                    w.setMerchantUserId(merchantId);
-                    w.setAmount(amount);
-                    w.setBankName(bankName);
-                    w.setBankAccountNumber(accNum);
-
-                    MerchantWithdrawalDAO withdrawDAO = new MerchantWithdrawalDAO();
-                    withdrawDAO.insertRequest(w);
-
-                    // Thêm thông báo thành công
-                    request.getSession().setAttribute("msg", "Đã gửi yêu cầu rút tiền thành công!");
-                }
-            } else {
+            if (amount < 50000 || bankName == null || bankName.trim().isEmpty() || accNum == null || accNum.trim().isEmpty()) {
                 request.getSession().setAttribute("error", "Số dư không đủ hoặc số tiền rút không hợp lệ!");
+                response.sendRedirect(request.getContextPath() + "/merchant/wallet");
+                return;
+            }
+
+            MerchantWithdrawalDAO withdrawDAO = new MerchantWithdrawalDAO();
+            boolean created = withdrawDAO.createRequestWithBalanceCheck(merchantId, amount, bankName.trim(), accNum.trim());
+            if (created) {
+                request.getSession().setAttribute("msg", "Đã gửi yêu cầu rút tiền thành công! Vui lòng chờ Admin duyệt.");
+            } else {
+                request.getSession().setAttribute("error", "Không thể tạo lệnh rút tiền (số dư không đủ hoặc có lệnh không hợp lệ).");
             }
         } catch (Exception e) {
             e.printStackTrace();

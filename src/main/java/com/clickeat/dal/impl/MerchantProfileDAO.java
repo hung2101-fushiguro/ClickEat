@@ -5,11 +5,19 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.clickeat.model.MerchantProfile;
 
 public class MerchantProfileDAO extends AbstractDAO<MerchantProfile> {
+
+    private static final double DEFAULT_BASE_SHIPPING_FEE = 10000;
+    private static final double DEFAULT_PER_KM_FEE = 5000;
+    private static final double DEFAULT_PLATFORM_FEE = 3000;
+    private static final double DEFAULT_INCLUDED_DISTANCE_KM = 1;
 
     @Override
     protected MerchantProfile mapRow(ResultSet rs) throws SQLException {
@@ -114,6 +122,12 @@ public class MerchantProfileDAO extends AbstractDAO<MerchantProfile> {
             m.setRejectionReason(null);
         }
 
+        try {
+            m.setSourcePlatform(rs.getString("source_platform"));
+        } catch (Exception e) {
+            m.setSourcePlatform(null);
+        }
+
         // ảnh đọc từ DB
         try {
             m.setImageUrl(normalizeImageUrl(rs.getString("image_url")));
@@ -194,6 +208,12 @@ public class MerchantProfileDAO extends AbstractDAO<MerchantProfile> {
             m.setDistance("1.8km");
         }
 
+        try {
+            m.setShippingFee(estimateShippingFee(parseDistanceKm(m.getDistance())));
+        } catch (Exception e) {
+            m.setShippingFee(estimateShippingFee(null));
+        }
+
         if (m.getIsOpen() == null) {
             m.setOpen("APPROVED".equalsIgnoreCase(m.getStatus()));
         }
@@ -237,79 +257,72 @@ public class MerchantProfileDAO extends AbstractDAO<MerchantProfile> {
 
     @Override
     public int insert(MerchantProfile m) {
-        String sql = """
-            INSERT INTO MerchantProfiles
-            (user_id, shop_name, shop_phone, shop_address_line,
-             province_code, province_name, district_code, district_name,
-             ward_code, ward_name, latitude, longitude, note, status,
-             shop_avatar, business_hours, shop_description, notification_settings)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """;
+        LinkedHashMap<String, Object> values = new LinkedHashMap<>();
+        values.put("user_id", m.getUserId());
+        values.put("shop_name", m.getShopName());
+        values.put("shop_phone", m.getShopPhone());
+        values.put("shop_address_line", m.getShopAddressLine());
+        values.put("province_code", m.getProvinceCode());
+        values.put("province_name", m.getProvinceName());
+        values.put("district_code", m.getDistrictCode());
+        values.put("district_name", m.getDistrictName());
+        values.put("ward_code", m.getWardCode());
+        values.put("ward_name", m.getWardName());
+        values.put("latitude", m.getLatitude());
+        values.put("longitude", m.getLongitude());
+        values.put("status", m.getStatus());
 
-        return update(sql,
-                m.getUserId(),
-                m.getShopName(),
-                m.getShopPhone(),
-                m.getShopAddressLine(),
-                m.getProvinceCode(),
-                m.getProvinceName(),
-                m.getDistrictCode(),
-                m.getDistrictName(),
-                m.getWardCode(),
-                m.getWardName(),
-                m.getLatitude(),
-                m.getLongitude(),
-                m.getNote(),
-                m.getStatus(),
-                m.getShopAvatar(),
-                m.getBusinessHours(),
-                m.getShopDescription(),
-                m.getNotificationSettings());
+        putIfColumnExists(values, "note", m.getNote());
+        putIfColumnExists(values, "shop_avatar", m.getShopAvatar());
+        putIfColumnExists(values, "business_hours", m.getBusinessHours());
+        putIfColumnExists(values, "shop_description", m.getShopDescription());
+        putIfColumnExists(values, "notification_settings", m.getNotificationSettings());
+        putIfColumnExists(values, "source_platform", m.getSourcePlatform());
+
+        String columns = String.join(", ", values.keySet());
+        String placeholders = values.keySet().stream().map(k -> "?").collect(Collectors.joining(", "));
+        String sql = "INSERT INTO MerchantProfiles (" + columns + ") VALUES (" + placeholders + ")";
+        return update(sql, values.values().toArray());
     }
 
     @Override
     public boolean update(MerchantProfile m) {
-        String sql = """
-            UPDATE MerchantProfiles
-            SET shop_name = ?,
-                shop_phone = ?,
-                shop_address_line = ?,
-                province_code = ?,
-                province_name = ?,
-                district_code = ?,
-                district_name = ?,
-                ward_code = ?,
-                ward_name = ?,
-                latitude = ?,
-                longitude = ?,
-                note = ?,
-                status = ?,
-                shop_avatar = ?,
-                business_hours = ?,
-                shop_description = ?,
-                notification_settings = ?
-            WHERE user_id = ?
-        """;
+        LinkedHashMap<String, Object> values = new LinkedHashMap<>();
+        values.put("shop_name", m.getShopName());
+        values.put("shop_phone", m.getShopPhone());
+        values.put("shop_address_line", m.getShopAddressLine());
+        values.put("province_code", m.getProvinceCode());
+        values.put("province_name", m.getProvinceName());
+        values.put("district_code", m.getDistrictCode());
+        values.put("district_name", m.getDistrictName());
+        values.put("ward_code", m.getWardCode());
+        values.put("ward_name", m.getWardName());
+        values.put("latitude", m.getLatitude());
+        values.put("longitude", m.getLongitude());
+        values.put("status", m.getStatus());
 
-        return update(sql,
-                m.getShopName(),
-                m.getShopPhone(),
-                m.getShopAddressLine(),
-                m.getProvinceCode(),
-                m.getProvinceName(),
-                m.getDistrictCode(),
-                m.getDistrictName(),
-                m.getWardCode(),
-                m.getWardName(),
-                m.getLatitude(),
-                m.getLongitude(),
-                m.getNote(),
-                m.getStatus(),
-                m.getShopAvatar(),
-                m.getBusinessHours(),
-                m.getShopDescription(),
-                m.getNotificationSettings(),
-                m.getUserId()) > 0;
+        putIfColumnExists(values, "note", m.getNote());
+        putIfColumnExists(values, "shop_avatar", m.getShopAvatar());
+        putIfColumnExists(values, "business_hours", m.getBusinessHours());
+        putIfColumnExists(values, "shop_description", m.getShopDescription());
+        putIfColumnExists(values, "notification_settings", m.getNotificationSettings());
+        putIfColumnExists(values, "source_platform", m.getSourcePlatform());
+
+        String setClause = values.keySet().stream()
+                .map(column -> column + " = ?")
+                .collect(Collectors.joining(", "));
+
+        List<Object> params = new ArrayList<>(values.values());
+        params.add(m.getUserId());
+
+        String sql = "UPDATE MerchantProfiles SET " + setClause + " WHERE user_id = ?";
+        return update(sql, params.toArray()) > 0;
+    }
+
+    private void putIfColumnExists(Map<String, Object> values, String columnName, Object value) {
+        if (columnExists("MerchantProfiles", columnName)) {
+            values.put(columnName, value);
+        }
     }
 
     @Override
@@ -323,6 +336,11 @@ public class MerchantProfileDAO extends AbstractDAO<MerchantProfile> {
     // Hàm phục vụ trang store
     // =========================
     public List<MerchantProfile> searchApprovedStores(String keyword, String province, String district, String sortBy) {
+        return searchApprovedStores(keyword, province, district, sortBy, null, null);
+    }
+
+    public List<MerchantProfile> searchApprovedStores(String keyword, String province, String district,
+            String sortBy, Double customerLat, Double customerLng) {
         StringBuilder sql = new StringBuilder("""
             SELECT mp.*,
                    ISNULL(rt.avg_rating, 4.8) AS rating,
@@ -385,7 +403,9 @@ public class MerchantProfileDAO extends AbstractDAO<MerchantProfile> {
             params.add(district.trim());
         }
 
-        if ("rating".equalsIgnoreCase(sortBy)) {
+        if ("near".equalsIgnoreCase(sortBy) && customerLat != null && customerLng != null) {
+            sql.append(" ORDER BY mp.shop_name ASC ");
+        } else if ("rating".equalsIgnoreCase(sortBy)) {
             sql.append(" ORDER BY rating DESC, mp.shop_name ASC ");
         } else if ("price".equalsIgnoreCase(sortBy)) {
             sql.append(" ORDER BY min_price ASC, mp.shop_name ASC ");
@@ -393,7 +413,102 @@ public class MerchantProfileDAO extends AbstractDAO<MerchantProfile> {
             sql.append(" ORDER BY mp.created_at DESC, mp.user_id DESC ");
         }
 
-        return query(sql.toString(), params.toArray());
+        List<MerchantProfile> stores = query(sql.toString(), params.toArray());
+
+        if (customerLat != null && customerLng != null) {
+            for (MerchantProfile store : stores) {
+                Double storeLat = store.getLatitude();
+                Double storeLng = store.getLongitude();
+                if (storeLat != null && storeLng != null && storeLat != 0 && storeLng != 0) {
+                    double distanceKm = haversineDistanceKm(customerLat, customerLng, storeLat, storeLng);
+                    store.setDistance(formatDistance(distanceKm));
+                    store.setDeliveryTime(estimateDeliveryTime(distanceKm));
+                    store.setShippingFee(estimateShippingFee(distanceKm));
+                } else {
+                    store.setShippingFee(estimateShippingFee(null));
+                }
+            }
+
+            if ("near".equalsIgnoreCase(sortBy)) {
+                stores.sort((left, right) -> {
+                    double leftKm = parseDistanceKm(left.getDistance());
+                    double rightKm = parseDistanceKm(right.getDistance());
+                    return Double.compare(leftKm, rightKm);
+                });
+            }
+        }
+
+        return stores;
+    }
+
+    private double haversineDistanceKm(double lat1, double lon1, double lat2, double lon2) {
+        double earthRadiusKm = 6371.0;
+        double latRad1 = Math.toRadians(lat1);
+        double latRad2 = Math.toRadians(lat2);
+        double deltaLat = Math.toRadians(lat2 - lat1);
+        double deltaLon = Math.toRadians(lon2 - lon1);
+
+        double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2)
+                + Math.cos(latRad1) * Math.cos(latRad2)
+                * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return earthRadiusKm * c;
+    }
+
+    private String formatDistance(double distanceKm) {
+        return String.format(java.util.Locale.US, "%.1fkm", distanceKm);
+    }
+
+    private String estimateDeliveryTime(double distanceKm) {
+        int minMinutes = 10 + (int) Math.ceil(Math.max(0, distanceKm) * 4);
+        int maxMinutes = minMinutes + 10;
+        return minMinutes + "-" + maxMinutes + "p";
+    }
+
+    private double parseDistanceKm(String distanceText) {
+        if (distanceText == null || distanceText.isBlank()) {
+            return Double.MAX_VALUE;
+        }
+        String normalized = distanceText.toLowerCase().replace("km", "").trim();
+        try {
+            return Double.parseDouble(normalized);
+        } catch (NumberFormatException ex) {
+            return Double.MAX_VALUE;
+        }
+    }
+
+    private double estimateShippingFee(Double distanceKm) {
+        double baseFee = getConfigDouble("clickeat.shipping.baseFee", DEFAULT_BASE_SHIPPING_FEE);
+        double perKmFee = getConfigDouble("clickeat.shipping.perKmFee", DEFAULT_PER_KM_FEE);
+        double platformFee = getConfigDouble("clickeat.shipping.platformFee", DEFAULT_PLATFORM_FEE);
+        double includedDistanceKm = getConfigDouble("clickeat.shipping.includedDistanceKm", DEFAULT_INCLUDED_DISTANCE_KM);
+
+        if (distanceKm == null || distanceKm < 0 || Double.isInfinite(distanceKm) || Double.isNaN(distanceKm)) {
+            return Math.max(0, baseFee + platformFee);
+        }
+
+        double extraDistance = Math.max(0, distanceKm - Math.max(0, includedDistanceKm));
+        double chargedKm = Math.ceil(extraDistance);
+        double distanceSurcharge = chargedKm * Math.max(0, perKmFee);
+        return Math.max(0, baseFee + platformFee + distanceSurcharge);
+    }
+
+    private double getConfigDouble(String key, double defaultValue) {
+        String value = System.getProperty(key);
+        if (value == null || value.isBlank()) {
+            String envKey = key.toUpperCase().replace('.', '_');
+            value = System.getenv(envKey);
+        }
+
+        if (value == null || value.isBlank()) {
+            return defaultValue;
+        }
+
+        try {
+            return Double.parseDouble(value.trim());
+        } catch (NumberFormatException ex) {
+            return defaultValue;
+        }
     }
 
     public MerchantProfile findApprovedStoreById(int merchantUserId) {

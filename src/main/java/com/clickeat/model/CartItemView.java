@@ -1,6 +1,7 @@
 package com.clickeat.model;
 
 public class CartItemView {
+
     private int cartItemId;      // CartItems.id
     private int cartId;          // CartItems.cart_id
     private int foodItemId;      // CartItems.food_item_id
@@ -10,8 +11,12 @@ public class CartItemView {
 
     private double unitPrice;    // CartItems.unit_price_snapshot
     private int quantity;
+    private String selectedSize;
+    private String selectedToppings;
+    private String optionSummary;
 
-    public CartItemView() {}
+    public CartItemView() {
+    }
 
     public int getCartItemId() {
         return cartItemId;
@@ -67,6 +72,30 @@ public class CartItemView {
 
     public void setQuantity(int quantity) {
         this.quantity = quantity;
+    }
+
+    public String getSelectedSize() {
+        return selectedSize;
+    }
+
+    public void setSelectedSize(String selectedSize) {
+        this.selectedSize = selectedSize;
+    }
+
+    public String getSelectedToppings() {
+        return selectedToppings;
+    }
+
+    public void setSelectedToppings(String selectedToppings) {
+        this.selectedToppings = selectedToppings;
+    }
+
+    public String getOptionSummary() {
+        return optionSummary;
+    }
+
+    public void setOptionSummary(String optionSummary) {
+        this.optionSummary = optionSummary;
     }
 
     public double getLineTotal() {

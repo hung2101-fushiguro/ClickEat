@@ -1,24 +1,22 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%
     String currentPage = (String) request.getAttribute("currentPage");
-    if (currentPage == null) {
-        currentPage = "";
-    }
+    if (currentPage == null) currentPage = "";
     java.util.Set<String> mobileCollapsedItems = new java.util.HashSet<>(
-            java.util.Arrays.asList("analytics", "wallet", "promotions", "reviews", "settings")
+        java.util.Arrays.asList("analytics", "wallet", "promotions", "reviews", "settings")
     );
     boolean isMobileMoreActive = mobileCollapsedItems.contains(currentPage);
     String[][] navItems = {
-        {"dashboard", "Dashboard", "home"},
-        {"orders", "Đơn hàng", "receipt_long"},
-        {"catalog", "Catalog", "menu_book"},
-        {"analytics", "Phân tích", "bar_chart"},
-        {"wallet", "Ví tiền", "account_balance_wallet"},
-        {"promotions", "Khuyến mãi", "local_offer"},
-        {"reviews", "Đánh giá", "star"},
-        {"chat", "Tin nhắn", "chat"},
-        {"settings", "Cài đặt", "settings"}
+        {"dashboard",   "Dashboard",    "home"},
+        {"orders",      "Đơn hàng",    "receipt_long"},
+        {"catalog",     "Catalog",     "menu_book"},
+        {"analytics",   "Phân tích",   "bar_chart"},
+        {"wallet",      "Ví tiền",     "account_balance_wallet"},
+        {"promotions",  "Khuyến mãi",  "local_offer"},
+        {"reviews",     "Đánh giá",    "star"},
+        {"chat",        "Tin nhắn",    "chat"},
+        {"settings",    "Cài đặt",     "settings"}
     };
 %>
 <!-- Sidebar -->
@@ -44,7 +42,7 @@
                           class="absolute -top-0.5 -right-0.5 hidden min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none"></span>
                 </button>
                 <!-- Dropdown -->
-                <div id="notifDropdown"
+                 <div id="notifDropdown"
                      class="hidden absolute left-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-[120] overflow-hidden">
                     <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
                         <span class="text-sm font-bold text-gray-900">Thông báo</span>
@@ -62,28 +60,36 @@
         (function () {
             var ctx = '<%= request.getContextPath()%>';
 
-            function fetchNotifs() {
-                fetch(ctx + '/merchant/notifications', {credentials: 'same-origin'})
-                        .then(function (r) {
-                            return r.json();
-                        })
-                        .then(function (data) {
-                            updateBadge('notifBadge', data.unread);
-                            updateBadge('mobileNotifBadge', data.unread);
-                            renderList(data.items, 'notifList');
-                            renderList(data.items, 'mobileNotifList');
-                        })
-                        .catch(function () {});
+            function escHtml(s) {
+                return String(s == null ? '' : s)
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;');
+            }
+
+            function updateBadge(id, unread) {
+                var badge = document.getElementById(id);
+                if (!badge)
+                    return;
+                if (unread > 0) {
+                    badge.textContent = unread > 99 ? '99+' : unread;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
             }
 
             function renderList(items, listId) {
                 var list = document.getElementById(listId);
                 if (!list)
                     return;
+
                 if (!items || items.length === 0) {
                     list.innerHTML = '<p class="text-xs text-gray-400 text-center py-6">Không có thông báo</p>';
                     return;
                 }
+
                 var html = '';
                 for (var i = 0; i < items.length; i++) {
                     var n = items[i];
@@ -99,20 +105,22 @@
                 list.innerHTML = html;
             }
 
-            function updateBadge(id, unread) {
-                var badge = document.getElementById(id);
-                if (!badge)
-                    return;
-                if (unread > 0) {
-                    badge.textContent = unread > 99 ? '99+' : unread;
-                    badge.classList.remove('hidden');
-                } else {
-                    badge.classList.add('hidden');
-                }
-            }
-
-            function escHtml(s) {
-                return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            function fetchNotifs() {
+                fetch(ctx + '/merchant/notifications', {credentials: 'same-origin'})
+                        .then(function (r) {
+                            if (!r.ok) {
+                                throw new Error('notif-fetch-failed');
+                            }
+                            return r.json();
+                        })
+                        .then(function (data) {
+                            updateBadge('notifBadge', data.unread || 0);
+                            updateBadge('mobileNotifBadge', data.unread || 0);
+                            renderList(data.items || [], 'notifList');
+                            renderList(data.items || [], 'mobileNotifList');
+                        })
+                        .catch(function () {
+                        });
             }
 
             window.toggleNotifDropdown = function () {
@@ -124,10 +132,14 @@
 
             window.markAllRead = function () {
                 fetch(ctx + '/merchant/notifications', {method: 'POST', credentials: 'same-origin'})
-                        .then(function () {
+                        .then(function (r) {
+                            if (!r.ok) {
+                                throw new Error('notif-mark-failed');
+                            }
                             fetchNotifs();
                         })
-                        .catch(function () {});
+                        .catch(function () {
+                        });
             };
 
             window.toggleMobileMenu = function (forceOpen) {
@@ -150,7 +162,6 @@
                 }
             };
 
-            // Close dropdown when clicking outside
             document.addEventListener('click', function (e) {
                 var container = document.getElementById('notifContainer');
                 if (container && !container.contains(e.target)) {
@@ -171,9 +182,8 @@
                 }
             });
 
-            // Initial fetch + poll every 60 seconds
             fetchNotifs();
-            setInterval(fetchNotifs, 60000);
+            setInterval(fetchNotifs, 15000);
         })();
     </script>
 
@@ -223,18 +233,16 @@
 <!-- Mobile bottom nav -->
 <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex md:hidden z-40 overflow-x-auto">
     <% for (String[] item : navItems) {
-            if (item[0].equals("analytics") || item[0].equals("wallet") || item[0].equals("promotions") || item[0].equals("reviews") || item[0].equals("settings")) {
-                continue;
-            }
-            boolean active = item[0].equals(currentPage);%>
-    <a href="<%= request.getContextPath()%>/merchant/<%= item[0]%>"
-       class="min-w-[72px] flex-1 flex flex-col items-center py-2 gap-0.5 text-[10px] font-medium <%= active ? "text-primary" : "text-gray-400"%>">
-        <span class="material-symbols-outlined text-[22px]"><%= item[2]%></span>
-        <%= item[1]%>
+        if (item[0].equals("analytics") || item[0].equals("wallet") || item[0].equals("promotions") || item[0].equals("reviews") || item[0].equals("settings")) continue;
+        boolean active = item[0].equals(currentPage); %>
+    <a href="<%= request.getContextPath() %>/merchant/<%= item[0] %>"
+       class="min-w-[72px] flex-1 flex flex-col items-center py-2 gap-0.5 text-[10px] font-medium <%= active ? "text-primary" : "text-gray-400" %>">
+        <span class="material-symbols-outlined text-[22px]"><%= item[2] %></span>
+        <%= item[1] %>
     </a>
-    <% }%>
+    <% } %>
     <button type="button" onclick="toggleMobileMenu(true)"
-            class="min-w-[72px] flex-1 flex flex-col items-center py-2 gap-0.5 text-[10px] font-medium <%= isMobileMoreActive ? "text-primary" : "text-gray-400"%>">
+            class="min-w-[72px] flex-1 flex flex-col items-center py-2 gap-0.5 text-[10px] font-medium <%= isMobileMoreActive ? "text-primary" : "text-gray-400" %>">
         <span class="relative">
             <span class="material-symbols-outlined text-[22px]">menu</span>
             <span id="mobileNotifBadge" class="absolute -top-1 -right-2 hidden min-w-[16px] h-[16px] px-1 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none"></span>
@@ -258,16 +266,16 @@
 
         <div class="p-4 space-y-2 overflow-y-auto max-h-[calc(88vh-72px)]">
             <% for (String[] item : navItems) {
-                    boolean active = item[0].equals(currentPage);%>
-            <a href="<%= request.getContextPath()%>/merchant/<%= item[0]%>"
+                boolean active = item[0].equals(currentPage); %>
+            <a href="<%= request.getContextPath() %>/merchant/<%= item[0] %>"
                onclick="toggleMobileMenu(false)"
                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all <%= active
-                       ? "bg-primary text-white shadow-sm shadow-primary/20"
-                       : "text-gray-700 hover:bg-gray-50"%>">
-                <span class="material-symbols-outlined text-[20px]"><%= item[2]%></span>
-                <span><%= item[1]%></span>
+                   ? "bg-primary text-white shadow-sm shadow-primary/20"
+                   : "text-gray-700 hover:bg-gray-50" %>">
+                <span class="material-symbols-outlined text-[20px]"><%= item[2] %></span>
+                <span><%= item[1] %></span>
             </a>
-            <% }%>
+            <% } %>
 
             <div class="mt-3 rounded-2xl border border-gray-100 bg-gray-50/70 overflow-hidden">
                 <div class="px-4 py-3 flex items-center justify-between border-b border-gray-100">
@@ -279,17 +287,17 @@
                 </div>
             </div>
 
-            <form method="POST" action="<%= request.getContextPath()%>/merchant/toggle-open" class="pt-2">
+            <form method="POST" action="<%= request.getContextPath() %>/merchant/toggle-open" class="pt-2">
                 <button type="submit"
                         class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all
-                        <%= isShopOpen ? "bg-green-50 text-green-700 hover:bg-green-100" : "bg-red-50 text-red-600 hover:bg-red-100"%>">
+                        <%= isShopOpen ? "bg-green-50 text-green-700 hover:bg-green-100" : "bg-red-50 text-red-600 hover:bg-red-100" %>">
                     <span class="flex items-center gap-2">
-                        <span class="material-symbols-outlined text-[20px]"><%= isShopOpen ? "store" : "store_mall_directory"%></span>
-                        <%= isShopOpen ? "Đang nhận đơn" : "Đã tạm đóng"%>
+                        <span class="material-symbols-outlined text-[20px]"><%= isShopOpen ? "store" : "store_mall_directory" %></span>
+                        <%= isShopOpen ? "Đang nhận đơn" : "Đã tạm đóng" %>
                     </span>
                     <span class="relative inline-flex w-10 h-5 shrink-0">
-                        <span class="absolute inset-0 rounded-full transition-colors duration-200 <%= isShopOpen ? "bg-green-500" : "bg-gray-300"%>"></span>
-                        <span class="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 <%= isShopOpen ? "translate-x-5" : "translate-x-0.5"%>"></span>
+                        <span class="absolute inset-0 rounded-full transition-colors duration-200 <%= isShopOpen ? "bg-green-500" : "bg-gray-300" %>"></span>
+                        <span class="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 <%= isShopOpen ? "translate-x-5" : "translate-x-0.5" %>"></span>
                     </span>
                 </button>
             </form>

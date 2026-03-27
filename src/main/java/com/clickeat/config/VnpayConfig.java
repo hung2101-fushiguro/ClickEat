@@ -1,22 +1,15 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.clickeat.config;
 
-/**
- *
- * @author DELL
- */
 public class VnpayConfig {
 
-    public static final String VNP_TMN_CODE = "";
-    public static final String VNP_HASH_SECRET = "";
+    // TODO: thay bằng thông tin sandbox thật của bạn
+    public static final String VNP_TMN_CODE = "EZ1YCPZG";
+    public static final String VNP_HASH_SECRET = "ISEPO8G29V848A6E7Z8EVA54PL8FVJ13";
 
     // Sandbox URL chính thức
     public static final String VNP_PAY_URL = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
 
-    public static final String VNP_RETURN_URL = "https://piscine-jaunita-unjoyfully.ngrok-free.dev/ClickEat2/vnpay-return";
+public static final String VNP_RETURN_URL = "https://piscine-jaunita-unjoyfully.ngrok-free.dev/ClickEat2/vnpay-return";
     public static final String VNP_IPN_URL = "https://piscine-jaunita-unjoyfully.ngrok-free.dev/ClickEat2/vnpay-ipn";
 
     public static final String VNP_VERSION = "2.1.0";

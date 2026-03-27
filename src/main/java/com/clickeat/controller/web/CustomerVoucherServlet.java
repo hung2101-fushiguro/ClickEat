@@ -1,6 +1,8 @@
 package com.clickeat.controller.web;
 
+import com.clickeat.dal.impl.CustomerVoucherDAO;
 import com.clickeat.dal.impl.VoucherDAO;
+import com.clickeat.model.CustomerVoucher;
 import com.clickeat.model.User;
 import com.clickeat.model.Voucher;
 import java.io.IOException;
@@ -41,12 +43,95 @@ public class CustomerVoucherServlet extends HttpServlet {
             throws ServletException, IOException {
 
         User account = getLoggedCustomer(request, response);
-        if (account == null) return;
+        if (account == null) {
+            return;
+        }
+
+        CustomerVoucherDAO customerVoucherDAO = new CustomerVoucherDAO();
+        List<CustomerVoucher> savedVouchers = customerVoucherDAO.getSavedVouchersByCustomer(account.getId());
+
+        request.setAttribute("savedVouchers", savedVouchers);
+        request.getRequestDispatcher("/views/web/vouchers.jsp").forward(request, response);
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        User account = getLoggedCustomer(request, response);
+        if (account == null) {
+            return;
+        }
+
+        String action = request.getParameter("action");
+        if (action != null) {
+            action = action.trim();
+        }
+
+        String returnUrl = request.getParameter("returnUrl");
+        if (returnUrl == null || returnUrl.isBlank()) {
+            returnUrl = "/promotions";
+        }
+
+        if (!returnUrl.startsWith("/")) {
+            returnUrl = "/promotions";
+        }
+
+        if (!"save".equalsIgnoreCase(action)) {
+            response.sendRedirect(request.getContextPath() + returnUrl);
+            return;
+        }
+
+        String voucherIdRaw = request.getParameter("voucherId");
+        if (voucherIdRaw != null) {
+            voucherIdRaw = voucherIdRaw.trim();
+        }
+
+        if (voucherIdRaw == null || voucherIdRaw.isBlank()) {
+            request.getSession().setAttribute("toastError", "Không tìm thấy voucher để lưu.");
+            response.sendRedirect(request.getContextPath() + returnUrl);
+            return;
+        }
+
+        int voucherId;
+        try {
+            voucherId = Integer.parseInt(voucherIdRaw);
+        } catch (NumberFormatException e) {
+            request.getSession().setAttribute("toastError", "Voucher không hợp lệ.");
+            response.sendRedirect(request.getContextPath() + returnUrl);
+            return;
+        }
 
         VoucherDAO voucherDAO = new VoucherDAO();
-        List<Voucher> vouchers = voucherDAO.getAvailableVouchersForCustomer(account.getId());
+        CustomerVoucherDAO customerVoucherDAO = new CustomerVoucherDAO();
 
-        request.setAttribute("vouchers", vouchers);
-        request.getRequestDispatcher("/views/web/vouchers.jsp").forward(request, response);
+        Voucher voucher = voucherDAO.findPublicActiveById(voucherId);
+        if (voucher == null) {
+            request.getSession().setAttribute("toastError", "Voucher không tồn tại hoặc đã hết hạn.");
+            response.sendRedirect(request.getContextPath() + returnUrl);
+            return;
+        }
+
+        if (voucher.getCode() == null || voucher.getCode().isBlank()) {
+            request.getSession().setAttribute("toastError", "Voucher chưa có mã hợp lệ.");
+            response.sendRedirect(request.getContextPath() + returnUrl);
+            return;
+        }
+
+        boolean alreadySaved = customerVoucherDAO.isSaved(account.getId(), voucherId);
+        if (alreadySaved) {
+            request.getSession().setAttribute("toastMsg", "Voucher này đã có trong kho của bạn.");
+            response.sendRedirect(request.getContextPath() + returnUrl);
+            return;
+        }
+
+        boolean ok = customerVoucherDAO.saveVoucher(account.getId(), voucherId, voucher.getCode().trim());
+        if (ok) {
+            request.getSession().setAttribute("toastMsg", "Đã lưu voucher vào kho của bạn.");
+        } else {
+            request.getSession().setAttribute("toastError", "Không thể lưu voucher lúc này.");
+        }
+
+        response.sendRedirect(request.getContextPath() + returnUrl);
     }
 }

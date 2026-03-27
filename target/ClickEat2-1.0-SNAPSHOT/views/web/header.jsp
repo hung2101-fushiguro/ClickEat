@@ -34,7 +34,7 @@
                     Thực đơn
                 </a>
 
-                <a href="${ctx}/promotion"
+                <a href="${ctx}/promotions"
                    class="text-[15px] font-semibold transition border-b-2 pb-1
                    ${activePage == 'promotion' ? 'text-orange-500 border-orange-500' : 'text-gray-900 border-transparent hover:text-orange-500'}">
                     Khuyến mãi

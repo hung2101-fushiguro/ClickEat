@@ -5,7 +5,8 @@ import java.sql.Timestamp;
 public class Voucher {
 
     private int id;
-    private int merchantUserId;
+    private Integer merchantUserId;
+    private String voucherType;
     private String code;
     private String title;
     private String description;
@@ -27,8 +28,6 @@ public class Voucher {
     private String merchantName;
     private String displayDiscount;
     private String themeClass;
-    private String merchantStatusLabel;
-    private String merchantStatusClass;
 
     public Voucher() {
     }
@@ -41,12 +40,20 @@ public class Voucher {
         this.id = id;
     }
 
-    public int getMerchantUserId() {
+    public Integer getMerchantUserId() {
         return merchantUserId;
     }
 
-    public void setMerchantUserId(int merchantUserId) {
+    public void setMerchantUserId(Integer merchantUserId) {
         this.merchantUserId = merchantUserId;
+    }
+
+    public String getVoucherType() {
+        return voucherType;
+    }
+
+    public void setVoucherType(String voucherType) {
+        this.voucherType = voucherType;
     }
 
     public String getCode() {
@@ -191,22 +198,6 @@ public class Voucher {
 
     public void setThemeClass(String themeClass) {
         this.themeClass = themeClass;
-    }
-
-    public String getMerchantStatusLabel() {
-        return merchantStatusLabel;
-    }
-
-    public void setMerchantStatusLabel(String merchantStatusLabel) {
-        this.merchantStatusLabel = merchantStatusLabel;
-    }
-
-    public String getMerchantStatusClass() {
-        return merchantStatusClass;
-    }
-
-    public void setMerchantStatusClass(String merchantStatusClass) {
-        this.merchantStatusClass = merchantStatusClass;
     }
 
     public int getUsedOrderCount() {

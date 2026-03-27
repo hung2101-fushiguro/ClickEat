@@ -67,8 +67,18 @@ public class VnpayIpnServlet extends HttpServlet {
                 orderDAO.markPaidByVnpay(orderId);
 
                 Order order = orderDAO.findById(orderId);
-                if (order != null && order.getCustomerUserId() > 0) {
-                    cartDAO.clearActiveCartByCustomerId(order.getCustomerUserId());
+                if (order != null) {
+                    if (order.getVoucherId() > 0 && order.getCustomerUserId() > 0) {
+                        com.clickeat.dal.impl.VoucherDAO voucherDAO = new com.clickeat.dal.impl.VoucherDAO();
+                        com.clickeat.dal.impl.CustomerVoucherDAO customerVoucherDAO = new com.clickeat.dal.impl.CustomerVoucherDAO();
+
+                        voucherDAO.insertUsage(order.getVoucherId(), orderId, order.getCustomerUserId(), null);
+                        customerVoucherDAO.markUsed(order.getCustomerUserId(), order.getVoucherId());
+                    }
+
+                    if (order.getCustomerUserId() > 0) {
+                        cartDAO.clearActiveCartByCustomerId(order.getCustomerUserId());
+                    }
                 }
 
                 out.print("{\"RspCode\":\"00\",\"Message\":\"Confirm Success\"}");

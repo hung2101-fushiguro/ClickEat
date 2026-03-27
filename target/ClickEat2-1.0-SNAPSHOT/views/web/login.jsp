@@ -57,7 +57,6 @@
                 min-height: 560px;
             }
 
-            /* LEFT (Hero) */
             .hero{
                 position:relative;
                 padding:28px;
@@ -153,7 +152,6 @@
                 margin-top:-1px;
             }
 
-            /* RIGHT (Form) */
             .formWrap{
                 padding:40px 44px;
                 display:flex;
@@ -342,7 +340,6 @@
                 color:#9ca3af;
             }
 
-            /* Responsive */
             @media (max-width: 980px){
                 .card{
                     grid-template-columns: 1fr;
@@ -364,7 +361,6 @@
     <body>
         <div class="frame">
             <div class="card">
-                <!-- LEFT -->
                 <section class="hero">
                     <div class="brand">
                         <div class="logo" aria-hidden="true"></div>
@@ -385,7 +381,6 @@
                     </div>
                 </section>
 
-                <!-- RIGHT -->
                 <section class="formWrap">
                     <h2 class="title">Đăng nhập</h2>
                     <p class="subtitle">Chào mừng bạn quay lại! Vui lòng nhập thông tin.</p>
@@ -397,12 +392,10 @@
                         <div class="alert success">✅ ${message}</div>
                     </c:if>
 
-                    <!-- ✅ FIX 2: action dùng contextPath để không bị sai route -->
                     <form action="${pageContext.request.contextPath}/login" method="post" autocomplete="on">
                         <input type="hidden" name="redirect" value="${not empty param.redirect ? param.redirect : redirect}">
                         <div class="field">
                             <label>Email hoặc Số điện thoại</label>
-                            <!-- giữ name giống code cũ của bạn -->
                             <input class="input"
                                    type="text"
                                    name="username"
@@ -438,7 +431,6 @@
 
                         <div class="divider">HOẶC</div>
 
-                        <!-- Nếu bạn có OAuth Google: đổi href sang endpoint của bạn (vd: google-login) -->
                         <button class="btn google" type="button" onclick="location.href = '${pageContext.request.contextPath}/google-login'">
                             <svg class="googleIcon" viewBox="0 0 48 48" aria-hidden="true">
                             <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.2 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.1-.1-2.3-.4-3.5z"/>
@@ -451,7 +443,6 @@
 
                         <div class="footer">
                             Chưa có tài khoản? <a class="link" href="${pageContext.request.contextPath}/register">Đăng ký</a><br/>
-                            <span class="small">Hoặc <a class="link" href="${pageContext.request.contextPath}/shipper/register">Trở thành shipper</a> ngay!</span><br/>
                             <span class="small">Bạn là đối tác? <a class="link" href="${pageContext.request.contextPath}/merchant-login">Đăng nhập Merchant</a> · <a class="link" href="${pageContext.request.contextPath}/merchant-register">Đi tới Merchant</a></span>
                         </div>
                     </form>

@@ -189,6 +189,8 @@ public class MerchantCatalogServlet extends HttpServlet {
                 }
 
                 String imageUrl = request.getParameter("imageUrl");
+                String sizeOptions = normalizeOptionText(request.getParameter("sizeOptions"));
+                String toppingOptions = normalizeOptionText(request.getParameter("toppingOptions"));
 
                 FoodItem item = new FoodItem();
                 item.setMerchantUserId(merchantId);
@@ -197,6 +199,8 @@ public class MerchantCatalogServlet extends HttpServlet {
                 item.setPrice(price);
                 item.setCategoryId(categoryId);
                 item.setImageUrl(imageUrl);
+                item.setSizeOptions(sizeOptions);
+                item.setToppingOptions(toppingOptions);
 
                 if ("add".equals(action)) {
                     item.setAvailable(true); // Mặc định vừa thêm là có bán
@@ -223,5 +227,22 @@ public class MerchantCatalogServlet extends HttpServlet {
             request.getSession().setAttribute("catalogError", "Có lỗi khi cập nhật danh mục món.");
             response.sendRedirect(request.getContextPath() + "/merchant/catalog?error=1");
         }
+    }
+
+    private String normalizeOptionText(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        String normalized = raw.trim().replace("\r", "").replace("\n", ";");
+        while (normalized.contains(";;")) {
+            normalized = normalized.replace(";;", ";");
+        }
+        if (normalized.startsWith(";")) {
+            normalized = normalized.substring(1);
+        }
+        if (normalized.endsWith(";")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return normalized;
     }
 }

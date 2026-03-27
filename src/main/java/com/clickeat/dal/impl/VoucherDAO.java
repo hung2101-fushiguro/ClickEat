@@ -1,11 +1,9 @@
 package com.clickeat.dal.impl;
 
+import com.clickeat.model.Voucher;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.util.List;
-
-import com.clickeat.model.Voucher;
 
 public class VoucherDAO extends AbstractDAO<Voucher> {
 
@@ -37,7 +35,6 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
 
         v.setStartAt(rs.getTimestamp("start_at"));
         v.setEndAt(rs.getTimestamp("end_at"));
-        v.setStatus(rs.getString("status"));
 
         Object maxUsesTotal = rs.getObject("max_uses_total");
         if (maxUsesTotal != null) {
@@ -52,8 +49,6 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
         } else {
             v.setMaxUsesPerUser(null);
         }
-
-        v.setPublished(rs.getBoolean("is_published"));
 
         try {
             v.setCreatedAt(rs.getTimestamp("created_at"));
@@ -80,17 +75,8 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
         } catch (SQLException e) {
             v.setMerchantName(null);
         }
-        try {
-            Object usedCount = rs.getObject("used_order_count");
-            if (usedCount != null) {
-                v.setUsedOrderCount(((Number) usedCount).intValue());
-            }
-        } catch (SQLException e) {
-            v.setUsedOrderCount(0);
-        }
 
         v.setDisplayDiscount(buildDiscountLabel(v.getDiscountType(), v.getDiscountValue()));
-        applyMerchantRuntimeStatus(v);
 
         return v;
     }
@@ -281,21 +267,22 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
     public List<Voucher> getAvailableVouchersForCustomer(int customerUserId) {
         String sql = """
         SELECT v.*,
-               mp.shop_name AS merchant_name
+               mp.shop_name AS merchant_name,
+               CASE
+                   WHEN EXISTS (
+                       SELECT 1
+                       FROM CustomerVouchers cv
+                       WHERE cv.customer_user_id = ?
+                         AND cv.voucher_id = v.id
+                   ) THEN 1
+                   ELSE 0
+               END AS is_saved
         FROM Vouchers v
         INNER JOIN MerchantProfiles mp ON mp.user_id = v.merchant_user_id
         WHERE v.is_published = 1
           AND v.status = N'ACTIVE'
           AND (GETUTCDATE() BETWEEN v.start_at AND v.end_at OR GETDATE() BETWEEN v.start_at AND v.end_at)
           AND (mp.status = N'APPROVED' OR mp.status = N'Approved' OR mp.status = N'active')
-          AND (
-                v.max_uses_per_user IS NULL
-                OR v.max_uses_per_user >
-                    (SELECT COUNT(*)
-                     FROM VoucherUsages vu
-                     WHERE vu.voucher_id = v.id
-                       AND vu.customer_user_id = ?)
-              )
         ORDER BY v.end_at ASC, v.id DESC
     """;
         return query(sql, customerUserId);
@@ -311,114 +298,6 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
         return update(sql, id) > 0;
     }
 
-    public boolean togglePublishByMerchant(int voucherId, int merchantId, boolean publish) {
-        String sql = "UPDATE Vouchers SET is_published = ? WHERE id = ? AND merchant_user_id = ?";
-        int rows = update(sql, publish ? 1 : 0, voucherId, merchantId);
-        if (rows <= 0) {
-            return false;
-        }
-
-        Voucher refreshed = queryOne("SELECT * FROM Vouchers WHERE id = ? AND merchant_user_id = ?", voucherId, merchantId);
-        return refreshed != null && refreshed.isPublished() == publish;
-    }
-
-    public boolean updateByMerchant(Voucher voucher, int merchantId) {
-        String sql = """
-            UPDATE Vouchers
-            SET code = ?,
-                title = ?,
-                discount_type = ?,
-                discount_value = ?,
-                min_order_amount = ?,
-                max_uses_total = ?,
-                start_at = ?,
-                end_at = ?,
-                updated_at = SYSUTCDATETIME()
-            WHERE id = ? AND merchant_user_id = ?
-        """;
-        return update(sql,
-                voucher.getCode(),
-                voucher.getTitle(),
-                voucher.getDiscountType(),
-                voucher.getDiscountValue(),
-                voucher.getMinOrderAmount(),
-                voucher.getMaxUsesTotal(),
-                voucher.getStartAt(),
-                voucher.getEndAt(),
-                voucher.getId(),
-                merchantId
-        ) > 0;
-    }
-
-    public boolean updateStatusByMerchant(int voucherId, int merchantId, String nextStatus) {
-        String normalized = nextStatus == null ? "INACTIVE" : nextStatus.trim().toUpperCase();
-        if (!"ACTIVE".equals(normalized) && !"INACTIVE".equals(normalized)) {
-            return false;
-        }
-
-        if (columnExists("Vouchers", "updated_at")) {
-            String sql = "UPDATE Vouchers SET status = ?, is_published = CASE WHEN ? = 'INACTIVE' THEN 0 ELSE is_published END, updated_at = SYSUTCDATETIME() WHERE id = ? AND merchant_user_id = ?";
-            int rows = update(sql, normalized, normalized, voucherId, merchantId);
-            if (rows > 0) {
-                return true;
-            }
-        }
-
-        String fallbackSql = "UPDATE Vouchers SET status = ?, is_published = CASE WHEN ? = 'INACTIVE' THEN 0 ELSE is_published END WHERE id = ? AND merchant_user_id = ?";
-        return update(fallbackSql, normalized, normalized, voucherId, merchantId) > 0;
-    }
-
-    public Voucher findByMerchantAndCode(int merchantUserId, String code) {
-        String sql = """
-            SELECT v.*,
-                   mp.shop_name AS merchant_name,
-                   ISNULL(vu.used_order_count, 0) AS used_order_count
-            FROM Vouchers v
-            INNER JOIN MerchantProfiles mp ON mp.user_id = v.merchant_user_id
-            LEFT JOIN (
-                SELECT voucher_id, COUNT(*) AS used_order_count
-                FROM VoucherUsages
-                GROUP BY voucher_id
-            ) vu ON vu.voucher_id = v.id
-            WHERE v.merchant_user_id = ? AND UPPER(v.code) = UPPER(?)
-        """;
-        return queryOne(sql, merchantUserId, code);
-    }
-
-    public int countUsageByCustomer(int voucherId, int customerUserId) {
-        String sql = "SELECT COUNT(*) FROM VoucherUsages WHERE voucher_id = ? AND customer_user_id = ?";
-        List<Object[]> rows = queryRaw(sql, voucherId, customerUserId);
-        if (rows.isEmpty() || rows.get(0).length == 0 || rows.get(0)[0] == null) {
-            return 0;
-        }
-        return ((Number) rows.get(0)[0]).intValue();
-    }
-
-    public boolean createVoucherUsage(int voucherId, int orderId, int customerUserId) {
-        String sql = "INSERT INTO VoucherUsages(voucher_id, order_id, customer_user_id, used_at) VALUES (?, ?, ?, SYSUTCDATETIME())";
-        return update(sql, voucherId, orderId, customerUserId) > 0;
-    }
-
-    public boolean isVoucherCurrentlyActive(Voucher voucher) {
-        if (voucher == null) {
-            return false;
-        }
-        if (!"ACTIVE".equalsIgnoreCase(voucher.getStatus()) || !voucher.isPublished()) {
-            return false;
-        }
-
-        Timestamp now = new Timestamp(System.currentTimeMillis());
-        Timestamp startAt = voucher.getStartAt();
-        Timestamp endAt = voucher.getEndAt();
-        if (startAt != null && now.before(startAt)) {
-            return false;
-        }
-        if (endAt != null && now.after(endAt)) {
-            return false;
-        }
-        return true;
-    }
-
     private String buildDiscountLabel(String discountType, double discountValue) {
         if ("PERCENT".equalsIgnoreCase(discountType)) {
             return "Giảm " + ((int) discountValue) + "%";
@@ -426,35 +305,59 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
         return "Giảm " + ((int) discountValue / 1000) + "k";
     }
 
-    private void applyMerchantRuntimeStatus(Voucher voucher) {
-        Timestamp now = new Timestamp(System.currentTimeMillis());
+    public boolean togglePublishByMerchant(int voucherId, int merchantId, boolean publish) {
+        String sql = "UPDATE Vouchers SET is_published = ?, updated_at = SYSUTCDATETIME() WHERE id = ? AND merchant_user_id = ?";
+        return update(sql, publish, voucherId, merchantId) > 0;
+    }
 
-        if (!"ACTIVE".equalsIgnoreCase(voucher.getStatus())) {
-            voucher.setMerchantStatusLabel("Tạm dừng");
-            voucher.setMerchantStatusClass("bg-gray-100 text-gray-600");
-            return;
-        }
+    public boolean updateStatusByMerchant(int voucherId, int merchantId, String status) {
+        String sql = """
+            UPDATE Vouchers
+            SET status = ?,
+                updated_at = SYSUTCDATETIME()
+            WHERE id = ?
+              AND merchant_user_id = ?
+        """;
+        return update(sql, status, voucherId, merchantId) > 0;
+    }
 
-        if (!voucher.isPublished()) {
-            voucher.setMerchantStatusLabel("Nháp");
-            voucher.setMerchantStatusClass("bg-slate-100 text-slate-600");
-            return;
-        }
-
-        if (voucher.getStartAt() != null && now.before(voucher.getStartAt())) {
-            voucher.setMerchantStatusLabel("Sắp diễn ra");
-            voucher.setMerchantStatusClass("bg-amber-100 text-amber-700");
-            return;
-        }
-
-        if (voucher.getEndAt() != null && now.after(voucher.getEndAt())) {
-            voucher.setMerchantStatusLabel("Hết hạn");
-            voucher.setMerchantStatusClass("bg-red-100 text-red-700");
-            return;
-        }
-
-        voucher.setMerchantStatusLabel("Đang chạy");
-        voucher.setMerchantStatusClass("bg-green-100 text-green-700");
+    public boolean updateByMerchant(Voucher v, int merchantId) {
+        String sql = """
+            UPDATE Vouchers
+            SET code = ?,
+                title = ?,
+                description = ?,
+                discount_type = ?,
+                discount_value = ?,
+                max_discount_amount = ?,
+                min_order_amount = ?,
+                start_at = ?,
+                end_at = ?,
+                max_uses_total = ?,
+                max_uses_per_user = ?,
+                is_published = ?,
+                status = ?,
+                updated_at = SYSUTCDATETIME()
+            WHERE id = ?
+              AND merchant_user_id = ?
+        """;
+        return update(sql,
+                v.getCode(),
+                v.getTitle(),
+                v.getDescription(),
+                v.getDiscountType(),
+                v.getDiscountValue(),
+                v.getMaxDiscountAmount(),
+                v.getMinOrderAmount(),
+                v.getStartAt(),
+                v.getEndAt(),
+                v.getMaxUsesTotal(),
+                v.getMaxUsesPerUser(),
+                v.isPublished(),
+                v.getStatus(),
+                v.getId(),
+                merchantId
+        ) > 0;
     }
 
     public Voucher findValidVoucherByCode(int merchantUserId, String code) {
@@ -499,5 +402,143 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
             e.printStackTrace();
         }
         return 0;
+    }
+
+    public Voucher findPublicActiveById(int voucherId) {
+        String sql = """
+        SELECT v.*,
+               mp.shop_name AS merchant_name,
+               ISNULL(vu.used_order_count, 0) AS used_order_count
+        FROM Vouchers v
+        INNER JOIN MerchantProfiles mp ON mp.user_id = v.merchant_user_id
+        LEFT JOIN (
+            SELECT voucher_id, COUNT(*) AS used_order_count
+            FROM VoucherUsages
+            GROUP BY voucher_id
+        ) vu ON vu.voucher_id = v.id
+        WHERE v.id = ?
+          AND v.is_published = 1
+          AND v.status = N'ACTIVE'
+          AND (SYSUTCDATETIME() BETWEEN v.start_at AND v.end_at
+               OR GETDATE() BETWEEN v.start_at AND v.end_at)
+    """;
+        return queryOne(sql, voucherId);
+    }
+
+    public boolean insertUsage(int voucherId, int orderId, Integer customerUserId, String guestId) {
+        String sql = """
+        INSERT INTO VoucherUsages(voucher_id, order_id, customer_user_id, guest_id, used_at)
+        VALUES (?, ?, ?, ?, SYSUTCDATETIME())
+    """;
+        return update(sql, voucherId, orderId, customerUserId, guestId) > 0;
+    }
+
+    public List<Voucher> searchPublicActiveVouchers(String keyword, String tab) {
+        StringBuilder sql = new StringBuilder("""
+        SELECT v.*,
+               mp.shop_name AS merchant_name,
+               ISNULL(vu.used_order_count, 0) AS used_order_count
+        FROM Vouchers v
+        INNER JOIN MerchantProfiles mp ON mp.user_id = v.merchant_user_id
+        LEFT JOIN (
+            SELECT voucher_id, COUNT(*) AS used_order_count
+            FROM VoucherUsages
+            GROUP BY voucher_id
+        ) vu ON vu.voucher_id = v.id
+        WHERE v.is_published = 1
+          AND v.status = N'ACTIVE'
+          AND (SYSUTCDATETIME() BETWEEN v.start_at AND v.end_at
+               OR GETDATE() BETWEEN v.start_at AND v.end_at)
+          AND (mp.status = N'APPROVED' OR mp.status = N'Approved' OR mp.status = N'active')
+    """);
+
+        java.util.List<Object> params = new java.util.ArrayList<>();
+
+        if (keyword != null && !keyword.isBlank()) {
+            String k = "%" + keyword.trim() + "%";
+            sql.append("""
+            AND (
+                v.code LIKE ?
+                OR v.title LIKE ?
+                OR v.description LIKE ?
+                OR mp.shop_name LIKE ?
+                OR CAST(CAST(v.discount_value AS BIGINT) AS NVARCHAR(50)) LIKE ?
+                OR (
+                    UPPER(v.discount_type) = 'PERCENT'
+                    AND (
+                        ('GIAM ' + CAST(CAST(v.discount_value AS BIGINT) AS NVARCHAR(50)) + '%') LIKE UPPER(?)
+                        OR ('GIẢM ' + CAST(CAST(v.discount_value AS BIGINT) AS NVARCHAR(50)) + '%') LIKE UPPER(?)
+                    )
+                )
+                OR (
+                    UPPER(v.discount_type) = 'FIXED'
+                    AND (
+                        ('GIAM ' + CAST(CAST(v.discount_value / 1000 AS BIGINT) AS NVARCHAR(50)) + 'K') LIKE UPPER(?)
+                        OR ('GIẢM ' + CAST(CAST(v.discount_value / 1000 AS BIGINT) AS NVARCHAR(50)) + 'K') LIKE UPPER(?)
+                    )
+                )
+                OR (
+                    UPPER(v.discount_type) = 'FREESHIP'
+                    AND (
+                        'FREESHIP' LIKE UPPER(?)
+                        OR 'MIEN PHI' LIKE UPPER(?)
+                        OR N'MIỄN PHÍ' LIKE UPPER(?)
+                    )
+                )
+            )
+        """);
+
+            params.add(k); // code
+            params.add(k); // title
+            params.add(k); // description
+            params.add(k); // merchant
+            params.add(k); // discount value text
+            params.add(k.toUpperCase());
+            params.add(k.toUpperCase());
+            params.add(k.toUpperCase());
+            params.add(k.toUpperCase());
+            params.add(k.toUpperCase());
+            params.add(k.toUpperCase());
+            params.add(k.toUpperCase());
+        }
+
+        if (tab != null && !tab.isBlank()) {
+            switch (tab.trim().toLowerCase()) {
+                case "freeship" ->
+                    sql.append(" AND UPPER(v.discount_type) = 'FREESHIP' ");
+                case "percent" ->
+                    sql.append(" AND UPPER(v.discount_type) = 'PERCENT' ");
+                case "fixed" ->
+                    sql.append(" AND UPPER(v.discount_type) = 'FIXED' ");
+                default -> {
+                }
+            }
+        }
+
+        sql.append(" ORDER BY v.end_at ASC, v.id DESC ");
+
+        return query(sql.toString(), params.toArray());
+    }
+
+    public List<Voucher> getAllPublicActiveVouchers() {
+        String sql = """
+        SELECT v.*,
+               mp.shop_name AS merchant_name,
+               ISNULL(vu.used_order_count, 0) AS used_order_count
+        FROM Vouchers v
+        INNER JOIN MerchantProfiles mp ON mp.user_id = v.merchant_user_id
+        LEFT JOIN (
+            SELECT voucher_id, COUNT(*) AS used_order_count
+            FROM VoucherUsages
+            GROUP BY voucher_id
+        ) vu ON vu.voucher_id = v.id
+        WHERE v.is_published = 1
+          AND v.status = N'ACTIVE'
+          AND (SYSUTCDATETIME() BETWEEN v.start_at AND v.end_at
+               OR GETDATE() BETWEEN v.start_at AND v.end_at)
+          AND (mp.status = N'APPROVED' OR mp.status = N'Approved' OR mp.status = N'active')
+        ORDER BY v.end_at ASC, v.id DESC
+    """;
+        return query(sql);
     }
 }

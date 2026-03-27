@@ -1,13 +1,14 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
-<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
+<%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
 <% request.setAttribute("currentPage", "reviews");%>
 <!DOCTYPE html>
 <html lang="vi">
     <head>
         <meta charset="UTF-8"/>
         <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/responsive-global.css">
         <title>Đánh giá – ClickEat Merchant</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <script>
@@ -49,17 +50,17 @@
                             <p class="text-gray-500 text-sm mt-1">Quản lý phản hồi và danh tiếng</p>
                         </div>
                         <div class="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm w-full md:w-auto overflow-x-auto">
-                            <a href="${pageContext.request.contextPath}/merchant/reviews?filter=all"
+                            <a href="${pageContext.request.contextPath}/merchant/reviews?filter=all&page=1"
                             class="flex-1 md:flex-none px-4 py-1.5 rounded-md text-sm font-semibold shadow-sm transition-all whitespace-nowrap
                             ${filter == 'all' || empty filter ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-50'}">
                             Tất cả
                         </a>
-                        <a href="${pageContext.request.contextPath}/merchant/reviews?filter=unanswered"
+                        <a href="${pageContext.request.contextPath}/merchant/reviews?filter=unanswered&page=1"
                         class="flex-1 md:flex-none px-4 py-1.5 rounded-md text-sm font-semibold shadow-sm transition-all whitespace-nowrap
                         ${filter == 'unanswered' ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-50'}">
                         Chưa trả lời
                     </a>
-                    <a href="${pageContext.request.contextPath}/merchant/reviews?filter=negative"
+                    <a href="${pageContext.request.contextPath}/merchant/reviews?filter=negative&page=1"
                     class="flex-1 md:flex-none px-4 py-1.5 rounded-md text-sm font-semibold shadow-sm transition-all whitespace-nowrap
                     ${filter == 'negative' ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-50'}">
                     Tiêu cực (1-3 sao)
@@ -149,6 +150,7 @@
                                         <input type="hidden" name="action" value="reply"/>
                                         <input type="hidden" name="ratingId" value="${rId}"/>
                                         <input type="hidden" name="filter" value="${filter}"/>
+                                        <input type="hidden" name="page" value="${currentPageNum}"/>
 
                                         <input type="text" name="replyText" placeholder="Viết phản hồi cho khách hàng..." required
                                         oninput="this.nextElementSibling.disabled = !this.value.trim()"
@@ -165,8 +167,21 @@
                 </c:forEach>
             </c:otherwise>
         </c:choose>
+
+        <c:if test="${totalPages > 1}">
+            <div class="mt-6 flex items-center justify-between gap-3 bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+                <p class="text-sm text-gray-500 font-semibold">Hiển thị ${fn:length(reviews)} / ${filteredTotal} đánh giá</p>
+                <div class="flex items-center gap-2">
+                    <a href="${pageContext.request.contextPath}/merchant/reviews?filter=${filter}&page=${currentPageNum > 1 ? currentPageNum - 1 : 1}"
+                        class="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-semibold ${currentPageNum > 1 ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-300 pointer-events-none'}">Trước</a>
+                        <span class="text-sm font-bold text-gray-700">Trang ${currentPageNum}/${totalPages}</span>
+                        <a href="${pageContext.request.contextPath}/merchant/reviews?filter=${filter}&page=${currentPageNum < totalPages ? currentPageNum + 1 : totalPages}"
+                        class="px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-semibold ${currentPageNum < totalPages ? 'text-gray-700 hover:bg-gray-50' : 'text-gray-300 pointer-events-none'}">Sau</a>
+                    </div>
+                </div>
+            </c:if>
+        </div>
     </div>
-</div>
 </div>
 </div>
 

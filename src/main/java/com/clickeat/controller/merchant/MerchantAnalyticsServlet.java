@@ -4,16 +4,18 @@
  */
 package com.clickeat.controller.merchant;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+
 import com.clickeat.dal.impl.OrderDAO;
 import com.clickeat.model.User;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
 
 /**
  *
@@ -39,14 +41,25 @@ public class MerchantAnalyticsServlet extends HttpServlet {
         }
 
         String periodStr = request.getParameter("period");
-        int days = (periodStr != null) ? Integer.parseInt(periodStr) : 7;
+        int days = 7;
+        if (periodStr != null && !periodStr.isBlank()) {
+            try {
+                int parsed = Integer.parseInt(periodStr);
+                if (parsed == 7 || parsed == 30 || parsed == 90) {
+                    days = parsed;
+                }
+            } catch (NumberFormatException ignored) {
+            }
+        }
 
         OrderDAO orderDAO = new OrderDAO();
         Map<String, Double> revenueData = orderDAO.getRevenueByPeriod(account.getId(), days);
         List<Map<String, Object>> topFoods = orderDAO.getTopSellingFoods(account.getId(), 5);
+        Map<String, Integer> orderStatusData = orderDAO.getOrderStatusBreakdown(account.getId(), days);
 
         request.setAttribute("revenueData", revenueData);
         request.setAttribute("topFoods", topFoods);
+        request.setAttribute("orderStatusData", orderStatusData);
         request.setAttribute("period", days);
         request.setAttribute("currentPage", "analytics");
 

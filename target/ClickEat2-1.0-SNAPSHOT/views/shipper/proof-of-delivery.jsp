@@ -1,7 +1,7 @@
-<%-- 
-    Document   : proof-of-delivery
-    Created on : Mar 6, 2026, 1:02:16 PM
-    Author     : DELL
+<%--
+Document   : proof-of-delivery
+Created on : Mar 6, 2026, 1:02:16 PM
+Author     : DELL
 --%>
 
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
@@ -9,10 +9,24 @@
 <html lang="vi">
     <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/responsive-global.css">
         <title>Xác nhận giao hàng - ClickEat Shipper</title>
         <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/assets/images/shipperlogo.png">
         <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        fontFamily: {sans: ['Inter', 'sans-serif']},
+                        colors: {primary: '#c86601', 'primary-dark': '#a05201'}
+                    }
+                }
+            };
+        </script>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+        <style>body { font-family: 'Inter', sans-serif; }</style>
     </head>
     <body class="bg-gray-900 flex justify-center min-h-screen">
 
@@ -56,7 +70,7 @@
             const imagePreview = document.getElementById('imagePreview');
             const uploadPlaceholder = document.getElementById('uploadPlaceholder');
             const submitBtn = document.getElementById('submitBtn');
-
+            
             imageInput.addEventListener('change', function () {
                 const file = this.files[0];
                 if (file) {

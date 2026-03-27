@@ -1,10 +1,11 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <!DOCTYPE html>
 <html lang="vi">
     <head>
         <meta charset="UTF-8"/>
         <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/responsive-global.css">
         <title>ClickEat – Đăng nhập</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -57,7 +58,7 @@
                 </div>
 
                 <!-- Form -->
-                <form method="POST" action="${pageContext.request.contextPath}/merchant/login" class="space-y-5">
+                <form method="POST" action="${pageContext.request.contextPath}/login" class="space-y-5">
 
                     <!-- Email -->
                     <div>
@@ -131,6 +132,7 @@
         <!-- Hidden form — JS fills credential then submits -->
         <form id="googleAuthForm" method="POST" action="${pageContext.request.contextPath}/merchant/auth/google">
             <input type="hidden" id="googleCredential" name="credential"/>
+            <input type="hidden" name="mode" value="login"/>
         </form>
         <div id="googleBtnContainer" class="flex justify-center"></div>
 

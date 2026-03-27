@@ -1,15 +1,18 @@
 package com.clickeat.controller.merchant;
 
+import java.io.IOException;
+import java.util.List;
+
+import com.clickeat.dal.impl.NotificationDAO;
 import com.clickeat.dal.impl.OrderDAO;
 import com.clickeat.model.Order;
 import com.clickeat.model.User;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.List;
 
 @WebServlet(name = "MerchantOrderServlet", urlPatterns = {"/merchant/orders"})
 public class MerchantOrderServlet extends HttpServlet {
@@ -104,6 +107,20 @@ public class MerchantOrderServlet extends HttpServlet {
         } catch (Exception e) {
             e.printStackTrace();
             message = "Có lỗi khi cập nhật đơn hàng.";
+        }
+
+        if (success) {
+            Order changedOrder = orderDAO.findById((int) orderId);
+            if (changedOrder != null && changedOrder.getCustomerUserId() > 0) {
+                NotificationDAO notificationDAO = new NotificationDAO();
+                if ("accept".equals(action)) {
+                    notificationDAO.createForUser(changedOrder.getCustomerUserId(), "ORDER", "Đơn #" + changedOrder.getOrderCode() + " đã được quán xác nhận và đang chuẩn bị.");
+                } else if ("ready".equals(action)) {
+                    notificationDAO.createForUser(changedOrder.getCustomerUserId(), "ORDER", "Đơn #" + changedOrder.getOrderCode() + " đã sẵn sàng để shipper lấy.");
+                } else if ("cancel".equals(action)) {
+                    notificationDAO.createForUser(changedOrder.getCustomerUserId(), "ORDER", "Đơn #" + changedOrder.getOrderCode() + " đã bị quán hủy.");
+                }
+            }
         }
 
         if (message != null) {

@@ -1,10 +1,11 @@
 package com.clickeat.dal.impl;
 
-import com.clickeat.dal.interfaces.IFoodItemDAO;
-import com.clickeat.model.FoodItem;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+
+import com.clickeat.dal.interfaces.IFoodItemDAO;
+import com.clickeat.model.FoodItem;
 
 public class FoodItemDAO extends AbstractDAO<FoodItem> implements IFoodItemDAO {
 
@@ -44,6 +45,8 @@ public class FoodItemDAO extends AbstractDAO<FoodItem> implements IFoodItemDAO {
 
         food.setMerchantName(getNullableString(rs, "merchant_name"));
         food.setCategoryName(getNullableString(rs, "category_name"));
+        food.setSizeOptions(getNullableString(rs, "size_options"));
+        food.setToppingOptions(getNullableString(rs, "topping_options"));
 
         int discountPercent = getNullableInt(rs, "discount_percent", 0);
         food.setDiscountPercent(discountPercent);
@@ -134,8 +137,8 @@ public class FoodItemDAO extends AbstractDAO<FoodItem> implements IFoodItemDAO {
     public int insert(FoodItem food) {
         String sql = """
             INSERT INTO FoodItems
-            (merchant_user_id, category_id, name, description, price, image_url, is_available, is_fried)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (merchant_user_id, category_id, name, description, price, image_url, is_available, is_fried, size_options, topping_options)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
         return update(sql,
                 food.getMerchantUserId(),
@@ -145,14 +148,16 @@ public class FoodItemDAO extends AbstractDAO<FoodItem> implements IFoodItemDAO {
                 food.getPrice(),
                 food.getImageUrl(),
                 food.isAvailable(),
-                food.isFried());
+                food.isFried(),
+                food.getSizeOptions(),
+                food.getToppingOptions());
     }
 
     @Override
     public boolean update(FoodItem food) {
         String sql = """
             UPDATE FoodItems
-            SET name = ?, description = ?, price = ?, image_url = ?, is_available = ?, is_fried = ?
+            SET name = ?, description = ?, price = ?, image_url = ?, is_available = ?, is_fried = ?, size_options = ?, topping_options = ?
             WHERE id = ?
         """;
         return update(sql,
@@ -162,6 +167,8 @@ public class FoodItemDAO extends AbstractDAO<FoodItem> implements IFoodItemDAO {
                 food.getImageUrl(),
                 food.isAvailable(),
                 food.isFried(),
+                food.getSizeOptions(),
+                food.getToppingOptions(),
                 food.getId()) > 0;
     }
 
@@ -223,6 +230,19 @@ public class FoodItemDAO extends AbstractDAO<FoodItem> implements IFoodItemDAO {
     }
 
     public List<FoodItem> findStoreFoods(int merchantUserId, Integer categoryId, String keyword, String filter) {
+        return findStoreFoodsPaged(merchantUserId, categoryId, keyword, filter, null, 1, 200);
+    }
+
+    public List<FoodItem> findStoreFoodsPaged(int merchantUserId, Integer categoryId, String keyword,
+            String filter, String sortBy, int page, int pageSize) {
+        if (page <= 0) {
+            page = 1;
+        }
+        if (pageSize <= 0) {
+            pageSize = 12;
+        }
+        int offset = (page - 1) * pageSize;
+
         StringBuilder sql = new StringBuilder("""
         SELECT fi.*,
                mp.shop_name AS merchant_name,
@@ -262,15 +282,68 @@ public class FoodItemDAO extends AbstractDAO<FoodItem> implements IFoodItemDAO {
             params.add(kw);
         }
 
-        if ("banchay".equalsIgnoreCase(filter)) {
-            sql.append(" ORDER BY discount_percent DESC, fi.id DESC ");
-        } else if ("giamgia".equalsIgnoreCase(filter)) {
+        if ("giamgia".equalsIgnoreCase(filter)) {
             sql.append(" ORDER BY original_price - fi.price DESC, fi.id DESC ");
+        } else if ("banchay".equalsIgnoreCase(filter)) {
+            sql.append(" ORDER BY discount_percent DESC, fi.id DESC ");
+        } else if ("price_asc".equalsIgnoreCase(sortBy)) {
+            sql.append(" ORDER BY fi.price ASC, fi.id DESC ");
+        } else if ("price_desc".equalsIgnoreCase(sortBy)) {
+            sql.append(" ORDER BY fi.price DESC, fi.id DESC ");
+        } else if ("name_asc".equalsIgnoreCase(sortBy)) {
+            sql.append(" ORDER BY fi.name ASC, fi.id DESC ");
         } else {
             sql.append(" ORDER BY fi.id DESC ");
         }
 
+        sql.append(" OFFSET ? ROWS FETCH NEXT ? ROWS ONLY ");
+        params.add(offset);
+        params.add(pageSize);
+
         return query(sql.toString(), params.toArray());
+    }
+
+    public int countStoreFoods(int merchantUserId, Integer categoryId, String keyword) {
+        StringBuilder sql = new StringBuilder("""
+            SELECT COUNT(1)
+            FROM FoodItems fi
+            INNER JOIN MerchantProfiles mp ON mp.user_id = fi.merchant_user_id
+            WHERE fi.merchant_user_id = ?
+              AND fi.is_available = 1
+              AND mp.status = 'APPROVED'
+        """);
+
+        java.util.List<Object> params = new java.util.ArrayList<>();
+        params.add(merchantUserId);
+
+        if (categoryId != null) {
+            sql.append(" AND fi.category_id = ? ");
+            params.add(categoryId);
+        }
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql.append(" AND (fi.name LIKE ? OR fi.description LIKE ?) ");
+            String kw = "%" + keyword.trim() + "%";
+            params.add(kw);
+            params.add(kw);
+        }
+
+        return executeCount(sql.toString(), params.toArray());
+    }
+
+    private int executeCount(String sql, Object... params) {
+        try (java.sql.Connection conn = getConnection(); java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            for (int i = 0; i < params.length; i++) {
+                ps.setObject(i + 1, params[i]);
+            }
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (java.sql.SQLException ignored) {
+        }
+        return 0;
     }
 
     public FoodItem findStoreFoodById(int foodId) {
@@ -302,100 +375,193 @@ public class FoodItemDAO extends AbstractDAO<FoodItem> implements IFoodItemDAO {
         String sql = "SELECT * FROM FoodItems WHERE merchant_user_id = ? ORDER BY id DESC";
         return query(sql, merchantId);
     }
-    
+
+    public List<FoodItem> searchPublicMenuFoods(String keyword, String sortBy, int page, int pageSize,
+            Double customerLat, Double customerLng, double maxDistanceKm) {
+        if (page <= 0) {
+            page = 1;
+        }
+        if (pageSize <= 0) {
+            pageSize = 12;
+        }
+        int offset = (page - 1) * pageSize;
+
+        StringBuilder sql = new StringBuilder("""
+            SELECT fi.*, mp.shop_name AS merchant_name, c.name AS category_name,
+                   CASE
+                       WHEN fi.id % 4 = 1 THEN 27
+                       WHEN fi.id % 4 = 2 THEN 16
+                       WHEN fi.id % 4 = 3 THEN 24
+                       ELSE 19
+                   END AS discount_percent,
+                   CASE
+                       WHEN fi.id % 4 = 1 THEN ROUND(fi.price / 0.73, 0)
+                       WHEN fi.id % 4 = 2 THEN ROUND(fi.price / 0.84, 0)
+                       WHEN fi.id % 4 = 3 THEN ROUND(fi.price / 0.76, 0)
+                       ELSE ROUND(fi.price / 0.81, 0)
+                   END AS original_price
+            FROM FoodItems fi
+            INNER JOIN MerchantProfiles mp ON mp.user_id = fi.merchant_user_id
+            INNER JOIN Categories c ON c.id = fi.category_id
+            WHERE fi.is_available = 1
+              AND mp.status = N'APPROVED'
+        """);
+
+        java.util.List<Object> params = new java.util.ArrayList<>();
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql.append(" AND (fi.name LIKE ? OR c.name LIKE ? OR mp.shop_name LIKE ?) ");
+            String kw = "%" + keyword.trim() + "%";
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+        }
+
+        if (customerLat != null && customerLng != null && maxDistanceKm > 0) {
+            sql.append("""
+                 AND mp.latitude IS NOT NULL
+                 AND mp.longitude IS NOT NULL
+                 AND mp.latitude <> 0
+                 AND mp.longitude <> 0
+                 AND (
+                    6371.0 * ACOS(
+                        CASE
+                            WHEN (COS(RADIANS(?)) * COS(RADIANS(mp.latitude)) * COS(RADIANS(mp.longitude) - RADIANS(?))
+                                 + SIN(RADIANS(?)) * SIN(RADIANS(mp.latitude))) > 1 THEN 1
+                            WHEN (COS(RADIANS(?)) * COS(RADIANS(mp.latitude)) * COS(RADIANS(mp.longitude) - RADIANS(?))
+                                 + SIN(RADIANS(?)) * SIN(RADIANS(mp.latitude))) < -1 THEN -1
+                            ELSE (COS(RADIANS(?)) * COS(RADIANS(mp.latitude)) * COS(RADIANS(mp.longitude) - RADIANS(?))
+                                 + SIN(RADIANS(?)) * SIN(RADIANS(mp.latitude)))
+                        END
+                    )
+                 ) <= ?
+            """);
+            params.add(customerLat);
+            params.add(customerLng);
+            params.add(customerLat);
+            params.add(customerLat);
+            params.add(customerLng);
+            params.add(customerLat);
+            params.add(customerLat);
+            params.add(customerLng);
+            params.add(customerLat);
+            params.add(maxDistanceKm);
+        }
+
+        if ("price_asc".equalsIgnoreCase(sortBy)) {
+            sql.append(" ORDER BY fi.price ASC, fi.id DESC ");
+        } else if ("price_desc".equalsIgnoreCase(sortBy)) {
+            sql.append(" ORDER BY fi.price DESC, fi.id DESC ");
+        } else if ("discount_desc".equalsIgnoreCase(sortBy)) {
+            sql.append(" ORDER BY discount_percent DESC, fi.id DESC ");
+        } else {
+            sql.append(" ORDER BY fi.id DESC ");
+        }
+
+        sql.append(" OFFSET ? ROWS FETCH NEXT ? ROWS ONLY ");
+        params.add(offset);
+        params.add(pageSize);
+        return query(sql.toString(), params.toArray());
+    }
+
+    public int countPublicMenuFoods(String keyword, Double customerLat, Double customerLng, double maxDistanceKm) {
+        StringBuilder sql = new StringBuilder("""
+            SELECT COUNT(1)
+            FROM FoodItems fi
+            INNER JOIN MerchantProfiles mp ON mp.user_id = fi.merchant_user_id
+            INNER JOIN Categories c ON c.id = fi.category_id
+            WHERE fi.is_available = 1
+              AND mp.status = N'APPROVED'
+        """);
+
+        java.util.List<Object> params = new java.util.ArrayList<>();
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql.append(" AND (fi.name LIKE ? OR c.name LIKE ? OR mp.shop_name LIKE ?) ");
+            String kw = "%" + keyword.trim() + "%";
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
+        }
+
+        if (customerLat != null && customerLng != null && maxDistanceKm > 0) {
+            sql.append("""
+                 AND mp.latitude IS NOT NULL
+                 AND mp.longitude IS NOT NULL
+                 AND mp.latitude <> 0
+                 AND mp.longitude <> 0
+                 AND (
+                    6371.0 * ACOS(
+                        CASE
+                            WHEN (COS(RADIANS(?)) * COS(RADIANS(mp.latitude)) * COS(RADIANS(mp.longitude) - RADIANS(?))
+                                 + SIN(RADIANS(?)) * SIN(RADIANS(mp.latitude))) > 1 THEN 1
+                            WHEN (COS(RADIANS(?)) * COS(RADIANS(mp.latitude)) * COS(RADIANS(mp.longitude) - RADIANS(?))
+                                 + SIN(RADIANS(?)) * SIN(RADIANS(mp.latitude))) < -1 THEN -1
+                            ELSE (COS(RADIANS(?)) * COS(RADIANS(mp.latitude)) * COS(RADIANS(mp.longitude) - RADIANS(?))
+                                 + SIN(RADIANS(?)) * SIN(RADIANS(mp.latitude)))
+                        END
+                    )
+                 ) <= ?
+            """);
+            params.add(customerLat);
+            params.add(customerLng);
+            params.add(customerLat);
+            params.add(customerLat);
+            params.add(customerLng);
+            params.add(customerLat);
+            params.add(customerLat);
+            params.add(customerLng);
+            params.add(customerLat);
+            params.add(maxDistanceKm);
+        }
+        return executeCount(sql.toString(), params.toArray());
+    }
+
     public boolean toggleStatus(int itemId, int merchantId, boolean isAvailable) {
         String sql = "UPDATE FoodItems SET is_available = ?, updated_at = SYSUTCDATETIME() WHERE id = ? AND merchant_user_id = ?";
         return update(sql, isAvailable, itemId, merchantId) > 0;
     }
 
     public java.util.List<com.clickeat.model.FoodItem> getPromotedFoods(int limit) {
-        if (limit <= 0) limit = 12;
-        String sql = "SELECT fi.*, mp.shop_name AS merchant_name, c.name AS category_name, " +
-               "CASE WHEN fi.id % 4 = 1 THEN 27 WHEN fi.id % 4 = 2 THEN 16 WHEN fi.id % 4 = 3 THEN 24 ELSE 19 END AS discount_percent, " +
-               "CASE WHEN fi.id % 4 = 1 THEN ROUND(fi.price / 0.73, 0) WHEN fi.id % 4 = 2 THEN ROUND(fi.price / 0.84, 0) WHEN fi.id % 4 = 3 THEN ROUND(fi.price / 0.76, 0) ELSE ROUND(fi.price / 0.81, 0) END AS original_price " +
-               "FROM FoodItems fi " +
-               "INNER JOIN MerchantProfiles mp ON mp.user_id = fi.merchant_user_id " +
-               "INNER JOIN Categories c ON c.id = fi.category_id " +
-               "WHERE fi.is_available = 1 AND mp.status = 'APPROVED' " +
-               "ORDER BY discount_percent DESC, fi.id DESC " +
-               "OFFSET 0 ROWS FETCH NEXT ? ROWS ONLY";
+        if (limit <= 0) {
+            limit = 12;
+        }
+        String sql = "SELECT fi.*, mp.shop_name AS merchant_name, c.name AS category_name, "
+                + "CASE WHEN fi.id % 4 = 1 THEN 27 WHEN fi.id % 4 = 2 THEN 16 WHEN fi.id % 4 = 3 THEN 24 ELSE 19 END AS discount_percent, "
+                + "CASE WHEN fi.id % 4 = 1 THEN ROUND(fi.price / 0.73, 0) WHEN fi.id % 4 = 2 THEN ROUND(fi.price / 0.84, 0) WHEN fi.id % 4 = 3 THEN ROUND(fi.price / 0.76, 0) ELSE ROUND(fi.price / 0.81, 0) END AS original_price "
+                + "FROM FoodItems fi "
+                + "INNER JOIN MerchantProfiles mp ON mp.user_id = fi.merchant_user_id "
+                + "INNER JOIN Categories c ON c.id = fi.category_id "
+                + "WHERE fi.is_available = 1 AND mp.status = 'APPROVED' "
+                + "ORDER BY discount_percent DESC, fi.id DESC "
+                + "OFFSET 0 ROWS FETCH NEXT ? ROWS ONLY";
         return query(sql, limit);
     }
-
-
 
     public boolean toggleStatus(int itemId, int merchantId, boolean isAvailable, String reason) {
         String sqlWithReason = "UPDATE FoodItems SET is_available = ?, out_of_stock_reason = ?, updated_at = SYSUTCDATETIME() WHERE id = ? AND merchant_user_id = ?";
         String finalReason = isAvailable ? null : reason;
         int updated = update(sqlWithReason, isAvailable, finalReason, itemId, merchantId);
-        if (updated > 0) return true;
+        if (updated > 0) {
+            return true;
+        }
         String fallbackSql = "UPDATE FoodItems SET is_available = ?, updated_at = SYSUTCDATETIME() WHERE id = ? AND merchant_user_id = ?";
         return update(fallbackSql, isAvailable, itemId, merchantId) > 0;
     }
 
     public int bulkToggleStatus(java.util.List<Integer> itemIds, int merchantId, boolean isAvailable, String reason) {
-        if (itemIds == null || itemIds.isEmpty()) return 0;
+        if (itemIds == null || itemIds.isEmpty()) {
+            return 0;
+        }
         int affected = 0;
         for (Integer itemId : itemIds) {
-            if (itemId == null) continue;
-            if (toggleStatus(itemId, merchantId, isAvailable, reason)) affected++;
+            if (itemId == null) {
+                continue;
+            }
+            if (toggleStatus(itemId, merchantId, isAvailable, reason)) {
+                affected++;
+            }
         }
         return affected;
-    }
-
-    public List<FoodItem> getAllAvailableFoods() {
-        String sql = """
-            SELECT fi.*,
-                   mp.shop_name AS merchant_name,
-                   c.name AS category_name,
-                   CASE
-                       WHEN fi.id % 4 = 1 THEN 27
-                       WHEN fi.id % 4 = 2 THEN 16
-                       WHEN fi.id % 4 = 3 THEN 24
-                       ELSE 19
-                   END AS discount_percent,
-                   CASE
-                       WHEN fi.id % 4 = 1 THEN ROUND(fi.price / 0.73, 0)
-                       WHEN fi.id % 4 = 2 THEN ROUND(fi.price / 0.84, 0)
-                       WHEN fi.id % 4 = 3 THEN ROUND(fi.price / 0.76, 0)
-                       ELSE ROUND(fi.price / 0.81, 0)
-                   END AS original_price
-            FROM FoodItems fi
-            INNER JOIN MerchantProfiles mp ON mp.user_id = fi.merchant_user_id
-            INNER JOIN Categories c ON c.id = fi.category_id
-            WHERE fi.is_available = 1
-              AND mp.status = 'APPROVED'
-            ORDER BY c.name, fi.id DESC
-        """;
-        return query(sql);
-    }
-
-    public List<FoodItem> getFoodsByCategoryName(String categoryName) {
-        String sql = """
-            SELECT fi.*,
-                   mp.shop_name AS merchant_name,
-                   c.name AS category_name,
-                   CASE
-                       WHEN fi.id % 4 = 1 THEN 27
-                       WHEN fi.id % 4 = 2 THEN 16
-                       WHEN fi.id % 4 = 3 THEN 24
-                       ELSE 19
-                   END AS discount_percent,
-                   CASE
-                       WHEN fi.id % 4 = 1 THEN ROUND(fi.price / 0.73, 0)
-                       WHEN fi.id % 4 = 2 THEN ROUND(fi.price / 0.84, 0)
-                       WHEN fi.id % 4 = 3 THEN ROUND(fi.price / 0.76, 0)
-                       ELSE ROUND(fi.price / 0.81, 0)
-                   END AS original_price
-            FROM FoodItems fi
-            INNER JOIN MerchantProfiles mp ON mp.user_id = fi.merchant_user_id
-            INNER JOIN Categories c ON c.id = fi.category_id
-            WHERE fi.is_available = 1
-              AND mp.status = 'APPROVED'
-              AND (UPPER(c.name) = UPPER(?) OR UPPER(fi.name) LIKE UPPER(?))
-            ORDER BY fi.id DESC
-        """;
-        return query(sql, categoryName, "%" + categoryName + "%");
     }
 
 }

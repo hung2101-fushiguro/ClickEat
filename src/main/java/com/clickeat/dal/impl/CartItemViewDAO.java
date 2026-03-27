@@ -1,9 +1,10 @@
 package com.clickeat.dal.impl;
 
-import com.clickeat.model.CartItemView;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+
+import com.clickeat.model.CartItemView;
 
 public class CartItemViewDAO extends AbstractDAO<CartItemView> {
 
@@ -15,7 +16,9 @@ public class CartItemViewDAO extends AbstractDAO<CartItemView> {
             fi.name AS food_name,
             fi.image_url AS image_url,
             ci.unit_price_snapshot AS unit_price,
-            ci.quantity AS quantity
+            ci.quantity AS quantity,
+            ci.selected_size AS selected_size,
+            ci.selected_toppings AS selected_toppings
         FROM dbo.CartItems ci
         JOIN dbo.FoodItems fi ON fi.id = ci.food_item_id
     """;
@@ -30,7 +33,26 @@ public class CartItemViewDAO extends AbstractDAO<CartItemView> {
         v.setImageUrl(rs.getString("image_url"));
         v.setUnitPrice(rs.getDouble("unit_price"));
         v.setQuantity(rs.getInt("quantity"));
+        String selectedSize = rs.getString("selected_size");
+        String selectedToppings = rs.getString("selected_toppings");
+        v.setSelectedSize(selectedSize);
+        v.setSelectedToppings(selectedToppings);
+        v.setOptionSummary(buildOptionSummary(selectedSize, selectedToppings));
         return v;
+    }
+
+    private String buildOptionSummary(String selectedSize, String selectedToppings) {
+        StringBuilder summary = new StringBuilder();
+        if (selectedSize != null && !selectedSize.isBlank()) {
+            summary.append("Size ").append(selectedSize.trim());
+        }
+        if (selectedToppings != null && !selectedToppings.isBlank()) {
+            if (summary.length() > 0) {
+                summary.append(" • ");
+            }
+            summary.append(selectedToppings.trim());
+        }
+        return summary.toString();
     }
 
     public List<CartItemView> getByCartId(int cartId) {

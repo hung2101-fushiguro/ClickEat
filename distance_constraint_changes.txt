@@ -1,0 +1,17 @@
+Bản cập nhật ràng buộc khoảng cách 4km cho Shipper:
+
+Tệp tin đã sửa đổi:
+- e:\Satoru\Documents\PRJ\ClickEat2\src\main\java\com\clickeat\dal\impl\OrderDAO.java
+
+Nội dung thay đổi:
+1. Sửa hàm getAvailableOrdersForShipper(int shipperId) để thực hiện kiểm tra bán kính.
+2. Logic thực hiện:
+   - Truy vấn vị trí hiện tại của shipper từ bảng ShipperAvailability (current_latitude, current_longitude).
+   - Nếu shipper chưa cập nhật vị trí hoặc vị trí là (0,0), hàm sẽ trả về danh sách trống để đảm bảo an toàn.
+   - Truy vấn các đơn hàng đang ở trạng thái 'MERCHANT_ACCEPTED', 'PREPARING', hoặc 'READY_FOR_PICKUP' đã kèm theo tọa độ của cửa hàng (MerchantProfiles).
+   - Sử dụng công thức Haversine (thông qua hàm distanceKm có sẵn trong OrderDAO) để tính khoảng cách giữa ví trí hiện tại của Shipper và vị trí của Quán ăn.
+   - Chỉ trả về các đơn hàng có khoảng cách nhỏ hơn hoặc bằng 4km.
+
+Lợi ích:
+- Giúp shipper chỉ nhìn thấy các đơn hàng gần mình, tối ưu hóa thời gian nhận hàng.
+- Đảm bảo shipper phải bật vị trí mới có thể nhận đơn.

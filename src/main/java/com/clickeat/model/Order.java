@@ -35,11 +35,12 @@ public class Order {
     private Timestamp pickedUpAt;
     private Timestamp deliveredAt;
     private Timestamp cancelledAt;
+    private int voucherId;
 
     public Order() {
     }
 
-    public Order(int id, String orderCode, int customerUserId, String guestId, int merchantId, int shipperUserId, String receiverName, String receiverPhone, String deliveryAddressLine, String provinceCode, String provinceName, String districtCode, String districtName, String wardCode, String wardName, double latitude, double longitude, String deliveryNote, String paymentMethod, String paymentStatus, String orderStatus, double subtotalAmount, double deliveryFee, double discountAmount, double totalAmount, Timestamp createdAt, Timestamp acceptedAt, Timestamp readyAt, Timestamp pickedUpAt, Timestamp deliveredAt, Timestamp cancelledAt) {
+    public Order(int id, String orderCode, int customerUserId, String guestId, int merchantId, int shipperUserId, String receiverName, String receiverPhone, String deliveryAddressLine, String provinceCode, String provinceName, String districtCode, String districtName, String wardCode, String wardName, double latitude, double longitude, String deliveryNote, String paymentMethod, String paymentStatus, String orderStatus, double subtotalAmount, double deliveryFee, double discountAmount, double totalAmount, Timestamp createdAt, Timestamp acceptedAt, Timestamp readyAt, Timestamp pickedUpAt, Timestamp deliveredAt, Timestamp cancelledAt, int voucherId) {
         this.id = id;
         this.orderCode = orderCode;
         this.customerUserId = customerUserId;
@@ -71,6 +72,7 @@ public class Order {
         this.pickedUpAt = pickedUpAt;
         this.deliveredAt = deliveredAt;
         this.cancelledAt = cancelledAt;
+        this.voucherId = voucherId;
     }
 
     public int getId() {
@@ -329,5 +331,30 @@ public class Order {
 
     public void setShopName(String shopName) {
         this.shopName = shopName;
+    }
+
+    public int getVoucherId() {
+        return voucherId;
+    }
+
+    public void setVoucherId(int voucherId) {
+        this.voucherId = voucherId;
+    }
+
+    // Backward-compatible aliases for mixed naming styles in older call sites.
+    public int getVoucherID() {
+        return getVoucherId();
+    }
+
+    public void setVoucherID(int voucherId) {
+        setVoucherId(voucherId);
+    }
+
+    public int getVoucherid() {
+        return getVoucherId();
+    }
+
+    public void setVoucherid(int voucherId) {
+        setVoucherId(voucherId);
     }
 }

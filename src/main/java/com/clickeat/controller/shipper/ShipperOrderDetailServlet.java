@@ -4,12 +4,15 @@
  */
 package com.clickeat.controller.shipper;
 
+import java.io.IOException;
+
 import com.clickeat.dal.impl.MerchantProfileDAO;
+import com.clickeat.dal.impl.NotificationDAO;
 import com.clickeat.dal.impl.OrderDAO;
 import com.clickeat.model.MerchantProfile;
 import com.clickeat.model.Order;
 import com.clickeat.model.User;
-import java.io.IOException;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -68,6 +71,14 @@ public class ShipperOrderDetailServlet extends HttpServlet {
             boolean success = orderDAO.yieldOrder(orderId, account.getId());
 
             if (success) {
+                Order changedOrder = orderDAO.findById(orderId);
+                NotificationDAO notificationDAO = new NotificationDAO();
+                if (changedOrder != null && changedOrder.getCustomerUserId() > 0) {
+                    notificationDAO.createForUser(changedOrder.getCustomerUserId(), "ORDER", "Shipper đã nhường đơn #" + changedOrder.getOrderCode() + ", hệ thống sẽ tìm tài xế khác.");
+                }
+                if (changedOrder != null && changedOrder.getMerchantId() > 0) {
+                    notificationDAO.createForUser(changedOrder.getMerchantId(), "ORDER", "Đơn #" + changedOrder.getOrderCode() + " đã được shipper nhường lại.");
+                }
                 request.getSession().setAttribute("toastMsg", "Đã nhường đơn thành công cho tài xế khác!");
             } else {
                 request.getSession().setAttribute("toastError", "Không thể nhường đơn lúc này.");
@@ -77,6 +88,14 @@ public class ShipperOrderDetailServlet extends HttpServlet {
             boolean success = orderDAO.claimOrder(orderId, account.getId());
 
             if (success) {
+                Order changedOrder = orderDAO.findById(orderId);
+                NotificationDAO notificationDAO = new NotificationDAO();
+                if (changedOrder != null && changedOrder.getCustomerUserId() > 0) {
+                    notificationDAO.createForUser(changedOrder.getCustomerUserId(), "ORDER", "Đơn #" + changedOrder.getOrderCode() + " đã có shipper nhận và đang đến quán.");
+                }
+                if (changedOrder != null && changedOrder.getMerchantId() > 0) {
+                    notificationDAO.createForUser(changedOrder.getMerchantId(), "ORDER", "Shipper đã nhận đơn #" + changedOrder.getOrderCode() + ".");
+                }
                 request.getSession().setAttribute("toastMsg", "Nhận đơn thành công! Hãy di chuyển đến quán.");
             } else {
                 request.getSession().setAttribute("toastError", "Đơn hàng đã bị người khác nhận hoặc không tồn tại.");

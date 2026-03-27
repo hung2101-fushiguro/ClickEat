@@ -4,11 +4,11 @@
  */
 package com.clickeat.controller.auth;
 
-import com.clickeat.dal.impl.UserDAO;
 import com.clickeat.dal.impl.AddressDAO;
 import com.clickeat.dal.impl.CustomerProfileDAO;
-import com.clickeat.model.User;
+import com.clickeat.dal.impl.UserDAO;
 import com.clickeat.model.Address;
+import com.clickeat.model.User;
 import java.io.IOException;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -63,7 +63,7 @@ public class RegisterServlet extends HttpServlet {
 
         UserDAO userDAO = new UserDAO();
 
-        // 3. Kiểm tra trùng lặp (Logic DAO bạn đã viết sẵn)
+        // 3. Kiểm tra trùng lặp
         if (userDAO.checkPhoneExist(phone)) {
             request.setAttribute("error", "Số điện thoại này đã được đăng ký!");
             request.getRequestDispatcher("views/web/register.jsp").forward(request, response);
@@ -76,17 +76,17 @@ public class RegisterServlet extends HttpServlet {
             return;
         }
 
-        // 4. Tạo Object User và lưu xuống DB
+        // 4. Tạo User và lưu xuống DB
         User newUser = new User();
         newUser.setFullName(fullName);
         newUser.setEmail(email);
         newUser.setPhone(phone);
         newUser.setPasswordHash(password); // Sau này nên hash
-        newUser.setRole("CUSTOMER");      // Mặc định đăng ký mới là Khách hàng
+        newUser.setRole("CUSTOMER");
 
         int newId = userDAO.insert(newUser);
 
-        // 5. Kiểm tra kết quả
+        // 5. Kiểm tra kết quả user insert
         if (newId <= 0) {
             request.setAttribute("error", "Lỗi hệ thống, vui lòng thử lại sau!");
             request.getRequestDispatcher("views/web/register.jsp").forward(request, response);

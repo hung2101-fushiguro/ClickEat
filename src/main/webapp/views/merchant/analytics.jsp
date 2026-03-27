@@ -1,12 +1,13 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
-<%@ taglib prefix="c"   uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
 <% request.setAttribute("currentPage", "analytics");%>
 <!DOCTYPE html>
 <html lang="vi">
     <head>
         <meta charset="UTF-8"/>
         <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/responsive-global.css">
         <title>Phân tích – ClickEat Merchant</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <script>
@@ -108,32 +109,32 @@
         <script>
             // 1. Chuyển đổi dữ liệu từ Java sang Javascript
             const rawLabels = [<c:forEach var="entry" items="${revenueData}">"${entry.key}",</c:forEach>];
-                    const rawData = [<c:forEach var="entry" items="${revenueData}">${entry.value},</c:forEach>];
-
+            const rawData = [<c:forEach var="entry" items="${revenueData}">${entry.value},</c:forEach>];
+            
             // 2. Vẽ biểu đồ chính
             (function initMainChart() {
                 const ctx = document.getElementById('mainRevenueChart').getContext('2d');
                 let gradient = ctx.createLinearGradient(0, 0, 0, 400);
                 gradient.addColorStop(0, 'rgba(200, 102, 1, 0.15)');
                 gradient.addColorStop(1, 'rgba(200, 102, 1, 0)');
-
+                
                 new Chart(ctx, {
                     type: 'line',
                     data: {
                         labels: rawLabels,
                         datasets: [{
-                                label: 'Doanh thu (đ)',
-                                data: rawData,
-                                borderColor: '#c86601',
-                                backgroundColor: gradient,
-                                fill: true,
-                                tension: 0.4,
-                                borderWidth: 3,
-                                pointBackgroundColor: '#fff',
-                                pointBorderColor: '#c86601',
-                                pointBorderWidth: 2,
-                                pointRadius: 4
-                            }]
+                            label: 'Doanh thu (đ)',
+                            data: rawData,
+                            borderColor: '#c86601',
+                            backgroundColor: gradient,
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 3,
+                            pointBackgroundColor: '#fff',
+                            pointBorderColor: '#c86601',
+                            pointBorderWidth: 2,
+                            pointRadius: 4
+                        }]
                     },
                     options: {
                         responsive: true,
@@ -146,7 +147,7 @@
                     }
                 });
             })();
-
+            
             function changePeriod(v) {
                 window.location.href = '${pageContext.request.contextPath}/merchant/analytics?period=' + v;
             }

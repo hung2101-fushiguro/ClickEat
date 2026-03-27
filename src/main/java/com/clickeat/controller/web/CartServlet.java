@@ -25,14 +25,33 @@ public class CartServlet extends HttpServlet {
         return (ref != null && !ref.isBlank()) ? ref : (request.getContextPath() + fallback);
     }
 
+    private void syncGuestIdSession(HttpSession session) {
+        String guestId = (String) session.getAttribute("guest_id");
+
+        if (guestId == null || guestId.isBlank()) {
+            guestId = (String) session.getAttribute("guestId");
+        }
+
+        if (guestId != null && !guestId.isBlank()) {
+            session.setAttribute("guest_id", guestId);
+            session.setAttribute("guestId", guestId);
+        }
+    }
+
     private String getOrCreateGuestId(HttpSession session, GuestSessionDAO guestSessionDAO) {
-        String guestId = (String) session.getAttribute("guestId");
+        String guestId = (String) session.getAttribute("guest_id");
+
+        if (guestId == null || guestId.isBlank()) {
+            guestId = (String) session.getAttribute("guestId");
+        }
 
         if (guestId == null || guestId.isBlank()) {
             guestId = guestSessionDAO.createGuestSession();
-            if (guestId != null && !guestId.isBlank()) {
-                session.setAttribute("guestId", guestId);
-            }
+        }
+
+        if (guestId != null && !guestId.isBlank()) {
+            session.setAttribute("guest_id", guestId);
+            session.setAttribute("guestId", guestId);
         }
 
         return guestId;
@@ -78,15 +97,13 @@ public class CartServlet extends HttpServlet {
 
         HttpSession session = request.getSession();
         User account = (User) session.getAttribute("account");
+        syncGuestIdSession(session);
 
         CartDAO cartDAO = new CartDAO();
         CartItemDAO cartItemDAO = new CartItemDAO();
         FoodItemDAO foodDAO = new FoodItemDAO();
         GuestSessionDAO guestSessionDAO = new GuestSessionDAO();
 
-        // --------------------------------------------------------
-        // ADD (GET /cart?action=add&id=FOOD_ID)
-        // --------------------------------------------------------
         if ("add".equals(action)) {
             try {
                 String foodIdRaw = request.getParameter("id");
@@ -119,7 +136,6 @@ public class CartServlet extends HttpServlet {
                     return;
                 }
 
-                // Nếu cart đang rỗng thì chủ động gán merchant cho cart
                 List<CartItem> currentItems = cartItemDAO.getItemsByCartId(cart.getId());
                 boolean cartIsEmpty = (currentItems == null || currentItems.isEmpty());
 
@@ -135,7 +151,6 @@ public class CartServlet extends HttpServlet {
                         e.printStackTrace();
                     }
                 } else {
-                    // Rule: single merchant
                     FoodItem firstFoodInCart = foodDAO.findById(currentItems.get(0).getFoodItemId());
                     if (firstFoodInCart != null
                             && firstFoodInCart.getMerchantUserId() != food.getMerchantUserId()) {
@@ -180,9 +195,6 @@ public class CartServlet extends HttpServlet {
             return;
         }
 
-        // --------------------------------------------------------
-        // DELETE (GET /cart?action=delete&itemId=CART_ITEM_ID)
-        // --------------------------------------------------------
         if ("delete".equals(action)) {
             try {
                 Cart cart = getOrCreateActiveCart(session, account, cartDAO, guestSessionDAO);
@@ -228,9 +240,6 @@ public class CartServlet extends HttpServlet {
             return;
         }
 
-        // --------------------------------------------------------
-        // VIEW (GET /cart?action=view)
-        // --------------------------------------------------------
         if ("view".equals(action)) {
             Cart cart = getOrCreateActiveCart(session, account, cartDAO, guestSessionDAO);
 
@@ -258,9 +267,6 @@ public class CartServlet extends HttpServlet {
         response.sendRedirect(request.getContextPath() + "/cart?action=view");
     }
 
-    // --------------------------------------------------------
-    // UPDATE (POST /cart?action=update)
-    // --------------------------------------------------------
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -272,6 +278,7 @@ public class CartServlet extends HttpServlet {
 
         HttpSession session = request.getSession();
         User account = (User) session.getAttribute("account");
+        syncGuestIdSession(session);
 
         if (!"update".equals(action)) {
             response.sendRedirect(request.getContextPath() + "/cart?action=view");
@@ -289,7 +296,6 @@ public class CartServlet extends HttpServlet {
                 return;
             }
 
-            // 1) Remove one item
             String removeIdRaw = request.getParameter("removeId");
             if (removeIdRaw != null && !removeIdRaw.isBlank()) {
                 int cartItemId = Integer.parseInt(removeIdRaw);
@@ -312,7 +318,6 @@ public class CartServlet extends HttpServlet {
                 return;
             }
 
-            // 2) Update qty_* params
             request.getParameterMap().forEach((key, val) -> {
                 if (key != null && key.startsWith("qty_")) {
                     try {

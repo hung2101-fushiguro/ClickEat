@@ -11,8 +11,8 @@ import java.util.Base64;
 @WebServlet(name = "GoogleLoginServlet", urlPatterns = {"/google-login"})
 public class GoogleLoginServlet extends HttpServlet {
 
-    private static final String CLIENT_ID = "";
-    private static final String REDIRECT_URI = "http://localhost:9999/ClickEat2/google-callback";
+    private static final String CLIENT_ID = "225189851661-pobij3uem6fsnos6ftm09rftdvadiavc.apps.googleusercontent.com";
+    private static final String REDIRECT_URI = "http://localhost:8080/ClickEat2/google-callback";
     private static final String SCOPE = "openid email profile";
 
     @Override

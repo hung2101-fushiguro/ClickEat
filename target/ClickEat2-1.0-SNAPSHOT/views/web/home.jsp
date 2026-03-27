@@ -86,7 +86,6 @@
                 display:-webkit-box;
                 -webkit-line-clamp:1;
                 -webkit-box-orient:vertical;
-                line-clamp: 1;
                 overflow:hidden;
             }
 
@@ -94,7 +93,6 @@
                 display:-webkit-box;
                 -webkit-line-clamp:2;
                 -webkit-box-orient:vertical;
-                line-clamp: 2;
                 overflow:hidden;
             }
 
@@ -704,6 +702,73 @@
         </jsp:include>
 
         <main class="pb-20">
+            <section class="pt-8">
+                <div class="container-click">
+                    <div class="bg-white rounded-[28px] shadow-soft border border-gray-100 px-6 md:px-8 py-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                        <div class="flex items-start gap-4 min-w-0 flex-1">
+                            <div class="w-14 h-14 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center text-2xl shrink-0">
+                                <i class="fa-solid fa-location-dot"></i>
+                            </div>
+
+                            <div class="min-w-0 flex-1">
+                                <div class="text-[14px] font-extrabold uppercase tracking-[.06em] text-gray-400">
+                                    Vị trí giao hàng hiện tại
+                                </div>
+
+                                <div class="mt-1 text-[20px] font-black text-gray-900 leading-snug break-words">
+                                    <c:out value="${empty deliveryAddress ? 'Chưa xác định vị trí giao hàng' : deliveryAddress}" />
+                                </div>
+
+                                <div class="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                                    <c:choose>
+                                        <c:when test="${deliverySource eq 'GPS'}">
+                                            <span class="pill pill-green">Đang dùng GPS hiện tại</span>
+                                        </c:when>
+                                        <c:when test="${deliverySource eq 'DEFAULT_ADDRESS'}">
+                                            <span class="pill pill-orange">Đang dùng địa chỉ mặc định</span>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <span class="pill bg-gray-100 text-gray-500">Chưa có vị trí</span>
+                                        </c:otherwise>
+                                    </c:choose>
+
+                                    <span class="text-gray-500 font-semibold">
+                                        Hiển thị quán trong phạm vi tối đa ${maxDeliveryKm} km
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3 shrink-0">
+                            <button type="button"
+                                    id="detectLocationBtn"
+                                    class="h-[52px] min-w-[220px] px-6 rounded-full bg-orange-500 text-white font-black text-[16px] hover:bg-orange-600 transition inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0">
+                                <i class="fa-solid fa-crosshairs"></i>
+                                <span>Cập nhật vị trí</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <section class="pt-4">
+                <div class="container-click">
+                    <div id="gpsMismatchAlert"
+                         class="hidden rounded-[22px] border border-amber-200 bg-amber-50 px-5 py-4">
+                        <div class="flex items-start gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                            </div>
+                            <div>
+                                <div class="text-[15px] font-black text-amber-700">
+                                    Bạn đang ở xa địa chỉ mặc định
+                                </div>
+                                <div id="gpsMismatchAlertText" class="mt-1 text-[15px] leading-7 text-amber-800">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
             <!-- HERO -->
             <section class="pt-7">
@@ -810,7 +875,7 @@
                 <div class="container-click">
                     <div class="flex flex-wrap items-center justify-between gap-4 mb-10">
                         <h2 class="section-title">VOUCHER NỔI BẬT</h2>
-                        <a href="${ctx}/menu" class="section-link">
+                        <a href="${ctx}/promotions" class="section-link">
                             Xem thêm ưu đãi <i class="fa-solid fa-angle-right text-[12px]"></i>
                         </a>
                     </div>
@@ -851,13 +916,20 @@
 
                                 <article class="voucher-modern ${voucherStyle}">
                                     <div class="voucher-top">
-                                        <div class="voucher-pill">${voucherLabel}</div>
+                                        <div class="voucher-pill">
+                                            <c:choose>
+                                                <c:when test="${v.discountType eq 'FREESHIP'}">FREESHIP</c:when>
+                                                <c:when test="${v.discountType eq 'PERCENT'}">% GIẢM</c:when>
+                                                <c:when test="${v.discountType eq 'FIXED'}">GIẢM TIỀN</c:when>
+                                                <c:otherwise>${voucherLabel}</c:otherwise>
+                                            </c:choose>
+                                        </div>
 
                                         <div class="voucher-code-row">
                                             <div>
                                                 <div class="voucher-code">${v.code}</div>
                                                 <div class="voucher-copy">
-                                                    Sao chép mã <i class="fa-regular fa-copy"></i>
+                                                    Mã voucher <i class="fa-regular fa-copy"></i>
                                                 </div>
                                             </div>
 
@@ -888,6 +960,13 @@
                                             </c:choose>
                                         </p>
 
+                                        <div class="mt-3 text-[13px] font-bold text-gray-700">
+                                            Quán:
+                                            <span class="text-orange-500">
+                                                <c:out value="${empty v.merchantName ? 'ClickEat Partner' : v.merchantName}" />
+                                            </span>
+                                        </div>
+
                                         <div class="voucher-expire">
                                             HSD:
                                             <c:choose>
@@ -901,9 +980,24 @@
                                         </div>
 
                                         <div class="voucher-action">
-                                            <a href="${ctx}/menu" class="voucher-save-btn">
-                                                Lưu mã
-                                            </a>
+                                            <c:choose>
+                                                <c:when test="${not empty sessionScope.account and sessionScope.account.role eq 'CUSTOMER'}">
+                                                    <form action="${ctx}/customer/vouchers" method="post" class="m-0">
+                                                        <input type="hidden" name="action" value="save">
+                                                        <input type="hidden" name="voucherId" value="${v.id}">
+                                                        <input type="hidden" name="returnUrl" value="/home">
+                                                        <button type="submit" class="voucher-save-btn">
+                                                            Lưu mã
+                                                        </button>
+                                                    </form>
+                                                </c:when>
+
+                                                <c:otherwise>
+                                                    <a href="${ctx}/login" class="voucher-save-btn">
+                                                        Lưu mã
+                                                    </a>
+                                                </c:otherwise>
+                                            </c:choose>
                                         </div>
                                     </div>
                                 </article>
@@ -912,49 +1006,48 @@
                     </c:if>
                 </div>
             </section>
-
             <!-- DANH MỤC -->
             <section class="pt-24">
                 <div class="container-click">
                     <h2 class="section-title text-center md:text-left mb-12">DANH MỤC PHỔ BIẾN</h2>
 
                     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-y-10 gap-x-6">
-                        <a href="${ctx}/menu?category=Cơm%20trưa" class="text-center group">
+                        <a href="${ctx}/menu" class="text-center group">
                             <div class="soft-icon-box bg-orange-50 text-orange-500 group-hover:-translate-y-1 transition">
                                 <i class="fa-solid fa-bowl-rice text-[42px]"></i>
                             </div>
                             <div class="text-[17px] font-extrabold text-slate-600">Cơm trưa</div>
                         </a>
 
-                        <a href="${ctx}/menu?category=Bún/Phở" class="text-center group">
+                        <a href="${ctx}/menu" class="text-center group">
                             <div class="soft-icon-box bg-blue-50 text-blue-500 group-hover:-translate-y-1 transition">
                                 <i class="fa-solid fa-bowl-food text-[42px]"></i>
                             </div>
                             <div class="text-[17px] font-extrabold text-slate-600">Bún/Phở</div>
                         </a>
 
-                        <a href="${ctx}/menu?category=Pizza" class="text-center group">
+                        <a href="${ctx}/menu" class="text-center group">
                             <div class="soft-icon-box bg-red-50 text-red-400 group-hover:-translate-y-1 transition">
                                 <i class="fa-solid fa-pizza-slice text-[42px]"></i>
                             </div>
                             <div class="text-[17px] font-extrabold text-slate-600">Pizza</div>
                         </a>
 
-                        <a href="${ctx}/menu?category=Trà%20sữa" class="text-center group">
+                        <a href="${ctx}/menu" class="text-center group">
                             <div class="soft-icon-box bg-pink-50 text-pink-500 group-hover:-translate-y-1 transition">
                                 <i class="fa-solid fa-mug-hot text-[42px]"></i>
                             </div>
                             <div class="text-[17px] font-extrabold text-slate-600">Trà sữa</div>
                         </a>
 
-                        <a href="${ctx}/menu?category=Burger" class="text-center group">
+                        <a href="${ctx}/menu" class="text-center group">
                             <div class="soft-icon-box bg-amber-50 text-amber-500 group-hover:-translate-y-1 transition">
                                 <i class="fa-solid fa-burger text-[42px]"></i>
                             </div>
                             <div class="text-[17px] font-extrabold text-slate-600">Burger</div>
                         </a>
 
-                        <a href="${ctx}/menu?category=Đồ%20ngọt" class="text-center group">
+                        <a href="${ctx}/menu" class="text-center group">
                             <div class="soft-icon-box bg-purple-50 text-purple-500 group-hover:-translate-y-1 transition">
                                 <i class="fa-solid fa-ice-cream text-[42px]"></i>
                             </div>
@@ -1129,7 +1222,7 @@
                                 AI giúp bạn chọn món phù hợp theo khẩu vị, nhu cầu và ngân sách chỉ trong vài giây.
                             </p>
 
-                            <a href="${ctx}/aichat" class="mt-10 inline-flex items-center justify-center gap-3 h-[58px] px-10 rounded-full bg-white text-orange-500 font-black text-[18px] hover:translate-y-[-1px] transition">
+                            <a href="${ctx}/ai" class="mt-10 inline-flex items-center justify-center gap-3 h-[58px] px-10 rounded-full bg-white text-orange-500 font-black text-[18px] hover:translate-y-[-1px] transition">
                                 TRẢI NGHIỆM AI NGAY
                                 <i class="fa-solid fa-wand-magic-sparkles text-[14px]"></i>
                             </a>
@@ -1147,10 +1240,277 @@
                     </div>
                 </div>
             </section>
+            <!-- Loading Overlay -->
+            <div id="locationLoadingOverlay" class="hidden fixed inset-0 z-[9999] bg-black/45 backdrop-blur-[2px]">
+                <div class="absolute inset-0 flex items-center justify-center px-4">
+                    <div class="w-full max-w-md bg-white rounded-[28px] shadow-2xl p-8 text-center">
+                        <div class="w-20 h-20 mx-auto rounded-full bg-orange-50 text-orange-500 flex items-center justify-center text-3xl">
+                            <i class="fa-solid fa-location-crosshairs fa-spin"></i>
+                        </div>
+
+                        <h3 class="mt-5 text-[26px] font-black text-gray-900">Đang xác định vị trí</h3>
+                        <p class="mt-3 text-gray-500 text-[16px] leading-7">
+                            ClickEat đang lấy GPS và cập nhật địa chỉ giao hàng của bạn...
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Confirm Modal -->
+            <div id="locationConfirmModal" class="hidden fixed inset-0 z-[10000] bg-black/45 backdrop-blur-[2px]">
+                <div class="absolute inset-0 flex items-center justify-center px-4">
+                    <div class="w-full max-w-xl bg-white rounded-[30px] shadow-2xl p-8">
+                        <div class="flex items-start gap-4">
+                            <div class="w-16 h-16 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center text-2xl shrink-0">
+                                <i class="fa-solid fa-circle-check"></i>
+                            </div>
+
+                            <div class="min-w-0 flex-1">
+                                <h3 class="text-[28px] font-black text-gray-900 leading-tight">
+                                    Đã tìm thấy vị trí giao hàng
+                                </h3>
+
+                                <p class="mt-3 text-gray-500 text-[16px] leading-7">
+                                    Hệ thống sẽ dùng vị trí này để lọc các quán gần bạn và trong phạm vi giao hàng.
+                                </p>
+
+                                <div class="mt-5 rounded-2xl bg-orange-50 border border-orange-100 px-5 py-4">
+                                    <div class="text-[13px] uppercase tracking-[.08em] font-black text-orange-500">
+                                        Địa chỉ hiện tại
+                                    </div>
+                                    <div id="confirmedLocationText" class="mt-2 text-[18px] font-bold text-gray-900 leading-7">
+                                    </div>
+                                </div>
+
+                                <div class="mt-7 flex flex-col sm:flex-row gap-3 sm:justify-end">
+                                    <button type="button"
+                                            id="cancelLocationConfirmBtn"
+                                            class="h-[52px] px-6 rounded-full bg-gray-100 text-gray-700 font-black hover:bg-gray-200 transition">
+                                        Đóng
+                                    </button>
+
+                                    <button type="button"
+                                            id="confirmLocationBtn"
+                                            class="h-[52px] px-7 rounded-full bg-orange-500 text-white font-black hover:bg-orange-600 transition">
+                                        Xác nhận và tải quán gần đây
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
         </main>
-
         <jsp:include page="footer.jsp" />
+        <script>
+            function haversineKm(lat1, lon1, lat2, lon2) {
+                const toRad = deg => deg * Math.PI / 180;
+                const R = 6371;
 
+                const dLat = toRad(lat2 - lat1);
+                const dLon = toRad(lon2 - lon1);
+
+                const a =
+                        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                return R * c;
+            }
+
+            document.addEventListener('DOMContentLoaded', function () {
+                const detectBtn = document.getElementById('detectLocationBtn');
+                const loadingOverlay = document.getElementById('locationLoadingOverlay');
+                const confirmModal = document.getElementById('locationConfirmModal');
+                const confirmedLocationText = document.getElementById('confirmedLocationText');
+                const confirmLocationBtn = document.getElementById('confirmLocationBtn');
+                const cancelLocationConfirmBtn = document.getElementById('cancelLocationConfirmBtn');
+
+                const alertBox = document.getElementById('gpsMismatchAlert');
+                const alertText = document.getElementById('gpsMismatchAlertText');
+
+                const isLoggedIn = ${not empty sessionScope.account ? 'true' : 'false'};
+                const deliverySource = '${empty deliverySource ? "" : deliverySource}';
+                const defaultLat = ${empty defaultAddressLat ? 'null' : defaultAddressLat};
+                const defaultLng = ${empty defaultAddressLng ? 'null' : defaultAddressLng};
+                const mismatchThresholdKm = ${empty locationMismatchAlertKm ? '1.5' : locationMismatchAlertKm};
+
+                function showLoading() {
+                    if (loadingOverlay) {
+                        loadingOverlay.classList.remove('hidden');
+                    }
+                }
+
+                function hideLoading() {
+                    if (loadingOverlay) {
+                        loadingOverlay.classList.add('hidden');
+                    }
+                }
+
+                function showConfirm(addressText) {
+                    if (confirmedLocationText) {
+                        confirmedLocationText.textContent = addressText || 'Vị trí hiện tại';
+                    }
+                    if (confirmModal) {
+                        confirmModal.classList.remove('hidden');
+                    }
+                }
+
+                function hideConfirm() {
+                    if (confirmModal) {
+                        confirmModal.classList.add('hidden');
+                    }
+                }
+
+                function hideMismatchAlert() {
+                    if (alertBox) {
+                        alertBox.classList.add('hidden');
+                    }
+                }
+
+                function showMismatchAlert(distanceKm) {
+                    if (!alertBox || !alertText) {
+                        return;
+                    }
+
+                    const distanceText = distanceKm.toFixed(2).replace('.', ',');
+
+                    alertText.textContent =
+                            `Vị trí hiện tại của bạn đang cách địa chỉ mặc định khoảng ${distanceText} km. ` +
+                            `Nếu bạn muốn xem quán gần vị trí hiện tại, hãy bấm "Cập nhật vị trí".`;
+
+                    alertBox.classList.remove('hidden');
+                }
+
+                function runPassiveMismatchCheck() {
+                    // Chỉ check khi:
+                    // 1) user đã login
+                    // 2) có địa chỉ mặc định
+                    // 3) hệ thống hiện vẫn đang dùng DEFAULT_ADDRESS
+                    if (!isLoggedIn || defaultLat === null || defaultLng === null) {
+                        hideMismatchAlert();
+                        return;
+                    }
+
+                    if (deliverySource !== 'DEFAULT_ADDRESS') {
+                        hideMismatchAlert();
+                        return;
+                    }
+
+                    if (!navigator.geolocation) {
+                        hideMismatchAlert();
+                        return;
+                    }
+
+                    navigator.geolocation.getCurrentPosition(
+                            function (position) {
+                                const currentLat = position.coords.latitude;
+                                const currentLng = position.coords.longitude;
+
+                                const distanceKm = haversineKm(defaultLat, defaultLng, currentLat, currentLng);
+
+                                if (distanceKm >= mismatchThresholdKm) {
+                                    showMismatchAlert(distanceKm);
+                                } else {
+                                    hideMismatchAlert();
+                                }
+                            },
+                            function () {
+                                hideMismatchAlert();
+                            },
+                            {
+                                enableHighAccuracy: true,
+                                timeout: 8000,
+                                maximumAge: 300000
+                            }
+                    );
+                }
+
+                if (cancelLocationConfirmBtn) {
+                    cancelLocationConfirmBtn.addEventListener('click', function () {
+                        hideConfirm();
+                    });
+                }
+
+                if (confirmLocationBtn) {
+                    confirmLocationBtn.addEventListener('click', function () {
+                        window.location.href = '${ctx}/home';
+                    });
+                }
+
+                if (detectBtn) {
+                    detectBtn.addEventListener('click', function () {
+                        if (!navigator.geolocation) {
+                            alert('Trình duyệt không hỗ trợ định vị GPS.');
+                            return;
+                        }
+
+                        showLoading();
+
+                        navigator.geolocation.getCurrentPosition(
+                                function (position) {
+                                    const latitude = position.coords.latitude;
+                                    const longitude = position.coords.longitude;
+
+                                    const formData = new URLSearchParams();
+                                    formData.append('latitude', latitude);
+                                    formData.append('longitude', longitude);
+
+                                    fetch('${ctx}/update-delivery-location', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                                        },
+                                        body: formData.toString()
+                                    })
+                                            .then(res => res.json())
+                                            .then(data => {
+                                                hideLoading();
+
+                                                if (data.success) {
+                                                    // vì user đã chủ động cập nhật vị trí rồi
+                                                    // nên ẩn cảnh báo mismatch cũ ngay
+                                                    hideMismatchAlert();
+                                                    showConfirm(data.address || 'Vị trí hiện tại');
+                                                } else {
+                                                    alert(data.message || 'Không thể cập nhật vị trí.');
+                                                }
+                                            })
+                                            .catch(() => {
+                                                hideLoading();
+                                                alert('Đã xảy ra lỗi khi cập nhật vị trí.');
+                                            });
+                                },
+                                function (error) {
+                                    hideLoading();
+
+                                    switch (error.code) {
+                                        case error.PERMISSION_DENIED:
+                                            alert('Bạn đã từ chối quyền truy cập vị trí.');
+                                            break;
+                                        case error.POSITION_UNAVAILABLE:
+                                            alert('Không thể xác định vị trí hiện tại.');
+                                            break;
+                                        case error.TIMEOUT:
+                                            alert('Hết thời gian chờ lấy vị trí.');
+                                            break;
+                                        default:
+                                            alert('Không thể lấy vị trí GPS.');
+                                    }
+                                },
+                                {
+                                    enableHighAccuracy: true,
+                                    timeout: 10000,
+                                    maximumAge: 0
+                                }
+                        );
+                    });
+                }
+
+                runPassiveMismatchCheck();
+            });
+        </script>
     </body>
 </html>

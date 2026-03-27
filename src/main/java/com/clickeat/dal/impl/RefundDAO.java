@@ -1,9 +1,10 @@
 package com.clickeat.dal.impl;
 
-import com.clickeat.model.RefundRequest;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+
+import com.clickeat.model.RefundRequest;
 
 public class RefundDAO extends AbstractDAO<RefundRequest> {
 
@@ -23,6 +24,13 @@ public class RefundDAO extends AbstractDAO<RefundRequest> {
     public boolean insertRefund(RefundRequest refund) {
         String sql = "INSERT INTO RefundRequests (order_id, merchant_user_id, refund_amount, reason, status) VALUES (?, ?, ?, ?, 'COMPLETED')";
         return update(sql, refund.getOrderId(), refund.getMerchantUserId(), refund.getRefundAmount(), refund.getReason()) > 0;
+    }
+
+    public boolean processRefundForMerchant(RefundRequest refund) {
+        if (refund == null) {
+            return false;
+        }
+        return insertRefund(refund);
     }
 
     @Override

@@ -16,9 +16,9 @@ import java.nio.charset.StandardCharsets;
 @WebServlet(name = "GoogleCallbackServlet", urlPatterns = {"/google-callback"})
 public class GoogleCallbackServlet extends HttpServlet {
 
-    private static final String CLIENT_ID = "";
-    private static final String CLIENT_SECRET = "";
-    private static final String REDIRECT_URI = "http://localhost:9999/ClickEat2/google-callback";
+    private static final String CLIENT_ID = cfg("GOOGLE_CLIENT_ID", "CHANGE_ME");
+    private static final String CLIENT_SECRET = cfg("GOOGLE_CLIENT_SECRET", "CHANGE_ME");
+    private static final String REDIRECT_URI = cfg("GOOGLE_REDIRECT_URI", "http://localhost:8080/ClickEat2/google-callback");
 
     private static final String TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
     private static final String USERINFO_ENDPOINT = "https://www.googleapis.com/oauth2/v3/userinfo";
@@ -111,6 +111,18 @@ public class GoogleCallbackServlet extends HttpServlet {
 
     private static String enc(String s) {
         return URLEncoder.encode(s, StandardCharsets.UTF_8);
+    }
+
+    private static String cfg(String key, String defaultValue) {
+        String fromJvm = System.getProperty(key);
+        if (fromJvm != null && !fromJvm.isBlank()) {
+            return fromJvm;
+        }
+        String fromEnv = System.getenv(key);
+        if (fromEnv != null && !fromEnv.isBlank()) {
+            return fromEnv;
+        }
+        return defaultValue;
     }
 
     private static String readAll(InputStream is) throws IOException {

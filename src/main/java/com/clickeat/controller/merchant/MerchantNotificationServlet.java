@@ -4,8 +4,8 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.List;
 
-import com.clickeat.dal.impl.MessageDAO;
-import com.clickeat.model.Message;
+import com.clickeat.dal.impl.NotificationDAO;
+import com.clickeat.model.Notification;
 import com.clickeat.model.User;
 
 import jakarta.servlet.ServletException;
@@ -17,18 +17,24 @@ import jakarta.servlet.http.HttpServletResponse;
 @WebServlet(name = "MerchantNotificationServlet", urlPatterns = {"/merchant/notifications"})
 public class MerchantNotificationServlet extends HttpServlet {
 
+    private boolean isMerchant(User account) {
+        return account != null
+                && account.getRole() != null
+                && "MERCHANT".equalsIgnoreCase(account.getRole().trim());
+    }
+
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         User account = (User) request.getSession().getAttribute("account");
-        if (account == null || !"MERCHANT".equals(account.getRole())) {
+        if (!isMerchant(account)) {
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
 
-        MessageDAO messageDAO = new MessageDAO();
-        int unread = messageDAO.countUnreadForMerchant(account.getId());
-        List<Message> items = messageDAO.getRecentNotificationsForMerchant(account.getId(), 10);
+        NotificationDAO notificationDAO = new NotificationDAO();
+        int unread = notificationDAO.countUnreadForUser(account.getId());
+        List<Notification> items = notificationDAO.getRecentForUser(account.getId(), 10);
 
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
@@ -39,37 +45,35 @@ public class MerchantNotificationServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         User account = (User) request.getSession().getAttribute("account");
-        if (account == null || !"MERCHANT".equals(account.getRole())) {
+        if (!isMerchant(account)) {
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
 
-        MessageDAO messageDAO = new MessageDAO();
-        boolean ok = messageDAO.markAllReadForMerchant(account.getId());
+        NotificationDAO notificationDAO = new NotificationDAO();
+        boolean ok = notificationDAO.markAllReadForUser(account.getId());
 
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         response.getWriter().write("{\"success\": " + ok + "}");
     }
 
-    private String toJson(int unread, List<Message> items) {
+    private String toJson(int unread, List<Notification> items) {
         StringBuilder sb = new StringBuilder();
         sb.append("{\"unread\":").append(unread).append(",\"items\":[");
         SimpleDateFormat formatter = new SimpleDateFormat("dd/MM HH:mm");
 
         for (int i = 0; i < items.size(); i++) {
-            Message m = items.get(i);
+            Notification m = items.get(i);
             if (i > 0) {
                 sb.append(',');
             }
-            String content = m.getOtherPartyName() == null || m.getOtherPartyName().trim().isEmpty()
-                    ? m.getContent()
-                    : (m.getOtherPartyName() + ": " + m.getContent());
+            String content = String.valueOf(m.getContent() == null ? "" : m.getContent());
             String time = m.getCreatedAt() == null ? "" : formatter.format(m.getCreatedAt());
 
             sb.append("{\"content\":\"").append(escapeJson(content))
                     .append("\",\"time\":\"").append(escapeJson(time))
-                    .append("\",\"isRead\":").append(m.isIsRead())
+                    .append("\",\"isRead\":").append(m.isRead())
                     .append("}");
         }
 

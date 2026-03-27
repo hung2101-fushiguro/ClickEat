@@ -71,10 +71,10 @@ public class MerchantWalletDAO extends AbstractDAO<MerchantWallet> {
         double grossIncome = 0;
         boolean hasAppFeeColumn = columnExists("Orders", "app_fee");
         String deliveredSql = hasAppFeeColumn
-                ? "SELECT subtotal_amount, discount_amount, delivery_fee, total_amount, ISNULL(app_fee,0) AS app_fee "
-                + "FROM Orders WHERE merchant_user_id = ? AND order_status = 'DELIVERED'"
-                : "SELECT subtotal_amount, discount_amount, delivery_fee, total_amount, 0 AS app_fee "
-                + "FROM Orders WHERE merchant_user_id = ? AND order_status = 'DELIVERED'";
+            ? "SELECT subtotal_amount, discount_amount, delivery_fee, total_amount, ISNULL(app_fee,0) AS app_fee "
+            + "FROM Orders WHERE merchant_user_id = ? AND order_status = 'DELIVERED'"
+            : "SELECT subtotal_amount, discount_amount, delivery_fee, total_amount, 0 AS app_fee "
+            + "FROM Orders WHERE merchant_user_id = ? AND order_status = 'DELIVERED'";
         try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(deliveredSql)) {
             ps.setInt(1, merchantId);
             try (ResultSet rs = ps.executeQuery()) {

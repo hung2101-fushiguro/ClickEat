@@ -1,9 +1,11 @@
 package com.clickeat.dal.impl;
 
-import com.clickeat.model.PaymentTransaction;
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+
+import com.clickeat.model.PaymentTransaction;
 
 public class PaymentTransactionDAO extends AbstractDAO<PaymentTransaction> {
 
@@ -22,6 +24,10 @@ public class PaymentTransactionDAO extends AbstractDAO<PaymentTransaction> {
     }
 
     public int insertVnpay(int orderId, double amount, String providerTxnRef, String vnpTxnRef, String requestPayload) {
+        return insertVnpay(null, orderId, amount, providerTxnRef, vnpTxnRef, requestPayload);
+    }
+
+    public int insertVnpay(Connection conn, int orderId, double amount, String providerTxnRef, String vnpTxnRef, String requestPayload) {
         String sql = """
             INSERT INTO PaymentTransactions(
                 order_id, provider, amount, status,
@@ -30,7 +36,14 @@ public class PaymentTransactionDAO extends AbstractDAO<PaymentTransaction> {
             )
             VALUES (?, 'VNPAY', ?, 'INITIATED', ?, ?, ?, SYSUTCDATETIME(), SYSUTCDATETIME())
         """;
-        return update(sql, orderId, amount, providerTxnRef, vnpTxnRef, requestPayload);
+        try {
+            if (conn != null) {
+                return update(conn, sql, orderId, amount, providerTxnRef, vnpTxnRef, requestPayload);
+            }
+            return update(sql, orderId, amount, providerTxnRef, vnpTxnRef, requestPayload);
+        } catch (SQLException e) {
+            return 0;
+        }
     }
 
     public PaymentTransaction findByOrderId(int orderId) {
@@ -39,6 +52,10 @@ public class PaymentTransactionDAO extends AbstractDAO<PaymentTransaction> {
     }
 
     public boolean markSuccess(int orderId, String vnpTransactionNo, String vnpResponseCode, String vnpPayDate, String callbackPayload) {
+        return markSuccess(null, orderId, vnpTransactionNo, vnpResponseCode, vnpPayDate, callbackPayload);
+    }
+
+    public boolean markSuccess(Connection conn, int orderId, String vnpTransactionNo, String vnpResponseCode, String vnpPayDate, String callbackPayload) {
         String sql = """
             UPDATE PaymentTransactions
             SET status = 'SUCCESS',
@@ -49,10 +66,21 @@ public class PaymentTransactionDAO extends AbstractDAO<PaymentTransaction> {
                 updated_at = SYSUTCDATETIME()
             WHERE order_id = ?
         """;
-        return update(sql, vnpTransactionNo, vnpResponseCode, vnpPayDate, callbackPayload, orderId) > 0;
+        try {
+            if (conn != null) {
+                return update(conn, sql, vnpTransactionNo, vnpResponseCode, vnpPayDate, callbackPayload, orderId) > 0;
+            }
+            return update(sql, vnpTransactionNo, vnpResponseCode, vnpPayDate, callbackPayload, orderId) > 0;
+        } catch (SQLException e) {
+            return false;
+        }
     }
 
     public boolean markFailed(int orderId, String vnpResponseCode, String callbackPayload) {
+        return markFailed(null, orderId, vnpResponseCode, callbackPayload);
+    }
+
+    public boolean markFailed(Connection conn, int orderId, String vnpResponseCode, String callbackPayload) {
         String sql = """
             UPDATE PaymentTransactions
             SET status = 'FAILED',
@@ -61,7 +89,14 @@ public class PaymentTransactionDAO extends AbstractDAO<PaymentTransaction> {
                 updated_at = SYSUTCDATETIME()
             WHERE order_id = ?
         """;
-        return update(sql, vnpResponseCode, callbackPayload, orderId) > 0;
+        try {
+            if (conn != null) {
+                return update(conn, sql, vnpResponseCode, callbackPayload, orderId) > 0;
+            }
+            return update(sql, vnpResponseCode, callbackPayload, orderId) > 0;
+        } catch (SQLException e) {
+            return false;
+        }
     }
 
     @Override
