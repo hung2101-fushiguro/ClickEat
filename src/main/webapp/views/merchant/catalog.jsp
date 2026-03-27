@@ -163,8 +163,8 @@
         </div>
     </main>
 
-    <div id="addModal" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm">
-        <div class="bg-white rounded-[2rem] p-8 w-full max-w-lg shadow-2xl relative">
+    <div id="addModal" class="fixed inset-0 bg-gray-900/60 z-50 hidden flex items-center justify-center backdrop-blur-sm p-4 overflow-y-auto">
+        <div class="bg-white rounded-[2rem] p-8 w-full max-w-lg max-h-[90vh] shadow-2xl relative overflow-y-auto">
             <button onclick="document.getElementById('addModal').classList.add('hidden')" class="absolute top-6 right-6 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors">
                 <span class="material-symbols-outlined text-[20px]">close</span>
             </button>

@@ -128,15 +128,19 @@ public class MerchantPromotionServlet extends HttpServlet {
 
             String codeParam = request.getParameter("code");
             String titleParam = request.getParameter("title");
+            String descriptionParam = request.getParameter("description");
             String typeParam = request.getParameter("type");
             String valueParam = request.getParameter("value");
+            String maxDiscountParam = request.getParameter("maxDiscount");
             String minOrderParam = request.getParameter("minOrder");
             String maxUsesParam = request.getParameter("maxUses");
+            String maxUsesPerUserParam = request.getParameter("maxUsesPerUser");
             String startDateParam = request.getParameter("startDate");
             String endDateParam = request.getParameter("endDate");
 
             if (isBlank(titleParam) || isBlank(valueParam) || isBlank(minOrderParam)
-                    || isBlank(maxUsesParam) || isBlank(startDateParam) || isBlank(endDateParam)) {
+                    || isBlank(maxUsesParam) || isBlank(startDateParam) || isBlank(endDateParam)
+                    || isBlank(maxUsesPerUserParam)) {
                 request.getSession().setAttribute("promotionError", "Thiếu thông tin bắt buộc để chỉnh sửa voucher.");
                 response.sendRedirect(request.getContextPath() + "/merchant/promotions");
                 return;
@@ -153,16 +157,22 @@ public class MerchantPromotionServlet extends HttpServlet {
             toUpdate.setId(voucherId);
             toUpdate.setCode(isBlank(codeParam) ? ownVoucher.getCode() : codeParam.trim().toUpperCase());
             toUpdate.setTitle(titleParam);
+            toUpdate.setDescription(isBlank(descriptionParam) ? null : descriptionParam.trim());
             toUpdate.setDiscountType(normalizedType);
+            toUpdate.setPublished(ownVoucher.isPublished());
+            String currentStatus = normalizeStatus(ownVoucher.getStatus());
+            toUpdate.setStatus(currentStatus == null ? "ACTIVE" : currentStatus);
 
             try {
                 double discountValue = Double.parseDouble(valueParam);
+                Double maxDiscountAmount = parseOptionalDouble(maxDiscountParam);
                 double minOrderAmount = Double.parseDouble(minOrderParam);
                 int maxUses = Integer.parseInt(maxUsesParam);
+                int maxUsesPerUser = Integer.parseInt(maxUsesPerUserParam);
                 java.sql.Timestamp startAt = java.sql.Timestamp.valueOf(startDateParam + " 00:00:00");
                 java.sql.Timestamp endAt = java.sql.Timestamp.valueOf(endDateParam + " 23:59:59");
 
-                if (!isValidVoucherNumbers(discountValue, minOrderAmount, maxUses)) {
+                if (!isValidVoucherNumbers(normalizedType, discountValue, maxDiscountAmount, minOrderAmount, maxUses, maxUsesPerUser)) {
                     request.getSession().setAttribute("promotionError", "Giá trị voucher không hợp lệ. Vui lòng kiểm tra lại.");
                     response.sendRedirect(request.getContextPath() + "/merchant/promotions");
                     return;
@@ -174,8 +184,10 @@ public class MerchantPromotionServlet extends HttpServlet {
                 }
 
                 toUpdate.setDiscountValue(discountValue);
+                toUpdate.setMaxDiscountAmount(maxDiscountAmount);
                 toUpdate.setMinOrderAmount(minOrderAmount);
                 toUpdate.setMaxUsesTotal(maxUses);
+                toUpdate.setMaxUsesPerUser(maxUsesPerUser);
                 toUpdate.setStartAt(startAt);
                 toUpdate.setEndAt(endAt);
             } catch (IllegalArgumentException ex) {
@@ -199,16 +211,21 @@ public class MerchantPromotionServlet extends HttpServlet {
 
         String titleParam = request.getParameter("title");
         String codeParam = request.getParameter("code");
+        String descriptionParam = request.getParameter("description");
         String typeParam = request.getParameter("type");
         String valueParam = request.getParameter("value");
+        String maxDiscountParam = request.getParameter("maxDiscount");
         String minOrderParam = request.getParameter("minOrder");
         String maxUsesParam = request.getParameter("maxUses");
+        String maxUsesPerUserParam = request.getParameter("maxUsesPerUser");
         String startDateParam = request.getParameter("startDate");
         String endDateParam = request.getParameter("endDate");
+        String statusParam = request.getParameter("status");
+        boolean publishedParam = parseCheckbox(request.getParameter("published"));
 
         if (isBlank(titleParam) || isBlank(codeParam) || isBlank(typeParam)
                 || isBlank(valueParam) || isBlank(minOrderParam) || isBlank(maxUsesParam)
-                || isBlank(startDateParam) || isBlank(endDateParam)) {
+                || isBlank(startDateParam) || isBlank(endDateParam) || isBlank(maxUsesPerUserParam)) {
             request.getSession().setAttribute("promotionError", "Thiếu thông tin bắt buộc để tạo voucher.");
             response.sendRedirect(request.getContextPath() + "/merchant/promotions");
             return;
@@ -221,19 +238,32 @@ public class MerchantPromotionServlet extends HttpServlet {
             return;
         }
 
+        String normalizedStatus = normalizeStatus(statusParam);
+        if (normalizedStatus == null) {
+            normalizedStatus = "ACTIVE";
+        }
+        if (publishedParam && !"ACTIVE".equalsIgnoreCase(normalizedStatus)) {
+            request.getSession().setAttribute("promotionError", "Không thể hiển thị voucher khi trạng thái đang tạm dừng.");
+            response.sendRedirect(request.getContextPath() + "/merchant/promotions");
+            return;
+        }
+
         Voucher v = new Voucher();
         v.setMerchantUserId((int) account.getId());
         v.setTitle(titleParam);
+        v.setDescription(isBlank(descriptionParam) ? null : descriptionParam.trim());
         v.setCode(codeParam.trim().toUpperCase());
         v.setDiscountType(normalizedType);
         try {
             double discountValue = Double.parseDouble(valueParam);
+            Double maxDiscountAmount = parseOptionalDouble(maxDiscountParam);
             double minOrderAmount = Double.parseDouble(minOrderParam);
             int maxUses = Integer.parseInt(maxUsesParam);
+            int maxUsesPerUser = Integer.parseInt(maxUsesPerUserParam);
             java.sql.Timestamp startAt = java.sql.Timestamp.valueOf(startDateParam + " 00:00:00");
             java.sql.Timestamp endAt = java.sql.Timestamp.valueOf(endDateParam + " 23:59:59");
 
-            if (!isValidVoucherNumbers(discountValue, minOrderAmount, maxUses)) {
+            if (!isValidVoucherNumbers(normalizedType, discountValue, maxDiscountAmount, minOrderAmount, maxUses, maxUsesPerUser)) {
                 request.getSession().setAttribute("promotionError", "Giá trị voucher không hợp lệ. Vui lòng kiểm tra lại.");
                 response.sendRedirect(request.getContextPath() + "/merchant/promotions");
                 return;
@@ -245,8 +275,10 @@ public class MerchantPromotionServlet extends HttpServlet {
             }
 
             v.setDiscountValue(discountValue);
+            v.setMaxDiscountAmount(maxDiscountAmount);
             v.setMinOrderAmount(minOrderAmount);
             v.setMaxUsesTotal(maxUses);
+            v.setMaxUsesPerUser(maxUsesPerUser);
             v.setStartAt(startAt);
             v.setEndAt(endAt);
         } catch (IllegalArgumentException ex) {
@@ -254,8 +286,8 @@ public class MerchantPromotionServlet extends HttpServlet {
             response.sendRedirect(request.getContextPath() + "/merchant/promotions");
             return;
         }
-        v.setStatus("ACTIVE");
-        v.setPublished(false);
+        v.setStatus(normalizedStatus);
+        v.setPublished(publishedParam);
 
         int created = voucherDAO.insert(v);
         request.getSession().setAttribute(created > 0 ? "promotionSuccess" : "promotionError", created > 0 ? "Tạo voucher thành công ở trạng thái nháp (chưa hiển thị)." : "Không thể tạo voucher.");
@@ -278,7 +310,55 @@ public class MerchantPromotionServlet extends HttpServlet {
         return null;
     }
 
-    private boolean isValidVoucherNumbers(double discountValue, double minOrderAmount, int maxUses) {
-        return discountValue > 0 && minOrderAmount >= 0 && maxUses > 0;
+    private String normalizeStatus(String rawStatus) {
+        if (isBlank(rawStatus)) {
+            return null;
+        }
+
+        String normalized = rawStatus.trim().toUpperCase();
+        if ("ACTIVE".equals(normalized) || "INACTIVE".equals(normalized)) {
+            return normalized;
+        }
+        return null;
+    }
+
+    private boolean parseCheckbox(String raw) {
+        if (raw == null) {
+            return false;
+        }
+        String normalized = raw.trim().toLowerCase();
+        return "true".equals(normalized) || "on".equals(normalized) || "1".equals(normalized);
+    }
+
+    private Double parseOptionalDouble(String raw) {
+        if (isBlank(raw)) {
+            return null;
+        }
+        return Double.parseDouble(raw);
+    }
+
+    private boolean isValidVoucherNumbers(String discountType,
+            double discountValue,
+            Double maxDiscountAmount,
+            double minOrderAmount,
+            int maxUses,
+            int maxUsesPerUser) {
+
+        if (discountValue <= 0 || minOrderAmount < 0 || maxUses <= 0 || maxUsesPerUser <= 0) {
+            return false;
+        }
+
+        if (maxUsesPerUser > maxUses) {
+            return false;
+        }
+
+        if ("PERCENT".equalsIgnoreCase(discountType)) {
+            if (discountValue > 100) {
+                return false;
+            }
+            return maxDiscountAmount == null || maxDiscountAmount > 0;
+        }
+
+        return true;
     }
 }
