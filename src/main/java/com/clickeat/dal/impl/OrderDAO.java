@@ -1776,7 +1776,53 @@ public class OrderDAO extends AbstractDAO<Order> implements IOrderDAO {
     }
 
     public List<Order> getAvailableOrdersForShipper(int shipperId) {
-        return getAvailableOrdersForShipper();
+        // 1) Lấy vị trí hiện tại của shipper
+        Double shipperLat = null;
+        Double shipperLng = null;
+        String sqlShipper = "SELECT current_latitude, current_longitude FROM ShipperAvailability WHERE shipper_user_id = ?";
+
+        try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(sqlShipper)) {
+            ps.setInt(1, shipperId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    shipperLat = rs.getObject("current_latitude") != null ? rs.getDouble("current_latitude") : null;
+                    shipperLng = rs.getObject("current_longitude") != null ? rs.getDouble("current_longitude") : null;
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+
+        // Nếu chưa có tọa độ shipper thì không hiển thị đơn (theo ràng buộc bán kính)
+        if (!isValidCoord(shipperLat, shipperLng) || (shipperLat == 0d && shipperLng == 0d)) {
+            return new ArrayList<>();
+        }
+
+        // 2) Lấy danh sách đơn chờ + tọa độ quán để lọc theo khoảng cách
+        String sqlOrders = "SELECT o.*, mp.latitude AS shop_lat, mp.longitude AS shop_lng "
+                + "FROM Orders o "
+                + "JOIN MerchantProfiles mp ON o.merchant_user_id = mp.user_id "
+                + "WHERE o.shipper_user_id IS NULL "
+                + "AND o.order_status IN ('MERCHANT_ACCEPTED', 'PREPARING', 'READY_FOR_PICKUP') "
+                + "ORDER BY o.created_at ASC";
+
+        List<Order> filteredOrders = new ArrayList<>();
+        try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(sqlOrders); ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                Double shopLat = rs.getObject("shop_lat") != null ? rs.getDouble("shop_lat") : null;
+                Double shopLng = rs.getObject("shop_lng") != null ? rs.getDouble("shop_lng") : null;
+
+                Double distKm = distanceKm(shipperLat, shipperLng, shopLat, shopLng);
+                if (distKm != null && distKm <= 4.0) {
+                    filteredOrders.add(mapRow(rs));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return filteredOrders;
     }
 
     private void appendMerchantOrderFilters(StringBuilder sql, List<Object> params, String statusGroup, String statusFilter, String fromDateTime, String toDateTime) {
