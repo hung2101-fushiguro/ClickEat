@@ -2,7 +2,7 @@
 <web-app version="6.0" xmlns="https://jakarta.ee/xml/ns/jakartaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd">
     <context-param>
         <param-name>map4d.api.key</param-name>
-        <param-value>38c76a382323f371dac14bba1690e1a1</param-value>
+        <param-value>MAP4D_API_KEY_PLACEHOLDER</param-value>
     </context-param>
     <context-param>
         <param-name>map4d.tile.url.template</param-name>
@@ -11,11 +11,11 @@
 
     <context-param>
         <param-name>gemini.api.key</param-name>
-        <param-value>AIzaSyDZPTl1uPyrTYg70EqK6AEUHOFEl62V5YM</param-value>
+        <param-value></param-value>
     </context-param>
     <context-param>
         <param-name>gemini.model</param-name>
-        <param-value>gemini-3-flash</param-value>
+        <param-value>gemini-2.5-pro</param-value>
     </context-param>
 
     <!-- OpenAI API Configuration -->

@@ -130,6 +130,7 @@ com\clickeat\model\GuestSession.class
 com\clickeat\controller\merchant\MerchantRegisterServlet.class
 com\clickeat\controller\web\StoreServlet.class
 com\clickeat\model\Address.class
+com\clickeat\controller\ai\AIChatServlet$MemoryWritebackEntry.class
 com\clickeat\controller\web\StoreSuggestServlet.class
 com\clickeat\controller\shipper\ShipperCheckNewOrderServlet.class
 com\clickeat\controller\shipper\ShipperOrderTrackingServlet.class
@@ -147,6 +148,7 @@ com\clickeat\controller\web\PaymentSuccessServlet.class
 com\clickeat\dal\impl\PaymentTransactionDAO.class
 com\clickeat\dal\interfaces\IOrderIssueDAO.class
 com\clickeat\controller\merchant\MerchantLogoutServlet.class
+com\clickeat\controller\ai\AIChatServlet$Recommendation.class
 com\clickeat\controller\auth\GoogleCompleteServlet.class
 com\clickeat\controller\auth\LoginServlet.class
 com\clickeat\model\MerchantWallet.class
@@ -163,6 +165,7 @@ com\clickeat\util\VonageVerifyUtil.class
 com\clickeat\model\MerchantWithdrawal.class
 com\clickeat\dal\interfaces\IMerchantKYCDAO.class
 com\clickeat\dal\interfaces\IUserDAO.class
+com\clickeat\controller\ai\AIChatServlet$StructuredAiResponse.class
 com\clickeat\controller\merchant\MerchantNotificationServlet.class
 com\clickeat\dal\impl\GuestSessionDAO.class
 com\clickeat\controller\web\UpdateDeliveryLocationServlet.class

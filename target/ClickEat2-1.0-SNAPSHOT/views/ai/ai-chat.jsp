@@ -113,37 +113,109 @@
                                             <div class="bg-gray-50 text-gray-800 p-4 rounded-2xl rounded-tl-sm text-[15px] font-medium max-w-2xl border border-gray-100 ai-content shadow-sm">
                                                 ${turn.text}
                                             </div>
-                                            <c:if test="${st.last and not empty suggestedFoods}">
-                                                <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-4xl">
-                                                    <c:forEach var="food" items="${suggestedFoods}">
-                                                        <div class="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
-                                                            <c:choose>
-                                                                <c:when test="${not empty food.imageUrl}">
-                                                                    <img src="${food.imageUrl}" class="w-full h-28 object-cover" alt="${food.name}"/>
-                                                                </c:when>
-                                                                <c:otherwise>
-                                                                    <div class="w-full h-28 bg-orange-50 flex items-center justify-center">
-                                                                        <span class="material-symbols-outlined text-orange-300 text-4xl">restaurant</span>
+                                            <c:if test="${st.last}">
+                                                <c:choose>
+                                                    <c:when test="${not empty aiStructuredRecommendations}">
+                                                        <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-4xl">
+                                                            <c:forEach var="rec" items="${aiStructuredRecommendations}">
+                                                                <div class="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+                                                                    <c:choose>
+                                                                        <c:when test="${not empty rec.imageUrl}">
+                                                                            <img src="${rec.imageUrl}" class="w-full h-28 object-cover" alt="${rec.dishName}"/>
+                                                                        </c:when>
+                                                                        <c:otherwise>
+                                                                            <div class="w-full h-28 bg-orange-50 flex items-center justify-center">
+                                                                                <span class="material-symbols-outlined text-orange-300 text-4xl">restaurant</span>
+                                                                            </div>
+                                                                        </c:otherwise>
+                                                                    </c:choose>
+                                                                    <div class="p-3">
+                                                                        <div class="flex items-start justify-between gap-2">
+                                                                            <p class="text-sm font-bold text-gray-900 line-clamp-1">${rec.dishName}</p>
+                                                                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${rec.isHealthyAlternative ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}">
+                                                                                ${rec.isHealthyAlternative ? 'Healthy' : 'Đậm vị'}
+                                                                            </span>
+                                                                        </div>
+                                                                        <p class="text-xs text-gray-500 mt-0.5 line-clamp-1">${rec.merchantName}</p>
+                                                                        <p class="mt-1 text-[11px] text-gray-600 line-clamp-2">${rec.reason}</p>
+                                                                        <div class="mt-2 flex flex-wrap gap-1">
+                                                                            <span class="text-[10px] font-semibold bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">Health ${rec.healthScore}/10</span>
+                                                                            <c:if test="${not empty rec.estimatedCalories}">
+                                                                                <span class="text-[10px] font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">~${rec.estimatedCalories} kcal</span>
+                                                                            </c:if>
+                                                                            <c:if test="${not empty rec.priceLevel and rec.priceLevel != 'unknown'}">
+                                                                                <span class="text-[10px] font-semibold bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">${rec.priceLevel}</span>
+                                                                            </c:if>
+                                                                        </div>
+                                                                        <c:if test="${not empty rec.tags}">
+                                                                            <div class="mt-2 flex flex-wrap gap-1">
+                                                                                <c:forEach var="tag" items="${rec.tags}">
+                                                                                    <span class="text-[10px] font-semibold bg-green-50 text-green-700 px-2 py-0.5 rounded-full">#${tag}</span>
+                                                                                </c:forEach>
+                                                                            </div>
+                                                                        </c:if>
+                                                                        <div class="mt-2 flex items-center justify-between gap-2">
+                                                                            <c:choose>
+                                                                                <c:when test="${not empty rec.price}">
+                                                                                    <span class="text-sm font-extrabold text-orange-600">
+                                                                                        <fmt:formatNumber value="${rec.price}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ
+                                                                                        </span>
+                                                                                    </c:when>
+                                                                                    <c:otherwise>
+                                                                                        <span class="text-xs font-semibold text-gray-400">Giá đang cập nhật</span>
+                                                                                    </c:otherwise>
+                                                                                </c:choose>
+                                                                                <c:if test="${not empty rec.foodId}">
+                                                                                    <a href="${pageContext.request.contextPath}/cart?action=add&id=${rec.foodId}"
+                                                                                    class="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-[11px] font-bold text-white hover:bg-orange-600 transition-colors">
+                                                                                    <span class="material-symbols-outlined text-[14px]">add_shopping_cart</span>
+                                                                                    Thêm vào giỏ
+                                                                                </a>
+                                                                            </c:if>
+                                                                        </div>
                                                                     </div>
-                                                                </c:otherwise>
-                                                            </c:choose>
-                                                            <div class="p-3">
-                                                                <p class="text-sm font-bold text-gray-900 line-clamp-1">${food.name}</p>
-                                                                <p class="text-xs text-gray-500 mt-0.5 line-clamp-1">${food.merchantName}</p>
-                                                                <div class="mt-2 flex items-center justify-between gap-2">
-                                                                    <span class="text-sm font-extrabold text-orange-600">
-                                                                        <fmt:formatNumber value="${food.price}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ
-                                                                        </span>
-                                                                        <a href="${pageContext.request.contextPath}/cart?action=add&id=${food.id}"
-                                                                        class="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-[11px] font-bold text-white hover:bg-orange-600 transition-colors">
-                                                                        <span class="material-symbols-outlined text-[14px]">add_shopping_cart</span>
-                                                                        Thêm vào giỏ
-                                                                    </a>
                                                                 </div>
-                                                            </div>
+                                                            </c:forEach>
                                                         </div>
-                                                    </c:forEach>
-                                                </div>
+                                                        <c:if test="${not empty aiNutritionNote}">
+                                                            <div class="mt-2 max-w-4xl rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-800">
+                                                                <span class="font-bold">Lưu ý dinh dưỡng:</span> ${aiNutritionNote}
+                                                            </div>
+                                                        </c:if>
+                                                    </c:when>
+                                                    <c:when test="${not empty suggestedFoods}">
+                                                        <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-4xl">
+                                                            <c:forEach var="food" items="${suggestedFoods}">
+                                                                <div class="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
+                                                                    <c:choose>
+                                                                        <c:when test="${not empty food.imageUrl}">
+                                                                            <img src="${food.imageUrl}" class="w-full h-28 object-cover" alt="${food.name}"/>
+                                                                        </c:when>
+                                                                        <c:otherwise>
+                                                                            <div class="w-full h-28 bg-orange-50 flex items-center justify-center">
+                                                                                <span class="material-symbols-outlined text-orange-300 text-4xl">restaurant</span>
+                                                                            </div>
+                                                                        </c:otherwise>
+                                                                    </c:choose>
+                                                                    <div class="p-3">
+                                                                        <p class="text-sm font-bold text-gray-900 line-clamp-1">${food.name}</p>
+                                                                        <p class="text-xs text-gray-500 mt-0.5 line-clamp-1">${food.merchantName}</p>
+                                                                        <div class="mt-2 flex items-center justify-between gap-2">
+                                                                            <span class="text-sm font-extrabold text-orange-600">
+                                                                                <fmt:formatNumber value="${food.price}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ
+                                                                                </span>
+                                                                                <a href="${pageContext.request.contextPath}/cart?action=add&id=${food.id}"
+                                                                                class="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-[11px] font-bold text-white hover:bg-orange-600 transition-colors">
+                                                                                <span class="material-symbols-outlined text-[14px]">add_shopping_cart</span>
+                                                                                Thêm vào giỏ
+                                                                            </a>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </c:forEach>
+                                                        </div>
+                                                    </c:when>
+                                                </c:choose>
                                             </c:if>
                                             <c:if test="${st.last and not empty aiInteractionId}">
                                                 <form method="POST" action="${pageContext.request.contextPath}/ai/feedback" class="mt-2 flex flex-wrap items-center gap-2 text-xs">

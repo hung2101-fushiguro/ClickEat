@@ -13,6 +13,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -34,7 +36,6 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-
 @WebServlet(name = "AIChatServlet", urlPatterns = {"/ai"})
 public class AIChatServlet extends HttpServlet {
 
@@ -42,6 +43,7 @@ public class AIChatServlet extends HttpServlet {
     private static final String GEMINI_API_URL_SUFFIX = ":generateContent?key=";
     private static final String OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
     private static final int MAX_HISTORY_TURNS = 8;
+    private static final Logger LOGGER = Logger.getLogger(AIChatServlet.class.getName());
     private final AIUserPreferenceSignalDAO preferenceSignalDAO = new AIUserPreferenceSignalDAO();
 
     @Override
@@ -124,16 +126,18 @@ public class AIChatServlet extends HttpServlet {
         String dataSourcingGuideline = buildDataSourcingGuideline(userLocation);
         String learnedPreferenceContext = buildLearnedPreferenceContext(request, account.getId());
 
-        // 3. Xây dựng System Instruction theo rule gợi ý món ngắn gọn và bám dữ liệu hệ thống
+        // 3. Xây dựng System Instruction dạng structured output để chạy production ổn định
         String systemInstruction
-                = "Bạn là AI gợi ý món ăn cho ứng dụng ClickEat.\n"
+                = "Bạn là ClickEat Smart Nutrition & Ordering Assistant.\n"
+                + "Mục tiêu ưu tiên: trải nghiệm tự nhiên, cá nhân hóa, tăng tỷ lệ chốt đơn, và an toàn sức khỏe.\n"
+                + "Bạn chỉ cung cấp khuyến nghị dinh dưỡng tổng quát theo tinh thần WHO, không chẩn đoán y khoa.\n\n"
                 + "=== HỒ SƠ CÁ NHÂN HÓA CỦA KHÁCH ===\n"
                 + profileContext + "\n\n"
                 + "=== DỮ LIỆU LỊCH SỬ ĂN UỐNG CỦA KHÁCH ===\n"
                 + foodHistory + "\n\n"
                 + "=== NGỮ CẢNH REALTIME ===\n"
                 + realtimeTimeContext + "\n\n"
-                + "=== CHÍNH SÁCH AN TOÀN BẮT BUỘC THEO HỒ SƠ KHÁCH ===\n"
+                + "=== CHÍNH SÁCH AN TOÀN BẮT BUỘC ===\n"
                 + safetyPolicyContext + "\n\n"
                 + "=== NGỮ CẢNH HỘI THOẠI GẦN NHẤT ===\n"
                 + recentConversationContext + "\n\n"
@@ -146,36 +150,58 @@ public class AIChatServlet extends HttpServlet {
                 + "=== CÁCH LẤY DỮ LIỆU (BẮT BUỘC) ===\n"
                 + dataSourcingGuideline + "\n\n"
                 + fewShotBlock
-                + "=== MỤC TIÊU ===\n"
-                + "- Gợi ý món ăn phù hợp nhu cầu người dùng.\n"
-                + "- Trả lời tự nhiên, ngắn gọn, giống người thật.\n"
-                + "- Giúp người dùng chọn món nhanh.\n\n"
                 + "=== QUY TẮC BẮT BUỘC ===\n"
-                + "1. CHỈ được chọn món từ danh sách thực đơn hệ thống ở trên.\n"
-                + "2. KHÔNG được tự tạo món mới hoặc bịa nhà hàng.\n"
-                + "3. KHÔNG giải thích dài dòng.\n"
-                + "4. Mỗi lần chỉ gợi ý 2-3 món.\n"
-                + "5. Ưu tiên theo thứ tự: mục tiêu sức khỏe -> sở thích và lịch sử ăn uống -> thời điểm realtime.\n"
-                + "6. Nếu không có món phù hợp hoàn toàn, chọn món gần nhất nhưng vẫn trong danh sách.\n"
-                + "7. Chỉ gợi ý món từ quán nằm trong phạm vi có thể giao tới vị trí hiện tại của khách.\n"
-                + "8. Nếu yêu cầu xung đột dị ứng hoặc an toàn sức khỏe, cảnh báo rất ngắn và đưa món thay thế an toàn từ danh sách.\n"
-                + "9. Nếu khách nói mơ hồ, chọn 2 món an toàn trước rồi hỏi thêm 1 câu ngắn để làm rõ cho lượt sau.\n"
-                + "10. Giữ tính liên tục hội thoại: bám ngữ cảnh gần nhất, không lặp lại nguyên văn câu vừa nói ở lượt trước.\n\n"
-                + "=== PHONG CÁCH TRẢ LỜI ===\n"
-                + "- Trả lời bằng tiếng Việt, thân thiện, tự nhiên.\n"
-                + "- Chỉ 1-2 câu.\n"
-                + "- Không dùng markdown, không bullet list.\n"
-                + "- Không prefix 'AI:'.\n"
-                + "- Không giải thích logic lựa chọn.\n"
-                + "- Nêu tên món + giá + nhà hàng để khách chốt nhanh.\n"
-                + "- Câu đầu bám đúng nhu cầu hiện tại; câu sau chốt lựa chọn hoặc hỏi rõ 1 ý nếu cần.";
+                + "1. CHỈ chọn món trong danh sách thực đơn hệ thống.\n"
+                + "2. Không bịa món, không bịa nhà hàng.\n"
+                + "3. Mỗi lần đề xuất 2-3 món và bắt buộc có ít nhất 1 healthy alternative.\n"
+                + "4. Nếu thiếu dữ liệu quan trọng thì needs_clarification=true, hỏi tối đa 2 câu ngắn.\n"
+                + "5. Nếu người dùng mơ hồ, vẫn đưa 2 gợi ý tạm an toàn trước.\n"
+                + "6. Nếu người dùng chọn món kém lành mạnh liên tục, phản hồi đồng hành, không phán xét.\n"
+                + "7. Ưu tiên thứ tự: dị ứng/an toàn -> mục tiêu sức khỏe -> khẩu vị/lịch sử -> thời điểm realtime.\n"
+                + "8. Giữ giọng điệu thân thiện, tự nhiên, không giáo điều.\n\n"
+                + "=== OUTPUT CONTRACT (BẮT BUỘC JSON THUẦN, KHÔNG markdown, KHÔNG văn bản ngoài JSON) ===\n"
+                + "{\n"
+                + "  \"intent\": \"string\",\n"
+                + "  \"needs_clarification\": true/false,\n"
+                + "  \"clarification_questions\": [\"...\",\"...\"],\n"
+                + "  \"natural_response\": \"string\",\n"
+                + "  \"recommendations\": [\n"
+                + "    {\n"
+                + "      \"dish_name\": \"string\",\n"
+                + "      \"reason\": \"string\",\n"
+                + "      \"health_score\": 1-10,\n"
+                + "      \"estimated_calories\": number|null,\n"
+                + "      \"price_level\": \"low|medium|high|unknown\",\n"
+                + "      \"tags\": [\"...\"],\n"
+                + "      \"is_healthy_alternative\": true/false\n"
+                + "    }\n"
+                + "  ],\n"
+                + "  \"nutrition_note\": \"string\",\n"
+                + "  \"warnings\": [\"...\"],\n"
+                + "  \"memory_writeback\": [\n"
+                + "    {\"key\":\"food_preferences|allergies|health_goal|disliked_items|other\",\"value\":\"string\",\"confidence\":0.0}\n"
+                + "  ],\n"
+                + "  \"cta\": \"string\"\n"
+                + "}\n"
+                + "Ràng buộc: recommendations phải có 2 hoặc 3 món và luôn có >=1 món is_healthy_alternative=true.";
+
         // 4. Gọi AI API — ưu tiên OpenAI, fallback Gemini nếu chưa cấu hình
-        String aiResponseText = callOpenAIAPI(systemInstruction, normalizedUserMessage, historyTurns);
-        if (aiResponseText == null) {
-            aiResponseText = callGeminiAPI(systemInstruction, normalizedUserMessage, historyTurns);
+        String aiProvider = "openai";
+        String rawAiOutput = callOpenAIAPI(systemInstruction, normalizedUserMessage, historyTurns);
+        if (rawAiOutput == null) {
+            aiProvider = "gemini";
+            rawAiOutput = callGeminiAPI(systemInstruction, normalizedUserMessage, historyTurns);
         }
-        aiResponseText = normalizeAiReplyText(aiResponseText);
+        if (rawAiOutput == null || rawAiOutput.isBlank()) {
+            aiProvider = "none";
+        }
+
+        StructuredAiResponse structured = parseStructuredAiResponse(rawAiOutput, suggestedFoods, normalizedUserMessage);
+        logStructuredInference(account.getId(), aiProvider, normalizedUserMessage, rawAiOutput, structured);
+        String aiResponseText = composeNaturalChatReply(structured);
+
         updatePreferenceMemory(request, account.getId(), normalizedUserMessage);
+        applyStructuredMemoryWriteback(customerProfileDAO, profile, account.getId(), structured);
 
         long interactionId = logTrainingEvent(account.getId(), normalizedUserMessage, profileContext, menuContext,
                 historyToContext(historyTurns), profile, aiResponseText);
@@ -187,6 +213,9 @@ public class AIChatServlet extends HttpServlet {
         request.setAttribute("userMessage", userMessage);
         request.setAttribute("aiReply", aiResponseText);
         request.setAttribute("suggestedFoods", suggestedFoods);
+        request.setAttribute("aiStructuredRecommendations", buildRecommendationCards(structured, suggestedFoods));
+        request.setAttribute("aiNutritionNote", safe(structured.nutritionNote, ""));
+        request.setAttribute("aiNeedsClarification", structured.needsClarification);
         request.setAttribute("locationAwareEnabled", userLocation.latitude != null && userLocation.longitude != null);
         if (interactionId > 0) {
             request.setAttribute("aiInteractionId", interactionId);
@@ -831,6 +860,437 @@ public class AIChatServlet extends HttpServlet {
             view.add(row);
         }
         return view;
+    }
+
+    private StructuredAiResponse parseStructuredAiResponse(String raw,
+            List<FoodItem> fallbackFoods,
+            String userMessage) {
+        StructuredAiResponse response = new StructuredAiResponse();
+        response.intent = "fallback";
+        response.naturalResponse = "Mình gợi ý nhanh vài món phù hợp để bạn chọn nhé.";
+
+        JSONObject json = tryParseJsonObject(raw);
+        if (json == null) {
+            response.parsedJson = false;
+            response.parseFailureReason = "invalid_json";
+            response.usedFallbackRecommendations = true;
+            response.recommendations = buildFallbackRecommendations(fallbackFoods);
+            ensureHealthyAlternative(response.recommendations);
+            response.nutritionNote = "Nếu bạn muốn mình cá nhân hóa kỹ hơn, cho mình biết mục tiêu sức khỏe và ngân sách nhé.";
+            response.cta = "Bạn thích món đậm vị hay nhẹ bụng hơn?";
+            return response;
+        }
+
+        response.parsedJson = true;
+
+        response.intent = safe(json.optString("intent"), "fallback");
+        response.needsClarification = json.optBoolean("needs_clarification", false);
+        response.naturalResponse = safe(json.optString("natural_response"), response.naturalResponse);
+        response.nutritionNote = safe(json.optString("nutrition_note"), "");
+        response.cta = safe(json.optString("cta"), "Bạn muốn mình chốt món nào luôn?");
+
+        JSONArray questions = json.optJSONArray("clarification_questions");
+        if (questions != null) {
+            for (int i = 0; i < questions.length() && i < 2; i++) {
+                String q = questions.optString(i);
+                if (q != null && !q.isBlank()) {
+                    response.clarificationQuestions.add(q.trim());
+                }
+            }
+        }
+
+        JSONArray recs = json.optJSONArray("recommendations");
+        if (recs != null) {
+            for (int i = 0; i < recs.length() && i < 3; i++) {
+                JSONObject item = recs.optJSONObject(i);
+                if (item == null) {
+                    continue;
+                }
+                Recommendation rec = new Recommendation();
+                rec.dishName = safe(item.optString("dish_name"), "Món gợi ý");
+                rec.reason = safe(item.optString("reason"), "Phù hợp nhu cầu hiện tại của bạn.");
+                rec.healthScore = Math.max(1, Math.min(10, item.optInt("health_score", 7)));
+                rec.estimatedCalories = item.has("estimated_calories") && !item.isNull("estimated_calories")
+                        ? item.optInt("estimated_calories") : null;
+                rec.priceLevel = safe(item.optString("price_level"), "unknown").toLowerCase(Locale.ROOT);
+                JSONArray tags = item.optJSONArray("tags");
+                if (tags != null) {
+                    for (int t = 0; t < tags.length(); t++) {
+                        String tag = safe(tags.optString(t), "");
+                        if (!tag.isBlank()) {
+                            rec.tags.add(tag);
+                        }
+                    }
+                }
+                rec.isHealthyAlternative = item.optBoolean("is_healthy_alternative", false);
+                response.recommendations.add(rec);
+            }
+        }
+
+        if (response.recommendations.size() < 2) {
+            response.usedFallbackRecommendations = true;
+            response.recommendations = buildFallbackRecommendations(fallbackFoods);
+        }
+        ensureHealthyAlternative(response.recommendations);
+
+        JSONArray writeback = json.optJSONArray("memory_writeback");
+        if (writeback != null) {
+            for (int i = 0; i < writeback.length(); i++) {
+                JSONObject wb = writeback.optJSONObject(i);
+                if (wb == null) {
+                    continue;
+                }
+                MemoryWritebackEntry entry = new MemoryWritebackEntry();
+                entry.key = safe(wb.optString("key"), "").toLowerCase(Locale.ROOT);
+                entry.value = safe(wb.optString("value"), "");
+                entry.confidence = wb.optDouble("confidence", 0.0);
+                if (!entry.key.isBlank() && !entry.value.isBlank()) {
+                    response.memoryWritebacks.add(entry);
+                }
+            }
+        }
+
+        if (response.needsClarification && response.clarificationQuestions.isEmpty()) {
+            response.clarificationQuestions.add("Bạn muốn ưu tiên ngon đậm vị hay lành mạnh hơn?");
+        }
+
+        if (response.cta.isBlank()) {
+            response.cta = "Bạn muốn mình chốt món nào cho đơn này?";
+        }
+
+        if (response.naturalResponse.isBlank()) {
+            response.naturalResponse = "Mình đã lọc nhanh các lựa chọn phù hợp cho bạn.";
+        }
+
+        if (response.intent.isBlank()) {
+            response.intent = "fallback";
+        }
+
+        if (response.needsClarification && response.clarificationQuestions.isEmpty()) {
+            response.clarificationQuestions.add("Bạn muốn ăn theo mục tiêu sức khỏe nào hôm nay?");
+        }
+
+        return response;
+    }
+
+    private JSONObject tryParseJsonObject(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String text = raw.trim();
+
+        if (text.startsWith("```") && text.contains("{")) {
+            int firstBrace = text.indexOf('{');
+            int lastBrace = text.lastIndexOf('}');
+            if (firstBrace >= 0 && lastBrace > firstBrace) {
+                text = text.substring(firstBrace, lastBrace + 1).trim();
+            }
+        }
+
+        try {
+            return new JSONObject(text);
+        } catch (Exception ignored) {
+            int firstBrace = text.indexOf('{');
+            int lastBrace = text.lastIndexOf('}');
+            if (firstBrace >= 0 && lastBrace > firstBrace) {
+                try {
+                    return new JSONObject(text.substring(firstBrace, lastBrace + 1));
+                } catch (Exception ignoredAgain) {
+                    return null;
+                }
+            }
+            return null;
+        }
+    }
+
+    private List<Recommendation> buildFallbackRecommendations(List<FoodItem> foods) {
+        List<Recommendation> recs = new ArrayList<>();
+        if (foods != null) {
+            for (FoodItem food : foods) {
+                if (food == null) {
+                    continue;
+                }
+                Recommendation rec = new Recommendation();
+                rec.dishName = safe(food.getName(), "Món gợi ý");
+                rec.reason = "Món đang sẵn và phù hợp ngữ cảnh hiện tại của bạn.";
+                rec.healthScore = food.isFried() ? 6 : 8;
+                rec.isHealthyAlternative = !food.isFried();
+                recs.add(rec);
+                if (recs.size() >= 3) {
+                    break;
+                }
+            }
+        }
+
+        while (recs.size() < 2) {
+            Recommendation rec = new Recommendation();
+            rec.dishName = recs.isEmpty() ? "Cơm gà nướng rau" : "Bún cá rau nhiều";
+            rec.reason = "Lựa chọn cân bằng, dễ ăn và phù hợp nhiều nhu cầu.";
+            rec.healthScore = 8;
+            rec.isHealthyAlternative = true;
+            recs.add(rec);
+        }
+        return recs;
+    }
+
+    private List<Map<String, Object>> buildRecommendationCards(StructuredAiResponse response, List<FoodItem> suggestedFoods) {
+        List<Map<String, Object>> cards = new ArrayList<>();
+        if (response == null || response.recommendations == null || response.recommendations.isEmpty()) {
+            return cards;
+        }
+
+        for (Recommendation rec : response.recommendations) {
+            if (rec == null || safe(rec.dishName, "").isBlank()) {
+                continue;
+            }
+
+            Map<String, Object> card = new LinkedHashMap<>();
+            FoodItem matchedFood = matchFoodByName(rec.dishName, suggestedFoods);
+
+            card.put("dishName", safe(rec.dishName, "Món gợi ý"));
+            card.put("reason", safe(rec.reason, "Phù hợp nhu cầu hiện tại của bạn."));
+            card.put("healthScore", rec.healthScore);
+            card.put("isHealthyAlternative", rec.isHealthyAlternative);
+            card.put("estimatedCalories", rec.estimatedCalories);
+            card.put("priceLevel", safe(rec.priceLevel, "unknown"));
+            card.put("tags", rec.tags == null ? new ArrayList<>() : rec.tags);
+
+            if (matchedFood != null) {
+                card.put("foodId", matchedFood.getId());
+                card.put("imageUrl", safe(matchedFood.getImageUrl(), ""));
+                card.put("merchantName", safe(matchedFood.getMerchantName(), ""));
+                card.put("price", matchedFood.getPrice());
+            } else {
+                card.put("foodId", null);
+                card.put("imageUrl", "");
+                card.put("merchantName", "");
+                card.put("price", null);
+            }
+
+            cards.add(card);
+        }
+        return cards;
+    }
+
+    private FoodItem matchFoodByName(String dishName, List<FoodItem> foods) {
+        if (foods == null || foods.isEmpty() || dishName == null || dishName.isBlank()) {
+            return null;
+        }
+        String target = normalize(dishName);
+        for (FoodItem food : foods) {
+            if (food == null || food.getName() == null) {
+                continue;
+            }
+            String foodName = normalize(food.getName());
+            if (foodName.equals(target) || foodName.contains(target) || target.contains(foodName)) {
+                return food;
+            }
+        }
+        return null;
+    }
+
+    private void logStructuredInference(int userId,
+            String provider,
+            String userMessage,
+            String rawOutput,
+            StructuredAiResponse response) {
+        try {
+            int recommendationCount = response == null || response.recommendations == null ? 0 : response.recommendations.size();
+            int writebackCount = response == null || response.memoryWritebacks == null ? 0 : response.memoryWritebacks.size();
+            boolean parseOk = response != null && response.parsedJson;
+            boolean fallbackRecs = response != null && response.usedFallbackRecommendations;
+
+            LOGGER.info(() -> String.format(
+                    "[AIChat] userId=%d provider=%s parseOk=%s fallbackRecs=%s intent=%s needsClarification=%s recs=%d writebacks=%d userMsgLen=%d rawLen=%d",
+                    userId,
+                    safe(provider, "unknown"),
+                    parseOk,
+                    fallbackRecs,
+                    response == null ? "" : safe(response.intent, ""),
+                    response != null && response.needsClarification,
+                    recommendationCount,
+                    writebackCount,
+                    safe(userMessage, "").length(),
+                    safe(rawOutput, "").length()));
+
+            if (!parseOk || fallbackRecs) {
+                String rawSnippet = safe(rawOutput, "").replaceAll("\\s+", " ").trim();
+                if (rawSnippet.length() > 260) {
+                    rawSnippet = rawSnippet.substring(0, 260) + "...";
+                }
+                String warning = "[AIChat] structured parse degraded"
+                        + " parseOk=" + parseOk
+                        + " fallbackRecs=" + fallbackRecs
+                        + " reason=" + (response == null ? "unknown" : safe(response.parseFailureReason, "unknown"))
+                        + " rawSnippet=" + rawSnippet;
+                LOGGER.warning(warning);
+            }
+        } catch (Exception ex) {
+            LOGGER.log(Level.WARNING, "[AIChat] Failed to emit structured telemetry", ex);
+        }
+    }
+
+    private void ensureHealthyAlternative(List<Recommendation> recs) {
+        if (recs == null || recs.isEmpty()) {
+            return;
+        }
+        for (Recommendation rec : recs) {
+            if (rec != null && rec.isHealthyAlternative) {
+                return;
+            }
+        }
+        recs.get(0).isHealthyAlternative = true;
+        if (recs.get(0).healthScore < 8) {
+            recs.get(0).healthScore = 8;
+        }
+    }
+
+    private String composeNaturalChatReply(StructuredAiResponse response) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(safe(response.naturalResponse, "Mình gợi ý nhanh vài món để bạn chọn nhé."));
+
+        if (response.recommendations != null && !response.recommendations.isEmpty()) {
+            sb.append(" ");
+            for (int i = 0; i < response.recommendations.size(); i++) {
+                Recommendation rec = response.recommendations.get(i);
+                if (rec == null) {
+                    continue;
+                }
+                if (i > 0) {
+                    sb.append(" ");
+                }
+                sb.append(i + 1).append(") ")
+                        .append(safe(rec.dishName, "Món gợi ý"))
+                        .append(" - ")
+                        .append(safe(rec.reason, "phù hợp nhu cầu hiện tại"))
+                        .append(".");
+            }
+        }
+
+        if (!safe(response.nutritionNote, "").isBlank()) {
+            sb.append(" ").append(response.nutritionNote.trim());
+        }
+
+        if (response.needsClarification && response.clarificationQuestions != null && !response.clarificationQuestions.isEmpty()) {
+            sb.append(" ");
+            for (int i = 0; i < response.clarificationQuestions.size(); i++) {
+                if (i > 0) {
+                    sb.append(" ");
+                }
+                sb.append(response.clarificationQuestions.get(i).trim());
+            }
+        }
+
+        if (!safe(response.cta, "").isBlank()) {
+            sb.append(" ").append(response.cta.trim());
+        }
+
+        return normalizeAiReplyText(sb.toString());
+    }
+
+    private void applyStructuredMemoryWriteback(CustomerProfileDAO customerProfileDAO,
+            CustomerProfile profile,
+            int userId,
+            StructuredAiResponse response) {
+        if (response == null || response.memoryWritebacks == null || response.memoryWritebacks.isEmpty()) {
+            return;
+        }
+
+        CustomerProfile target = profile;
+        if (target == null) {
+            customerProfileDAO.ensureExists(userId);
+            target = customerProfileDAO.findByUserId(userId);
+            if (target == null) {
+                target = new CustomerProfile();
+                target.setUserId(userId);
+            }
+        }
+
+        boolean profileDirty = false;
+        for (MemoryWritebackEntry entry : response.memoryWritebacks) {
+            if (entry == null || entry.confidence < 0.75) {
+                continue;
+            }
+
+            String key = safe(entry.key, "").toLowerCase(Locale.ROOT);
+            String value = safe(entry.value, "");
+            if (key.isBlank() || value.isBlank()) {
+                continue;
+            }
+
+            switch (key) {
+                case "food_preferences":
+                    target.setFoodPreferences(mergeProfileField(target.getFoodPreferences(), value));
+                    profileDirty = true;
+                    break;
+                case "allergies":
+                    target.setAllergies(mergeProfileField(target.getAllergies(), value));
+                    profileDirty = true;
+                    break;
+                case "health_goal":
+                    target.setHealthGoal(value);
+                    profileDirty = true;
+                    break;
+                default:
+                    rememberPreference(new LinkedHashMap<>(), userId, "wb-" + key, "Tín hiệu AI: " + key + "=" + value);
+                    break;
+            }
+        }
+
+        if (profileDirty) {
+            customerProfileDAO.updateProfile(target);
+        }
+    }
+
+    private String mergeProfileField(String oldValue, String newValue) {
+        String oldText = safe(oldValue, "");
+        String newText = safe(newValue, "");
+        if (newText.isBlank()) {
+            return oldText;
+        }
+        if (oldText.isBlank()) {
+            return newText;
+        }
+
+        String normalizedOld = normalize(oldText);
+        String normalizedNew = normalize(newText);
+        if (normalizedOld.contains(normalizedNew)) {
+            return oldText;
+        }
+        return oldText + "; " + newText;
+    }
+
+    private static final class StructuredAiResponse {
+
+        private String intent;
+        private boolean needsClarification;
+        private String naturalResponse;
+        private String nutritionNote;
+        private String cta;
+        private boolean parsedJson;
+        private boolean usedFallbackRecommendations;
+        private String parseFailureReason;
+        private List<String> clarificationQuestions = new ArrayList<>();
+        private List<Recommendation> recommendations = new ArrayList<>();
+        private List<MemoryWritebackEntry> memoryWritebacks = new ArrayList<>();
+    }
+
+    private static final class Recommendation {
+
+        private String dishName;
+        private String reason;
+        private int healthScore;
+        private boolean isHealthyAlternative;
+        private Integer estimatedCalories;
+        private String priceLevel;
+        private List<String> tags = new ArrayList<>();
+    }
+
+    private static final class MemoryWritebackEntry {
+
+        private String key;
+        private String value;
+        private double confidence;
     }
 
     private static final class ChatTurn {
