@@ -29,8 +29,11 @@ import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 @WebServlet(name = "HomeServlet", urlPatterns = {"/home"})
@@ -61,6 +64,17 @@ public class HomeServlet extends HttpServlet {
         List<MerchantProfile> merchants = new ArrayList<>();
 
         DeliveryLocation deliveryLocation = resolveCurrentDeliveryLocation(session, account);
+        List<MerchantProfile> allMerchants = new ArrayList<>();
+
+        try {
+            allMerchants = merchantProfileDAO.findAll();
+            if (allMerchants == null) {
+                allMerchants = new ArrayList<>();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("merchantsError", e.getMessage());
+        }
 
         try {
             Cart cart = null;
@@ -86,6 +100,7 @@ public class HomeServlet extends HttpServlet {
 
         try {
             foods = foodItemDAO.getTopFoods(8);
+            foods = filterHotDealsByCurrentProvince(foods, allMerchants, deliveryLocation, 8);
         } catch (Exception e) {
             e.printStackTrace();
             request.setAttribute("foodsError", e.getMessage());
@@ -141,7 +156,7 @@ public class HomeServlet extends HttpServlet {
         }
 
         try {
-            merchants = getNearbyFeaturedMerchants(deliveryLocation, 6);
+            merchants = getNearbyFeaturedMerchants(allMerchants, deliveryLocation, 6);
         } catch (Exception e) {
             e.printStackTrace();
             request.setAttribute("merchantsError", e.getMessage());
@@ -247,8 +262,7 @@ public class HomeServlet extends HttpServlet {
         return new DeliveryLocation(null, null, "Chưa xác định vị trí giao hàng", "NONE");
     }
 
-    private List<MerchantProfile> getNearbyFeaturedMerchants(DeliveryLocation location, int limit) {
-        List<MerchantProfile> allMerchants = merchantProfileDAO.findAll();
+    private List<MerchantProfile> getNearbyFeaturedMerchants(List<MerchantProfile> allMerchants, DeliveryLocation location, int limit) {
         List<MerchantProfile> candidates = new ArrayList<>();
         List<MerchantProfile> result = new ArrayList<>();
 
@@ -334,6 +348,135 @@ public class HomeServlet extends HttpServlet {
         }
 
         return result;
+    }
+
+    private List<FoodItem> filterHotDealsByCurrentProvince(List<FoodItem> foods,
+            List<MerchantProfile> allMerchants,
+            DeliveryLocation location,
+            int limit) {
+
+        if (foods == null || foods.isEmpty() || allMerchants == null || allMerchants.isEmpty() || location == null) {
+            return foods;
+        }
+
+        Set<String> provinceSignals = extractProvinceSignals(location.getAddress());
+        if (provinceSignals.isEmpty()) {
+            return foods;
+        }
+
+        Map<Long, MerchantProfile> merchantByUserId = new HashMap<>();
+        for (MerchantProfile merchant : allMerchants) {
+            if (merchant == null) {
+                continue;
+            }
+            merchantByUserId.put(merchant.getUserId(), merchant);
+        }
+
+        List<FoodItem> sameProvinceFoods = new ArrayList<>();
+        for (FoodItem food : foods) {
+            MerchantProfile merchant = merchantByUserId.get((long) food.getMerchantUserId());
+            if (matchesProvince(merchant, provinceSignals)) {
+                sameProvinceFoods.add(food);
+                if (sameProvinceFoods.size() >= limit) {
+                    break;
+                }
+            }
+        }
+
+        // Keep old behavior if location parsing fails to match anything.
+        if (sameProvinceFoods.isEmpty()) {
+            return foods;
+        }
+        return sameProvinceFoods;
+    }
+
+    private boolean matchesProvince(MerchantProfile merchant, Set<String> provinceSignals) {
+        if (merchant == null || provinceSignals == null || provinceSignals.isEmpty()) {
+            return false;
+        }
+
+        String provinceName = normalizePlaceToken(merchant.getProvinceName());
+        String provinceCode = normalizePlaceToken(merchant.getProvinceCode());
+
+        for (String signal : provinceSignals) {
+            if (signal == null || signal.isBlank()) {
+                continue;
+            }
+            if (!provinceName.isBlank() && (provinceName.contains(signal) || signal.contains(provinceName))) {
+                return true;
+            }
+            if (!provinceCode.isBlank() && signal.equalsIgnoreCase(provinceCode)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private Set<String> extractProvinceSignals(String address) {
+        Set<String> result = new HashSet<>();
+        if (address == null || address.isBlank()) {
+            return result;
+        }
+
+        String[] parts = address.split(",");
+        for (String raw : parts) {
+            String token = normalizePlaceToken(raw);
+            if (token.isBlank()) {
+                continue;
+            }
+
+            if (token.contains("tinh")
+                    || token.contains("thanh pho")
+                    || token.startsWith("tp ")
+                    || token.startsWith("tp.")) {
+                result.add(token);
+                result.add(stripProvincePrefix(token));
+            }
+        }
+
+        if (result.isEmpty() && parts.length > 0) {
+            // Fallback: last meaningful segment before country often maps to province/city.
+            String fallback = normalizePlaceToken(parts[parts.length - 1]);
+            if (fallback.equals("viet nam") && parts.length >= 2) {
+                fallback = normalizePlaceToken(parts[parts.length - 2]);
+            }
+            if (!fallback.isBlank()) {
+                result.add(fallback);
+                result.add(stripProvincePrefix(fallback));
+            }
+        }
+
+        result.removeIf(String::isBlank);
+        return result;
+    }
+
+    private String stripProvincePrefix(String token) {
+        if (token == null) {
+            return "";
+        }
+        String value = token;
+        value = value.replace("thanh pho", "").trim();
+        value = value.replace("tinh", "").trim();
+        value = value.replace("tp.", "").trim();
+        value = value.replace("tp", "").trim();
+        return value;
+    }
+
+    private String normalizePlaceToken(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        String normalized = java.text.Normalizer.normalize(value, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "")
+                .toLowerCase(Locale.ROOT)
+                .replace('đ', 'd')
+                .replaceAll("[^a-z0-9\\s]", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+
+        return normalized;
     }
 
     private Double toDouble(Object value) {
