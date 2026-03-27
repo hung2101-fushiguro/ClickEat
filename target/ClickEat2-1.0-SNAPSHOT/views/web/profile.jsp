@@ -416,5 +416,6 @@
                 clientError.classList.add('hidden');
             });
         </script>
+        <jsp:include page="footer.jsp" />
     </body>
 </html>

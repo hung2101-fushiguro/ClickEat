@@ -10,6 +10,8 @@ Author     : DELL
 <html lang="vi">
     <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/responsive-global.css">
         <title>Theo dõi Đơn hàng - ClickEat Shipper</title>
         <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/assets/images/shipperlogo.png">
         <script src="https://cdn.tailwindcss.com"></script>
@@ -26,6 +28,9 @@ Author     : DELL
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/vendor/leaflet/leaflet.css" />
         <script src="${pageContext.request.contextPath}/assets/vendor/leaflet/leaflet.js"></script>
+        <script>window.MAP4D_API_KEY = window.MAP4D_API_KEY || '${initParam["map4d.api.key"]}';</script>
+        <script>window.MAP4D_TILE_URL_TEMPLATE = window.MAP4D_TILE_URL_TEMPLATE || '${initParam["map4d.tile.url.template"]}';</script>
+        <script src="${pageContext.request.contextPath}/assets/js/map4d-api.js"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
         <style>body { font-family: 'Inter', sans-serif; }</style>
     </head>
@@ -150,6 +155,8 @@ Author     : DELL
                 let isRouting = false;
                 let lastTrackingUpdateAt = 0;
                 let trackingTickerId = null;
+                let geoErrorToastAt = 0;
+                let geoRetryTimer = null;
                 
                 // ĐÃ FIX CHỐNG SẬP: Bọc dấu nháy và dùng parseFloat, dự phòng tọa độ mặc định
                 let targetLat = parseFloat('${order.orderStatus == "DELIVERING" ? merchant.latitude : order.latitude}') || 16.0736;
@@ -167,10 +174,11 @@ Author     : DELL
                     // 2. Khởi tạo bản đồ
                     map = L.map('map').setView([shopLat, shopLng], 14);
                     
-                    // 3. Load lớp bản đồ (OpenStreetMap)
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        attribution: '© OpenStreetMap contributors'
-                    }).addTo(map);
+                    // 3. Load lớp bản đồ nền (Map4D nếu cấu hình, fallback OpenStreetMap)
+                    ClickEatMap4D.addBaseTileLayer(map, {
+                        attribution: '&copy; Map4D',
+                        fallbackAttribution: '&copy; OpenStreetMap contributors'
+                    });
                     
                     // 4. Tạo icon Tùy chỉnh
                     const shopIcon = L.divIcon({
@@ -187,36 +195,24 @@ Author     : DELL
                     L.marker([shopLat, shopLng], {icon: shopIcon}).addTo(map).bindPopup("<b>Lấy hàng tại đây</b>");
                     L.marker([customerLat, customerLng], {icon: customerIcon}).addTo(map).bindPopup("<b>Giao hàng đến đây</b>");
                     
-                    // 5. Gọi OSRM API để vẽ đường
-                    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/\${shopLng},\${shopLat};\${customerLng},\${customerLat}?overview=full&geometries=geojson`;
-                    
-                    fetch(osrmUrl)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.routes && data.routes.length > 0) {
-                            const route = data.routes[0];
-                            
-                            // Cập nhật text khoảng cách
-                            const distanceKm = (route.distance / 1000).toFixed(1);
-                            const durationMin = Math.round(route.duration / 60);
-                            document.getElementById('distance-text').innerHTML = `\${distanceKm} km • \${durationMin} phút`;
-                            
-                            // Vẽ đường đi
-                            const coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-                            const polyline = L.polyline(coordinates, {
-                                color: '#3B82F6',
-                                weight: 5,
-                                opacity: 0.8,
-                                dashArray: '10, 10'
-                            }).addTo(map);
-                            
-                            // Zoom bản đồ vừa vặn
-                            map.fitBounds(polyline.getBounds(), {padding: [30, 30]});
-                        }
+                    ClickEatMap4D.route(shopLat, shopLng, customerLat, customerLng)
+                    .then(route => {
+                        const distanceKm = (route.distance / 1000).toFixed(1);
+                        const durationMin = Math.max(1, Math.round(route.duration / 60));
+                        document.getElementById('distance-text').innerHTML = `\${distanceKm} km • \${durationMin} phút`;
+                        
+                        const polyline = L.polyline(route.coordinates, {
+                            color: '#3B82F6',
+                            weight: 5,
+                            opacity: 0.8,
+                            dashArray: '10, 10'
+                        }).addTo(map);
+                        
+                        map.fitBounds(polyline.getBounds(), {padding: [30, 30]});
                     })
                     .catch(err => {
-                        console.error("Lỗi vẽ đường đi: ", err);
-                        document.getElementById('distance-text').innerHTML = "Không thể tính khoảng cách";
+                        console.error('Lỗi vẽ đường đi (Map4D): ', err);
+                        document.getElementById('distance-text').innerHTML = ClickEatMap4D.messageFromError(err, 'Không thể tính khoảng cách');
                     });
                     
                     startLiveTracking();
@@ -250,6 +246,70 @@ Author     : DELL
                 function markTrackingUpdatedNow() {
                     lastTrackingUpdateAt = Date.now();
                     renderTrackingLastUpdated();
+                }
+                
+                function setDistanceStatus(message) {
+                    const distanceEl = document.getElementById('distance-text');
+                    if (distanceEl) {
+                        distanceEl.innerHTML = message;
+                    }
+                }
+                
+                function notifyGeoIssue(message) {
+                    const now = Date.now();
+                    // Prevent alert spam from repeated watchPosition errors.
+                    if (now - geoErrorToastAt < 9000) {
+                        return;
+                    }
+                    geoErrorToastAt = now;
+                    alert(message);
+                }
+                
+                function describeGeoError(error) {
+                    if (!error || typeof error.code !== 'number') {
+                        return 'Không thể lấy vị trí hiện tại. Vui lòng thử lại.';
+                    }
+                    if (error.code === 1) {
+                        return 'Ứng dụng chưa được cấp quyền vị trí. Vui lòng cho phép truy cập vị trí trong trình duyệt.';
+                    }
+                    if (error.code === 2) {
+                        return 'Thiết bị chưa lấy được tín hiệu vị trí. Hãy đứng nơi thoáng hơn hoặc thử lại sau vài giây.';
+                    }
+                    if (error.code === 3) {
+                        return 'Định vị GPS bị quá thời gian. Hệ thống sẽ thử lại với chế độ tiết kiệm pin.';
+                    }
+                    return 'Không thể lấy vị trí hiện tại. Vui lòng thử lại.';
+                }
+                
+                function requestSinglePosition(lowAccuracyFallback) {
+                    if (!navigator.geolocation) {
+                        notifyGeoIssue('Trình duyệt không hỗ trợ định vị GPS.');
+                        return;
+                    }
+                    navigator.geolocation.getCurrentPosition(
+                    function (position) {
+                        updateShipperLocation(position.coords.latitude, position.coords.longitude, true);
+                    },
+                    function (error) {
+                        const message = describeGeoError(error);
+                        setDistanceStatus('Chưa lấy được GPS');
+                        if (error && error.code === 1) {
+                            notifyGeoIssue(message);
+                            return;
+                        }
+                        if (!lowAccuracyFallback && error && error.code === 3) {
+                            // Retry once with lower accuracy for devices that delay GPS lock.
+                            requestSinglePosition(true);
+                            return;
+                        }
+                        notifyGeoIssue(message);
+                    },
+                    {
+                        enableHighAccuracy: !lowAccuracyFallback,
+                        maximumAge: lowAccuracyFallback ? 30000 : 0,
+                        timeout: lowAccuracyFallback ? 18000 : 12000
+                    }
+                    );
                 }
                 
                 function toRad(value) {
@@ -305,16 +365,8 @@ Author     : DELL
                     lastRouteLat = lat;
                     lastRouteLng = lng;
                     
-                    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/\${lng},\${lat};\${targetLng},\${targetLat}?overview=full&geometries=geojson`;
-                    
-                    fetch(osrmUrl)
-                    .then(res => res.json())
-                    .then(data => {
-                        if (!data.routes || data.routes.length === 0) {
-                            throw new Error('no-route');
-                        }
-                        
-                        const route = data.routes[0];
+                    ClickEatMap4D.route(lat, lng, targetLat, targetLng)
+                    .then(route => {
                         const distanceKm = (route.distance / 1000).toFixed(1);
                         const durationMin = Math.max(1, Math.round(route.duration / 60));
                         document.getElementById('distance-text').innerHTML = `\${distanceKm} km • ~\${durationMin} phút`;
@@ -323,14 +375,13 @@ Author     : DELL
                             map.removeLayer(routeLine);
                         }
                         
-                        const coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-                        routeLine = L.polyline(coordinates, {color: '#3B82F6', weight: 5, dashArray: '10, 10'}).addTo(map);
+                        routeLine = L.polyline(route.coordinates, {color: '#3B82F6', weight: 5, dashArray: '10, 10'}).addTo(map);
                         
                         const bounds = L.latLngBounds([lat, lng], [targetLat, targetLng]);
                         map.fitBounds(bounds, {padding: [50, 50]});
                     })
-                    .catch(() => {
-                        document.getElementById('distance-text').innerHTML = 'Không thể cập nhật lộ trình';
+                    .catch((err) => {
+                        document.getElementById('distance-text').innerHTML = ClickEatMap4D.messageFromError(err, 'Không thể cập nhật lộ trình');
                     })
                     .finally(() => {
                         isRouting = false;
@@ -365,70 +416,66 @@ Author     : DELL
                         
                         // Hàm 1: Lấy GPS từ điện thoại/trình duyệt
                         function getGPSLocation() {
-                            document.getElementById('distance-text').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang định vị...';
-                            if (navigator.geolocation) {
-                                navigator.geolocation.getCurrentPosition(
-                                (position) => {
-                                    updateShipperLocation(position.coords.latitude, position.coords.longitude, true);
-                                },
-                                () => {
-                                    alert("Vui lòng bật GPS hoặc tự nhập địa chỉ ở thanh phía trên!");
-                                    document.getElementById('distance-text').innerHTML = 'Chưa có vị trí';
-                                },
-                                {
-                                    enableHighAccuracy: true,
-                                    maximumAge: 0,
-                                    timeout: 12000
-                                }
-                                );
-                                } else {
-                                    alert("Trình duyệt không hỗ trợ GPS.");
-                                }
+                            setDistanceStatus('<i class="fa-solid fa-spinner fa-spin"></i> Đang định vị...');
+                            requestSinglePosition(false);
+                        }
+                        
+                        function startLiveTracking() {
+                            if (!navigator.geolocation) {
+                                getGPSLocation();
+                                return;
                             }
                             
-                            function startLiveTracking() {
-                                if (!navigator.geolocation) {
-                                    getGPSLocation();
+                            if (locationWatchId !== null) {
+                                navigator.geolocation.clearWatch(locationWatchId);
+                            }
+                            
+                            locationWatchId = navigator.geolocation.watchPosition(
+                            (position) => {
+                                updateShipperLocation(position.coords.latitude, position.coords.longitude, false);
+                            },
+                            (error) => {
+                                const message = describeGeoError(error);
+                                if (error && error.code === 1) {
+                                    setDistanceStatus('Thiếu quyền vị trí');
+                                    notifyGeoIssue(message);
                                     return;
                                 }
                                 
-                                if (locationWatchId !== null) {
-                                    navigator.geolocation.clearWatch(locationWatchId);
+                                // Do not show false "enable GPS" alerts repeatedly on timeout/unavailable.
+                                setDistanceStatus('GPS đang yếu, sẽ thử lại...');
+                                if (geoRetryTimer !== null) {
+                                    clearTimeout(geoRetryTimer);
                                 }
-                                
-                                locationWatchId = navigator.geolocation.watchPosition(
-                                (position) => {
-                                    updateShipperLocation(position.coords.latitude, position.coords.longitude, false);
-                                },
-                                () => {
-                                    getGPSLocation();
-                                },
-                                {
-                                    enableHighAccuracy: true,
-                                    maximumAge: 7000,
-                                    timeout: 15000
-                                }
-                                );
+                                geoRetryTimer = setTimeout(function () {
+                                    requestSinglePosition(true);
+                                }, 1500);
+                            },
+                            {
+                                enableHighAccuracy: true,
+                                maximumAge: 7000,
+                                timeout: 15000
                             }
+                            );
+                        }
+                        
+                        // Hàm 2: Lấy tọa độ từ địa chỉ gõ tay
+                        function searchAddress() {
+                            const address = document.getElementById('custom-address').value.trim();
+                            if (!address)
+                            return alert("Vui lòng nhập địa chỉ!");
                             
-                            // Hàm 2: Lấy tọa độ từ địa chỉ gõ tay
-                            function searchAddress() {
-                                const address = document.getElementById('custom-address').value.trim();
-                                if (!address)
-                                return alert("Vui lòng nhập địa chỉ!");
-                                
-                                document.getElementById('distance-text').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tìm...';
-                                
-                                const url = `https://nominatim.openstreetmap.org/search?format=json&q=\${encodeURIComponent(address + ", Vietnam")}&limit=1`;
-                                
-                                fetch(url).then(res => res.json()).then(data => {
-                                    if (data.length > 0)
-                                    updateShipperLocation(data[0].lat, data[0].lon);
-                                    else {
-                                        alert("Không tìm thấy địa chỉ này!");
+                            document.getElementById('distance-text').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tìm...';
+                            
+                            ClickEatMap4D.geocode(address + ', Vietnam', 1)
+                            .then(data => {
+                                if (data.length > 0) {
+                                    updateShipperLocation(data[0].lat, data[0].lng);
+                                    } else {
+                                        alert('Không tìm thấy địa chỉ này!');
                                         document.getElementById('distance-text').innerHTML = 'Không tìm thấy';
                                     }
-                                }).catch(err => alert("Lỗi mạng!"));
+                                }).catch((err) => alert(ClickEatMap4D.messageFromError(err, 'Lỗi mạng!')));
                             }
                             
                             // Hàm 3: Cập nhật vị trí Shipper và Vẽ lại đường đi
@@ -441,6 +488,7 @@ Author     : DELL
                                 }
                                 
                                 syncLocationToServer(lat, lng, false);
+                                setDistanceStatus('<i class="fa-solid fa-route text-blue-500"></i> Đang cập nhật lộ trình...');
                                 
                                 // Cập nhật Marker Shipper
                                 if (shipperMarker) {

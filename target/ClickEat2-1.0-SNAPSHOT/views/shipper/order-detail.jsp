@@ -5,6 +5,8 @@
 <html lang="vi">
     <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/responsive-global.css">
         <title>Chi tiết Đơn hàng - ClickEat</title>
         <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/assets/images/shipperlogo.png">
         <script src="https://cdn.tailwindcss.com"></script>
@@ -21,6 +23,9 @@
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/vendor/leaflet/leaflet.css" />
         <script src="${pageContext.request.contextPath}/assets/vendor/leaflet/leaflet.js"></script>
+        <script>window.MAP4D_API_KEY = window.MAP4D_API_KEY || '${initParam["map4d.api.key"]}';</script>
+        <script>window.MAP4D_TILE_URL_TEMPLATE = window.MAP4D_TILE_URL_TEMPLATE || '${initParam["map4d.tile.url.template"]}';</script>
+        <script src="${pageContext.request.contextPath}/assets/js/map4d-api.js"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
         <style>body { font-family: 'Inter', sans-serif; }</style>
     </head>
@@ -154,10 +159,11 @@
                 
                 const map = L.map('map').setView([shopLat, shopLng], 14);
                 
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap',
-                    maxZoom: 19
-                }).addTo(map);
+                ClickEatMap4D.addBaseTileLayer(map, {
+                    attribution: '&copy; Map4D',
+                    fallbackAttribution: '&copy; OpenStreetMap',
+                    fallbackMaxZoom: 19
+                });
                 
                 const shopIcon = L.divIcon({
                     html: '<div class="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center border-2 border-white shadow-md"><i class="fa-solid fa-store text-xs"></i></div>',
@@ -172,84 +178,79 @@
                 L.marker([shopLat, shopLng], {icon: shopIcon}).addTo(map);
                 L.marker([customerLat, customerLng], {icon: customerIcon}).addTo(map);
                 
-                const osrmUrl = `https://router.project-osrm.org/route/v1/driving/\${shopLng},\${shopLat};\${customerLng},\${customerLat}?overview=full&geometries=geojson`;
-                
-                fetch(osrmUrl)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.routes && data.routes.length > 0) {
-                        const route = data.routes[0];
-                        const distanceKm = (route.distance / 1000).toFixed(1);
-                        const durationMin = Math.round(route.duration / 60);
-                        document.getElementById('distance-text').innerHTML = `\${distanceKm} km • \${durationMin} phút`;
-                        
-                        const coordinates = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-                        const polyline = L.polyline(coordinates, {
-                            color: '#f97316', // Cam
-                            weight: 4,
-                            opacity: 0.8,
-                            dashArray: '8, 8'
-                        }).addTo(map);
-                        
-                        map.fitBounds(polyline.getBounds(), {padding: [20, 20]});
-                    }
+                ClickEatMap4D.route(shopLat, shopLng, customerLat, customerLng)
+                .then(route => {
+                    const distanceKm = (route.distance / 1000).toFixed(1);
+                    const durationMin = Math.max(1, Math.round(route.duration / 60));
+                    document.getElementById('distance-text').innerHTML = `\${distanceKm} km • \${durationMin} phút`;
+                    
+                    const polyline = L.polyline(route.coordinates, {
+                        color: '#f97316',
+                        weight: 4,
+                        opacity: 0.8,
+                        dashArray: '8, 8'
+                    }).addTo(map);
+                    
+                    map.fitBounds(polyline.getBounds(), {padding: [20, 20]});
+                    }).catch(function (err) {
+                        document.getElementById('distance-text').innerHTML = ClickEatMap4D.messageFromError(err, 'Không thể tính khoảng cách');
+                    });
                 });
-            });
-        </script>
-        <script>
-            
-            let targetAction = null; // Biến lưu trữ hành động đang chờ xác nhận
-            
-            // Hàm gọi Popblock hiện lên
-            function confirmAction(event, message, element) {
-                event.preventDefault(); // Chặn hành động mặc định ngay lập tức (chặn form submit / chặn link)
+            </script>
+            <script>
                 
-                // Xác định xem người dùng đang bấm vào Form hay thẻ Link <a>
-                if (element.tagName === 'A') {
-                    targetAction = {type: 'link', data: element.href};
-                    } else if (element.form) {
-                        targetAction = {type: 'form', data: element.form}; // Dùng cho <button type="submit">
-                        } else if (element.tagName === 'FORM') {
-                            targetAction = {type: 'form', data: element};
-                        }
-                        
-                        // Cập nhật câu chữ và tạo hiệu ứng bật lên
-                        document.getElementById('confirm-message').innerText = message;
-                        const modal = document.getElementById('custom-confirm-modal');
-                        const content = document.getElementById('confirm-modal-content');
-                        
-                        modal.classList.remove('hidden');
-                        setTimeout(() => {
-                            content.classList.remove('scale-95', 'opacity-0');
-                            content.classList.add('scale-100', 'opacity-100');
-                        }, 10);
-                    }
+                let targetAction = null; // Biến lưu trữ hành động đang chờ xác nhận
+                
+                // Hàm gọi Popblock hiện lên
+                function confirmAction(event, message, element) {
+                    event.preventDefault(); // Chặn hành động mặc định ngay lập tức (chặn form submit / chặn link)
                     
-                    // Hàm tắt Popblock
-                    function closeConfirmModal() {
-                        const modal = document.getElementById('custom-confirm-modal');
-                        const content = document.getElementById('confirm-modal-content');
-                        
-                        content.classList.remove('scale-100', 'opacity-100');
-                        content.classList.add('scale-95', 'opacity-0');
-                        
-                        setTimeout(() => {
-                            modal.classList.add('hidden');
-                            targetAction = null; // Xóa dữ liệu chờ
-                        }, 200);
-                    }
-                    
-                    // Hàm thực thi khi người dùng bấm "Xác nhận"
-                    function executeConfirm() {
-                        if (!targetAction)
-                        return;
-                        
-                        if (targetAction.type === 'form') {
-                            targetAction.data.submit(); // Cho phép form gửi đi
-                            } else if (targetAction.type === 'link') {
-                                window.location.href = targetAction.data; // Cho phép link chuyển hướng
+                    // Xác định xem người dùng đang bấm vào Form hay thẻ Link <a>
+                    if (element.tagName === 'A') {
+                        targetAction = {type: 'link', data: element.href};
+                        } else if (element.form) {
+                            targetAction = {type: 'form', data: element.form}; // Dùng cho <button type="submit">
+                            } else if (element.tagName === 'FORM') {
+                                targetAction = {type: 'form', data: element};
                             }
+                            
+                            // Cập nhật câu chữ và tạo hiệu ứng bật lên
+                            document.getElementById('confirm-message').innerText = message;
+                            const modal = document.getElementById('custom-confirm-modal');
+                            const content = document.getElementById('confirm-modal-content');
+                            
+                            modal.classList.remove('hidden');
+                            setTimeout(() => {
+                                content.classList.remove('scale-95', 'opacity-0');
+                                content.classList.add('scale-100', 'opacity-100');
+                            }, 10);
                         }
-                    </script>
-                </body>
-            </html>
+                        
+                        // Hàm tắt Popblock
+                        function closeConfirmModal() {
+                            const modal = document.getElementById('custom-confirm-modal');
+                            const content = document.getElementById('confirm-modal-content');
+                            
+                            content.classList.remove('scale-100', 'opacity-100');
+                            content.classList.add('scale-95', 'opacity-0');
+                            
+                            setTimeout(() => {
+                                modal.classList.add('hidden');
+                                targetAction = null; // Xóa dữ liệu chờ
+                            }, 200);
+                        }
+                        
+                        // Hàm thực thi khi người dùng bấm "Xác nhận"
+                        function executeConfirm() {
+                            if (!targetAction)
+                            return;
+                            
+                            if (targetAction.type === 'form') {
+                                targetAction.data.submit(); // Cho phép form gửi đi
+                                } else if (targetAction.type === 'link') {
+                                    window.location.href = targetAction.data; // Cho phép link chuyển hướng
+                                }
+                            }
+                        </script>
+                    </body>
+                </html>

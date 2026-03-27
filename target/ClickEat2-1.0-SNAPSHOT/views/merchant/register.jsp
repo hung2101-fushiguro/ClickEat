@@ -5,6 +5,7 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/responsive-global.css">
     <title>ClickEat – Đăng ký cửa hàng</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -12,6 +13,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/vendor/leaflet/leaflet.css"/>
     <script src="${pageContext.request.contextPath}/assets/vendor/leaflet/leaflet.js"></script>
+    <script>window.MAP4D_API_KEY = window.MAP4D_API_KEY || '${initParam["map4d.api.key"]}';</script>
+    <script>window.MAP4D_TILE_URL_TEMPLATE = window.MAP4D_TILE_URL_TEMPLATE || '${initParam["map4d.tile.url.template"]}';</script>
+    <script src="${pageContext.request.contextPath}/assets/js/map4d-api.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -824,7 +828,7 @@
                 if (Array.isArray(fallbackResults) && fallbackResults.length > 0) {
                     const first = fallbackResults[0];
                     const lat = Number.parseFloat(first.lat);
-                    const lng = Number.parseFloat(first.lon);
+                    const lng = Number.parseFloat(first.lng);
                     if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
                         selectedAddressParts = extractAddressParts(first);
                         updateMapMarker(lat, lng, first.display_name || addr, selectedAddressParts);
@@ -859,7 +863,7 @@
             }
             const first = data[0];
             const lat = parseFloat(first.lat);
-            const lng = parseFloat(first.lon);
+            const lng = parseFloat(first.lng);
             if (Number.isNaN(lat) || Number.isNaN(lng)) {
                 alert('Không lấy được tọa độ từ kết quả tìm kiếm.');
                 return;
@@ -872,7 +876,7 @@
             }
             updateMapMarker(lat, lng, input.value || query, selectedAddressParts);
         } catch (e) {
-            alert('Không thể tìm địa chỉ lúc này. Vui lòng thử lại.');
+            alert(ClickEatMap4D.messageFromError(e, 'Không thể tìm địa chỉ lúc này. Vui lòng thử lại.'));
         } finally {
             btn.disabled = false;
             btn.textContent = prev;
@@ -880,11 +884,7 @@
     }
 
     async function fetchAddressResults(query, limit) {
-        const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=' + encodeURIComponent(String(limit || 1)) + '&q=' + encodeURIComponent(query);
-        const res = await fetch(url, {
-            headers: { 'Accept': 'application/json' }
-        });
-        return res.json();
+        return ClickEatMap4D.geocode(query, Number(limit || 1));
     }
 
     function hideAddressSuggestions() {
@@ -904,7 +904,7 @@
 
         box.innerHTML = items.map(function(item, index) {
             const lat = Number.parseFloat(item.lat);
-            const lng = Number.parseFloat(item.lon);
+            const lng = Number.parseFloat(item.lng);
             if (Number.isNaN(lat) || Number.isNaN(lng)) return '';
             const label = (item.display_name || '').replace(/"/g, '&quot;');
             return '<button type="button" class="w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-orange-50 border-b border-gray-100 last:border-b-0" '
@@ -1007,10 +1007,11 @@
         if (!mapEl || leafletMap) return;
 
         leafletMap = L.map('leafletMap');
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(leafletMap);
+        ClickEatMap4D.addBaseTileLayer(leafletMap, {
+            attribution: '&copy; Map4D',
+            fallbackAttribution: '&copy; OpenStreetMap contributors',
+            fallbackMaxZoom: 19
+        });
 
         leafletMap.setView([10.762622, 106.660172], 13);
         setTimeout(function() { leafletMap.invalidateSize(); }, 50);
