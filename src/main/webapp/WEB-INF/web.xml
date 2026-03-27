@@ -1,5 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <web-app version="6.0" xmlns="https://jakarta.ee/xml/ns/jakartaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd">
+    <context-param>
+        <param-name>map4d.api.key</param-name>
+        <param-value>38c76a382323f371dac14bba1690e1a1</param-value>
+    </context-param>
+    <context-param>
+        <param-name>map4d.tile.url.template</param-name>
+        <param-value>https://api.map4d.vn/map/tile/{z}/{x}/{y}?access_key=YOUR_ACCESS_KEY</param-value>
+    </context-param>
+
+    <context-param>
+        <param-name>gemini.api.key</param-name>
+        <param-value>AIza_YOUR_GEMINI_API_KEY</param-value>
+    </context-param>
+    <context-param>
+        <param-name>gemini.model</param-name>
+        <param-value>gemini-2.5-flash</param-value>
+    </context-param>
+
+    <!-- OpenAI API Configuration -->
+    <context-param>
+        <param-name>openai.api.key</param-name>
+        <param-value>OPENAI_API_KEY_PLACEHOLDER</param-value>
+    </context-param>
+    <context-param>
+        <!-- gpt-4o-mini: rẻ + nhanh | gpt-4o: mạnh hơn -->
+        <param-name>openai.model</param-name>
+        <param-value>gpt-4o-mini</param-value>
+    </context-param>
+
     <session-config>
         <session-timeout>
             30

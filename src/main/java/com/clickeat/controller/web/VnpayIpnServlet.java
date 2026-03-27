@@ -1,15 +1,19 @@
 package com.clickeat.controller.web;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.sql.Connection;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.clickeat.config.DBContext;
 import com.clickeat.config.VnpayConfig;
 import com.clickeat.dal.impl.CartDAO;
 import com.clickeat.dal.impl.OrderDAO;
 import com.clickeat.dal.impl.PaymentTransactionDAO;
 import com.clickeat.model.Order;
 import com.clickeat.util.VnpayUtil;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.HashMap;
-import java.util.Map;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -63,24 +67,51 @@ public class VnpayIpnServlet extends HttpServlet {
             String payload = request.getQueryString();
 
             if ("00".equals(responseCode) && "00".equals(transactionStatus)) {
-                paymentDAO.markSuccess(orderId, vnpTransactionNo, responseCode, vnpPayDate, payload);
-                orderDAO.markPaidByVnpay(orderId);
+                try (Connection conn = DBContext.getConnection()) {
+                    conn.setAutoCommit(false);
 
-                Order order = orderDAO.findById(orderId);
-                if (order != null) {
-                    if (order.getCustomerUserId() > 0) {
-                        cartDAO.clearActiveCartByCustomerId(order.getCustomerUserId());
-                    } else if (order.getGuestId() != null && !order.getGuestId().isBlank()) {
-                        cartDAO.clearActiveCartByGuestId(order.getGuestId());
+                    boolean paymentOk = paymentDAO.markSuccess(conn, orderId, vnpTransactionNo, responseCode, vnpPayDate, payload);
+                    boolean orderOk = orderDAO.markPaidByVnpay(conn, orderId);
+
+                    if (!paymentOk || !orderOk) {
+                        conn.rollback();
+                        out.print("{\"RspCode\":\"99\",\"Message\":\"Update failed\"}");
+                        return;
                     }
+
+                    Order order = orderDAO.findById(conn, orderId);
+                    if (order != null) {
+                        if (order.getCustomerUserId() > 0) {
+                            cartDAO.clearActiveCartByCustomerId(conn, order.getCustomerUserId());
+                        } else if (order.getGuestId() != null && !order.getGuestId().isBlank()) {
+                            cartDAO.clearActiveCartByGuestId(conn, order.getGuestId());
+                        }
+                    }
+
+                    conn.commit();
+                } catch (Exception ex) {
+                    out.print("{\"RspCode\":\"99\",\"Message\":\"Internal error\"}");
+                    return;
                 }
 
                 out.print("{\"RspCode\":\"00\",\"Message\":\"Confirm Success\"}");
                 return;
             }
 
-            paymentDAO.markFailed(orderId, responseCode, payload);
-            orderDAO.markPaymentFailed(orderId);
+            try (Connection conn = DBContext.getConnection()) {
+                conn.setAutoCommit(false);
+                boolean paymentOk = paymentDAO.markFailed(conn, orderId, responseCode, payload);
+                boolean orderOk = orderDAO.markPaymentFailed(conn, orderId);
+                if (!paymentOk || !orderOk) {
+                    conn.rollback();
+                    out.print("{\"RspCode\":\"99\",\"Message\":\"Update failed\"}");
+                    return;
+                }
+                conn.commit();
+            } catch (Exception ex) {
+                out.print("{\"RspCode\":\"99\",\"Message\":\"Internal error\"}");
+                return;
+            }
             out.print("{\"RspCode\":\"00\",\"Message\":\"Confirm Success\"}");
         }
     }

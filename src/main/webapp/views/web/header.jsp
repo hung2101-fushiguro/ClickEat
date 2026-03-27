@@ -57,7 +57,7 @@
 
                 <button type="button"
                         id="headerLocationBtn"
-                        class="hidden xl:flex items-center gap-2 w-[230px] min-w-[230px] h-10 px-3 rounded-full border border-gray-200 bg-white hover:border-orange-200 hover:bg-orange-50 transition overflow-hidden">
+                        class="${not empty sessionScope.account ? 'hidden xl:flex items-center gap-2 w-[210px] min-w-[210px] h-10 px-3 rounded-full border border-gray-200 bg-white hover:border-orange-200 hover:bg-orange-50 transition overflow-hidden' : 'hidden 2xl:flex items-center gap-2 w-[210px] min-w-[210px] h-10 px-3 rounded-full border border-gray-200 bg-white hover:border-orange-200 hover:bg-orange-50 transition overflow-hidden'}">
                     <i class="fa-solid fa-location-dot text-orange-500"></i>
                     <span class="text-[12px] font-bold text-gray-700 truncate min-w-0 flex-1 text-left" id="headerLocationText">Chọn vị trí giao hàng</span>
                 </button>
@@ -173,6 +173,28 @@
     <div class="h-px bg-gray-100"></div>
 </header>
 
+<c:if test="${not empty sessionScope.account and sessionScope.account.role == 'CUSTOMER'}">
+    <div class="fixed right-4 bottom-24 z-[95] flex flex-col items-end gap-3">
+        <a href="${ctx}/customer/orders"
+           class="group flex items-center gap-2 rounded-full border border-orange-200 bg-white/95 px-3 py-2 shadow-[0_8px_24px_rgba(15,23,42,.12)] hover:bg-orange-50 hover:border-orange-300 transition"
+           aria-label="Theo dõi đơn hàng">
+            <span class="w-9 h-9 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center">
+                <i class="fa-solid fa-route"></i>
+            </span>
+            <span class="hidden sm:block text-xs font-extrabold text-gray-700">Tracking đơn</span>
+        </a>
+
+        <a href="${ctx}/ai"
+           class="group flex items-center gap-2 rounded-full border border-orange-200 bg-white/95 px-3 py-2 shadow-[0_8px_24px_rgba(15,23,42,.12)] hover:bg-orange-50 hover:border-orange-300 transition"
+           aria-label="Mở trợ lý AI">
+            <span class="w-9 h-9 rounded-full bg-orange-500 text-white flex items-center justify-center">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </span>
+            <span class="hidden sm:block text-xs font-extrabold text-gray-700">AI gợi ý</span>
+        </a>
+    </div>
+</c:if>
+
 <div id="headerLocationModal" class="hidden fixed inset-0 z-[120] bg-black/45 px-4">
     <div class="mx-auto mt-16 w-full max-w-xl rounded-2xl bg-white shadow-2xl border border-gray-100 overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -244,6 +266,12 @@
 </jsp:include>
 
 <jsp:include page="checkout-choice-modal.jsp" />
+
+<script>
+    window.MAP4D_API_KEY = window.MAP4D_API_KEY || '${initParam["map4d.api.key"]}';
+    window.MAP4D_TILE_URL_TEMPLATE = window.MAP4D_TILE_URL_TEMPLATE || '${initParam["map4d.tile.url.template"]}';
+</script>
+<script src="${ctx}/assets/js/map4d-api.js"></script>
 
 <script>
     (() => {
@@ -337,26 +365,11 @@
         }
 
         async function reverseGeocode(lat, lng) {
-            const url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat='
-                    + encodeURIComponent(lat)
-                    + '&lon=' + encodeURIComponent(lng)
-                    + '&accept-language=vi';
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error('reverse_geocode_error');
-            }
-            const data = await response.json();
-            return data.display_name || '';
+            return ClickEatMap4D.reverse(lat, lng);
         }
 
         async function searchLocation(keyword) {
-            const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=8&addressdetails=1&accept-language=vi&q='
-                    + encodeURIComponent(keyword);
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error('search_error');
-            }
-            return response.json();
+            return ClickEatMap4D.geocode(keyword, 8);
         }
 
         function closeModal() {
@@ -381,11 +394,11 @@
                 row.className = 'w-full text-left px-4 py-3 hover:bg-orange-50 transition';
                 const displayName = item.display_name || 'Địa chỉ';
                 const latText = Number(item.lat).toFixed(6);
-                const lngText = Number(item.lon).toFixed(6);
+                const lngText = Number(item.lng).toFixed(6);
                 row.innerHTML = '<div class="text-sm font-bold text-gray-800">' + displayName + '</div>'
                         + '<div class="text-xs text-gray-500 mt-1">Lat: ' + latText + ', Lng: ' + lngText + '</div>';
                 row.addEventListener('click', () => {
-                    persistLocation(item.lat, item.lon, item.display_name || '');
+                    persistLocation(item.lat, item.lng, item.display_name || '');
                     hint.textContent = 'Đã lưu vị trí giao hàng.';
                     closeModal();
                 });
@@ -405,7 +418,7 @@
                 renderResults(items);
                 hint.textContent = 'Chọn 1 địa chỉ để lưu.';
             } catch (e) {
-                hint.textContent = 'Không thể tìm vị trí lúc này, vui lòng thử lại.';
+                hint.textContent = ClickEatMap4D.messageFromError(e, 'Không thể tìm vị trí lúc này, vui lòng thử lại.');
             }
         }
 

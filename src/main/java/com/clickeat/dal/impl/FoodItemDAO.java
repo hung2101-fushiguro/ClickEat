@@ -376,7 +376,8 @@ public class FoodItemDAO extends AbstractDAO<FoodItem> implements IFoodItemDAO {
         return query(sql, merchantId);
     }
 
-    public List<FoodItem> searchPublicMenuFoods(String keyword, String sortBy, int page, int pageSize) {
+    public List<FoodItem> searchPublicMenuFoods(String keyword, String sortBy, int page, int pageSize,
+            Double customerLat, Double customerLng, double maxDistanceKm) {
         if (page <= 0) {
             page = 1;
         }
@@ -416,6 +417,37 @@ public class FoodItemDAO extends AbstractDAO<FoodItem> implements IFoodItemDAO {
             params.add(kw);
         }
 
+        if (customerLat != null && customerLng != null && maxDistanceKm > 0) {
+            sql.append("""
+                 AND mp.latitude IS NOT NULL
+                 AND mp.longitude IS NOT NULL
+                 AND mp.latitude <> 0
+                 AND mp.longitude <> 0
+                 AND (
+                    6371.0 * ACOS(
+                        CASE
+                            WHEN (COS(RADIANS(?)) * COS(RADIANS(mp.latitude)) * COS(RADIANS(mp.longitude) - RADIANS(?))
+                                 + SIN(RADIANS(?)) * SIN(RADIANS(mp.latitude))) > 1 THEN 1
+                            WHEN (COS(RADIANS(?)) * COS(RADIANS(mp.latitude)) * COS(RADIANS(mp.longitude) - RADIANS(?))
+                                 + SIN(RADIANS(?)) * SIN(RADIANS(mp.latitude))) < -1 THEN -1
+                            ELSE (COS(RADIANS(?)) * COS(RADIANS(mp.latitude)) * COS(RADIANS(mp.longitude) - RADIANS(?))
+                                 + SIN(RADIANS(?)) * SIN(RADIANS(mp.latitude)))
+                        END
+                    )
+                 ) <= ?
+            """);
+            params.add(customerLat);
+            params.add(customerLng);
+            params.add(customerLat);
+            params.add(customerLat);
+            params.add(customerLng);
+            params.add(customerLat);
+            params.add(customerLat);
+            params.add(customerLng);
+            params.add(customerLat);
+            params.add(maxDistanceKm);
+        }
+
         if ("price_asc".equalsIgnoreCase(sortBy)) {
             sql.append(" ORDER BY fi.price ASC, fi.id DESC ");
         } else if ("price_desc".equalsIgnoreCase(sortBy)) {
@@ -432,7 +464,7 @@ public class FoodItemDAO extends AbstractDAO<FoodItem> implements IFoodItemDAO {
         return query(sql.toString(), params.toArray());
     }
 
-    public int countPublicMenuFoods(String keyword) {
+    public int countPublicMenuFoods(String keyword, Double customerLat, Double customerLng, double maxDistanceKm) {
         StringBuilder sql = new StringBuilder("""
             SELECT COUNT(1)
             FROM FoodItems fi
@@ -449,6 +481,37 @@ public class FoodItemDAO extends AbstractDAO<FoodItem> implements IFoodItemDAO {
             params.add(kw);
             params.add(kw);
             params.add(kw);
+        }
+
+        if (customerLat != null && customerLng != null && maxDistanceKm > 0) {
+            sql.append("""
+                 AND mp.latitude IS NOT NULL
+                 AND mp.longitude IS NOT NULL
+                 AND mp.latitude <> 0
+                 AND mp.longitude <> 0
+                 AND (
+                    6371.0 * ACOS(
+                        CASE
+                            WHEN (COS(RADIANS(?)) * COS(RADIANS(mp.latitude)) * COS(RADIANS(mp.longitude) - RADIANS(?))
+                                 + SIN(RADIANS(?)) * SIN(RADIANS(mp.latitude))) > 1 THEN 1
+                            WHEN (COS(RADIANS(?)) * COS(RADIANS(mp.latitude)) * COS(RADIANS(mp.longitude) - RADIANS(?))
+                                 + SIN(RADIANS(?)) * SIN(RADIANS(mp.latitude))) < -1 THEN -1
+                            ELSE (COS(RADIANS(?)) * COS(RADIANS(mp.latitude)) * COS(RADIANS(mp.longitude) - RADIANS(?))
+                                 + SIN(RADIANS(?)) * SIN(RADIANS(mp.latitude)))
+                        END
+                    )
+                 ) <= ?
+            """);
+            params.add(customerLat);
+            params.add(customerLng);
+            params.add(customerLat);
+            params.add(customerLat);
+            params.add(customerLng);
+            params.add(customerLat);
+            params.add(customerLat);
+            params.add(customerLng);
+            params.add(customerLat);
+            params.add(maxDistanceKm);
         }
         return executeCount(sql.toString(), params.toArray());
     }

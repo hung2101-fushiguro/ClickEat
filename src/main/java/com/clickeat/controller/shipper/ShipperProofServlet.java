@@ -4,11 +4,15 @@
  */
 package com.clickeat.controller.shipper;
 
-import com.clickeat.dal.impl.OrderDAO;
-import com.clickeat.model.User;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
+
+import com.clickeat.dal.impl.NotificationDAO;
+import com.clickeat.dal.impl.OrderDAO;
+import com.clickeat.model.Order;
+import com.clickeat.model.User;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
@@ -73,6 +77,16 @@ public class ShipperProofServlet extends HttpServlet {
                 response.sendRedirect(request.getContextPath() + "/shipper/order-tracking?id=" + orderId);
                 return;
             }
+
+            Order deliveredOrder = orderDAO.findById(orderId);
+            NotificationDAO notificationDAO = new NotificationDAO();
+            if (deliveredOrder != null && deliveredOrder.getCustomerUserId() > 0) {
+                notificationDAO.createForUser(deliveredOrder.getCustomerUserId(), "ORDER", "Đơn #" + deliveredOrder.getOrderCode() + " đã giao thành công.");
+            }
+            if (deliveredOrder != null && deliveredOrder.getMerchantId() > 0) {
+                notificationDAO.createForUser(deliveredOrder.getMerchantId(), "ORDER", "Đơn #" + deliveredOrder.getOrderCode() + " đã được giao thành công.");
+            }
+            notificationDAO.createForUser(account.getId(), "WALLET", "Bạn vừa hoàn tất đơn giao. Số dư ví đã được cập nhật.");
 
             request.getSession().setAttribute("toastMsg", "Đã giao hàng, lưu ảnh và cộng tiền vào ví thành công!");
         } catch (Exception e) {

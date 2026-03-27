@@ -8,6 +8,7 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/responsive-global.css">
         <title>ClickEat - Thực đơn</title>
         <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/logo-icon.png?v=2">
         <script src="https://cdn.tailwindcss.com"></script>
@@ -63,6 +64,11 @@
                     class="flex-1 outline-none bg-transparent text-sm">
                 </div>
 
+                <c:if test="${not empty customerLat and not empty customerLng}">
+                    <input type="hidden" name="shippingLat" value="${customerLat}">
+                    <input type="hidden" name="shippingLng" value="${customerLng}">
+                </c:if>
+
                 <select name="sort" class="h-11 rounded-full border border-gray-200 px-4 text-sm font-semibold text-gray-700 outline-none">
                     <option value="" ${empty sort ? 'selected' : ''}>Mới nhất</option>
                     <option value="discount_desc" ${sort == 'discount_desc' ? 'selected' : ''}>Giảm giá cao</option>
@@ -74,6 +80,12 @@
                     Lọc món
                 </button>
             </form>
+
+            <c:if test="${not hasCustomerLocation}">
+                <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                    Bật vị trí hoặc chọn địa chỉ giao hàng để xem món trong phạm vi giao tới bạn.
+                </div>
+            </c:if>
 
             <c:if test="${totalItems > 0}">
                 <p class="mb-4 text-sm text-gray-500">Hiển thị <strong>${fn:length(foods)}</strong> / <strong>${totalItems}</strong> món.</p>
@@ -149,21 +161,21 @@
 
                                 <c:if test="${totalPages > 1}">
                                     <div class="mt-7 flex items-center justify-center gap-2">
-                                        <a href="${ctx}/menu?keyword=${keyword}&sort=${sort}&page=${page - 1}"
+                                        <a href="${ctx}/menu?keyword=${keyword}&sort=${sort}&shippingLat=${customerLat}&shippingLng=${customerLng}&page=${page - 1}"
                                         class="px-4 h-10 rounded-full border inline-flex items-center justify-center font-bold ${page <= 1 ? 'pointer-events-none opacity-40 bg-gray-100 border-gray-200 text-gray-400' : 'bg-white border-[#eadfd7] text-[#8b6b52] hover:border-orange-300'}">
                                         <i class="fa-solid fa-chevron-left"></i>
                                     </a>
 
                                     <c:forEach var="p" begin="1" end="${totalPages}">
                                         <c:if test="${p >= page - 2 && p <= page + 2}">
-                                            <a href="${ctx}/menu?keyword=${keyword}&sort=${sort}&page=${p}"
+                                            <a href="${ctx}/menu?keyword=${keyword}&sort=${sort}&shippingLat=${customerLat}&shippingLng=${customerLng}&page=${p}"
                                             class="min-w-[40px] h-10 px-3 rounded-full border inline-flex items-center justify-center font-bold ${p == page ? 'bg-orange-500 border-orange-500 text-white' : 'bg-white border-[#eadfd7] text-[#8b6b52] hover:border-orange-300'}">
                                             ${p}
                                         </a>
                                     </c:if>
                                 </c:forEach>
 
-                                <a href="${ctx}/menu?keyword=${keyword}&sort=${sort}&page=${page + 1}"
+                                <a href="${ctx}/menu?keyword=${keyword}&sort=${sort}&shippingLat=${customerLat}&shippingLng=${customerLng}&page=${page + 1}"
                                 class="px-4 h-10 rounded-full border inline-flex items-center justify-center font-bold ${page >= totalPages ? 'pointer-events-none opacity-40 bg-gray-100 border-gray-200 text-gray-400' : 'bg-white border-[#eadfd7] text-[#8b6b52] hover:border-orange-300'}">
                                 <i class="fa-solid fa-chevron-right"></i>
                             </a>

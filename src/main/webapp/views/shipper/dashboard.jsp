@@ -6,6 +6,8 @@
 <html lang="vi">
     <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/responsive-global.css">
         <title>ClickEat Shipper - Bảng điều khiển</title>
         <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/assets/images/shipperlogo.png">
         <script src="https://cdn.tailwindcss.com"></script>
@@ -21,6 +23,9 @@
         </script>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+        <script>window.MAP4D_API_KEY = window.MAP4D_API_KEY || '${initParam["map4d.api.key"]}';</script>
+        <script>window.MAP4D_TILE_URL_TEMPLATE = window.MAP4D_TILE_URL_TEMPLATE || '${initParam["map4d.tile.url.template"]}';</script>
+        <script src="${pageContext.request.contextPath}/assets/js/map4d-api.js"></script>
         <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <style>body { font-family: 'Inter', sans-serif; }</style>
@@ -521,6 +526,8 @@
                 let lastSentLng = null;
                 let lastLocationUpdateAt = 0;
                 let locationTickerId = null;
+                let geoStatusToastAt = 0;
+                let geoRetryTimer = null;
                 
                 function setLocationStatus(html) {
                     const statusText = document.getElementById('location-status');
@@ -618,6 +625,50 @@
                     }
                 }
                 
+                function toastGeoMessage(message) {
+                    const now = Date.now();
+                    if (now - geoStatusToastAt < 9000) {
+                        return;
+                    }
+                    geoStatusToastAt = now;
+                    alert(message);
+                }
+                
+                function geolocationErrorInfo(error) {
+                    if (!error || typeof error.code !== 'number') {
+                        return {
+                            html: '<span class="text-red-500"><i class="fa-solid fa-location-crosshairs-slash"></i> Không thể lấy vị trí GPS.</span>',
+                            alert: 'Không thể lấy vị trí GPS. Vui lòng thử lại.'
+                        };
+                    }
+                    
+                    if (error.code === 1) {
+                        return {
+                            html: '<span class="text-red-500"><i class="fa-solid fa-lock"></i> Chưa cấp quyền vị trí cho trình duyệt.</span>',
+                            alert: 'Bạn đã chặn quyền vị trí cho trang này. Vui lòng vào cài đặt trình duyệt để cho phép lại.'
+                        };
+                    }
+                    
+                    if (error.code === 2) {
+                        return {
+                            html: '<span class="text-amber-600"><i class="fa-solid fa-satellite-dish"></i> GPS yếu hoặc mất tín hiệu. Đang thử lại...</span>',
+                            alert: 'Thiết bị đang mất tín hiệu vị trí. Hãy đứng nơi thoáng hơn rồi thử lại.'
+                        };
+                    }
+                    
+                    if (error.code === 3) {
+                        return {
+                            html: '<span class="text-amber-600"><i class="fa-solid fa-hourglass-half"></i> GPS phản hồi chậm. Đang thử lại...</span>',
+                            alert: 'Định vị GPS bị quá thời gian. Hệ thống sẽ thử lại tự động.'
+                        };
+                    }
+                    
+                    return {
+                        html: '<span class="text-red-500"><i class="fa-solid fa-location-crosshairs-slash"></i> Không thể lấy vị trí GPS.</span>',
+                        alert: 'Không thể lấy vị trí GPS. Vui lòng thử lại.'
+                    };
+                }
+                
                 function startLocationWatcher() {
                     if (!navigator.geolocation) {
                         setLocationStatus('<span class="text-red-500"><i class="fa-solid fa-triangle-exclamation"></i> Trình duyệt không hỗ trợ GPS.</span>');
@@ -633,8 +684,21 @@
                         saveLocationToDatabase(lat, lng, 'GPS realtime', false).catch(function () {
                             setLocationStatus('<span class="text-red-500"><i class="fa-solid fa-wifi"></i> Không gửi được vị trí lên máy chủ.</span>');
                         });
-                        }, function () {
-                            setLocationStatus('<span class="text-red-500"><i class="fa-solid fa-location-crosshairs-slash"></i> Không lấy được vị trí GPS.</span>');
+                        }, function (error) {
+                            const info = geolocationErrorInfo(error);
+                            setLocationStatus(info.html);
+                            
+                            if (error && error.code === 1) {
+                                toastGeoMessage(info.alert);
+                                return;
+                            }
+                            
+                            if (geoRetryTimer !== null) {
+                                clearTimeout(geoRetryTimer);
+                            }
+                            geoRetryTimer = setTimeout(function () {
+                                getGPSLocation(true);
+                            }, 1500);
                             }, {
                                 enableHighAccuracy: true,
                                 maximumAge: 10000,
@@ -642,7 +706,7 @@
                             });
                         }
                         
-                        function getGPSLocation() {
+                        function getGPSLocation(lowAccuracyFallback) {
                             if (!navigator.geolocation) {
                                 setLocationStatus('<span class="text-red-500"><i class="fa-solid fa-triangle-exclamation"></i> Trình duyệt không hỗ trợ GPS.</span>');
                                 return;
@@ -655,12 +719,24 @@
                                 saveLocationToDatabase(lat, lng, 'GPS', true).catch(function () {
                                     setLocationStatus('<span class="text-red-500"><i class="fa-solid fa-wifi"></i> Không gửi được vị trí lên máy chủ.</span>');
                                 });
-                                }, function () {
-                                    setLocationStatus('<span class="text-red-500"><i class="fa-solid fa-location-crosshairs-slash"></i> Vui lòng bật quyền vị trí.</span>');
+                                }, function (error) {
+                                    const info = geolocationErrorInfo(error);
+                                    setLocationStatus(info.html);
+                                    
+                                    if (error && error.code === 1) {
+                                        toastGeoMessage(info.alert);
+                                        return;
+                                    }
+                                    
+                                    if (!lowAccuracyFallback && error && error.code === 3) {
+                                        getGPSLocation(true);
+                                        return;
+                                    }
+                                    toastGeoMessage(info.alert);
                                     }, {
-                                        enableHighAccuracy: true,
-                                        maximumAge: 0,
-                                        timeout: 12000
+                                        enableHighAccuracy: !lowAccuracyFallback,
+                                        maximumAge: lowAccuracyFallback ? 30000 : 0,
+                                        timeout: lowAccuracyFallback ? 18000 : 12000
                                     });
                                 }
                                 
@@ -677,15 +753,11 @@
                                     
                                     setLocationStatus('<span class="text-blue-500"><i class="fa-solid fa-spinner fa-spin"></i> Đang tìm tọa độ...</span>');
                                     
-                                    const searchQuery = encodeURIComponent(address + ', Vietnam');
-                                    const url = 'https://nominatim.openstreetmap.org/search?format=json&q=' + searchQuery + '&limit=1';
-                                    
-                                    fetch(url)
-                                    .then(response => response.json())
+                                    ClickEatMap4D.geocode(address + ', Vietnam', 1)
                                     .then(data => {
                                         if (data && data.length > 0) {
                                             const lat = Number(data[0].lat);
-                                            const lng = Number(data[0].lon);
+                                            const lng = Number(data[0].lng);
                                             
                                             return saveLocationToDatabase(lat, lng, 'Địa chỉ', true);
                                         }
@@ -697,7 +769,8 @@
                                             return;
                                         }
                                         console.error('Lỗi API: ', error);
-                                        setLocationStatus('<span class="text-red-500"><i class="fa-solid fa-wifi"></i> Lỗi kết nối mạng!</span>');
+                                        setLocationStatus('<span class="text-red-500"><i class="fa-solid fa-wifi"></i> '
+                                        + ClickEatMap4D.messageFromError(error, 'Lỗi kết nối mạng!') + '</span>');
                                     });
                                 }
                                 

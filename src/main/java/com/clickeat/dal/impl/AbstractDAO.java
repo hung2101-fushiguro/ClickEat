@@ -40,10 +40,87 @@ public abstract class AbstractDAO<T> extends DBContext implements IGenericDAO<T>
 
     // Hàm INSERT/UPDATE/DELETE chung
     public int update(String sql, Object... params) {
-        try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        boolean isInsert = sql != null && sql.trim().toUpperCase().startsWith("INSERT");
+        int generatedKeyMode = isInsert ? Statement.RETURN_GENERATED_KEYS : Statement.NO_GENERATED_KEYS;
+
+        try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(sql, generatedKeyMode)) {
             setParameter(ps, params);
-            int rows = ps.executeUpdate();
-            if (rows > 0 && sql.trim().toUpperCase().startsWith("INSERT")) {
+
+            if (isInsert) {
+                /*
+                 * Dùng executeUpdate() thay vì execute() cho INSERT.
+                 *
+                 * Lý do: SQL Server trigger (VD: TR_CartItems_EnforceSingleMerchant)
+                 * sinh thêm result sets phụ sau khi INSERT. Nếu dùng execute() + vòng
+                 * getMoreResults(CLOSE_CURRENT_RESULT), tất cả result sets (kể cả kênh
+                 * generated keys) bị đóng trước khi getGeneratedKeys() được gọi → crash
+                 * SQLServerException: "The statement must be executed before any results
+                 * can be obtained."
+                 *
+                 * executeUpdate() bỏ qua result sets phụ của trigger và cho phép gọi
+                 * getGeneratedKeys() ngay sau đó một cách an toàn.
+                 */
+                int rows = ps.executeUpdate();
+                try (ResultSet rs = ps.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        int generatedKey = rs.getInt(1);
+                        if (generatedKey > 0) {
+                            return generatedKey;
+                        }
+                    }
+                }
+                return rows; // Fallback: trả số dòng bị ảnh hưởng nếu không có generated key
+            } else {
+                // Với UPDATE / DELETE: dùng execute() + lặp multi-result như cũ
+                boolean hasResultSet = ps.execute();
+                int affectedRows = 0;
+                Integer firstNumericResult = null;
+
+                while (true) {
+                    if (hasResultSet) {
+                        try (ResultSet rs = ps.getResultSet()) {
+                            if (firstNumericResult == null && rs != null && rs.next()) {
+                                Object firstCol = rs.getObject(1);
+                                if (firstCol instanceof Number) {
+                                    firstNumericResult = ((Number) firstCol).intValue();
+                                }
+                            }
+                        }
+                    } else {
+                        int count = ps.getUpdateCount();
+                        if (count == -1) {
+                            break;
+                        }
+                        affectedRows += Math.max(0, count);
+                    }
+
+                    hasResultSet = ps.getMoreResults(Statement.CLOSE_CURRENT_RESULT);
+                    if (!hasResultSet && ps.getUpdateCount() == -1) {
+                        break;
+                    }
+                }
+
+                if (firstNumericResult != null && firstNumericResult > 0) {
+                    return firstNumericResult;
+                }
+                return affectedRows;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    // Overload dùng chung transaction từ bên ngoài (không tự đóng Connection)
+    public int update(Connection conn, String sql, Object... params) throws SQLException {
+        boolean isInsert = sql != null && sql.trim().toUpperCase().startsWith("INSERT");
+        int generatedKeyMode = isInsert ? Statement.RETURN_GENERATED_KEYS : Statement.NO_GENERATED_KEYS;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql, generatedKeyMode)) {
+            setParameter(ps, params);
+
+            if (isInsert) {
+                int rows = ps.executeUpdate();
                 try (ResultSet rs = ps.getGeneratedKeys()) {
                     if (rs.next()) {
                         int generatedKey = rs.getInt(1);
@@ -54,11 +131,31 @@ public abstract class AbstractDAO<T> extends DBContext implements IGenericDAO<T>
                 }
                 return rows;
             }
-            return rows;
-        } catch (SQLException e) {
-            e.printStackTrace();
+
+            boolean hasResultSet = ps.execute();
+            int affectedRows = 0;
+
+            while (true) {
+                if (hasResultSet) {
+                    try (ResultSet rs = ps.getResultSet()) {
+                        // Ignore result sets for non-INSERT DML.
+                    }
+                } else {
+                    int count = ps.getUpdateCount();
+                    if (count == -1) {
+                        break;
+                    }
+                    affectedRows += Math.max(0, count);
+                }
+
+                hasResultSet = ps.getMoreResults(Statement.CLOSE_CURRENT_RESULT);
+                if (!hasResultSet && ps.getUpdateCount() == -1) {
+                    break;
+                }
+            }
+
+            return affectedRows;
         }
-        return 0;
     }
 
     private void setParameter(PreparedStatement ps, Object... params) throws SQLException {

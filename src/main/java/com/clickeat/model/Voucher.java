@@ -5,7 +5,8 @@ import java.sql.Timestamp;
 public class Voucher {
 
     private int id;
-    private int merchantUserId;
+    private Integer merchantUserId;
+    private String voucherType;
     private String code;
     private String title;
     private String description;
@@ -39,12 +40,20 @@ public class Voucher {
         this.id = id;
     }
 
-    public int getMerchantUserId() {
+    public Integer getMerchantUserId() {
         return merchantUserId;
     }
 
-    public void setMerchantUserId(int merchantUserId) {
+    public void setMerchantUserId(Integer merchantUserId) {
         this.merchantUserId = merchantUserId;
+    }
+
+    public String getVoucherType() {
+        return voucherType;
+    }
+
+    public void setVoucherType(String voucherType) {
+        this.voucherType = voucherType;
     }
 
     public String getCode() {

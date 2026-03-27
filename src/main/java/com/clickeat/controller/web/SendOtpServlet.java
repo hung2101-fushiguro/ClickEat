@@ -100,7 +100,11 @@ public class SendOtpServlet extends HttpServlet {
             session.removeAttribute("guest_latitude");
             session.removeAttribute("guest_longitude");
 
-            request.setAttribute("message", "Mã OTP đã được gửi đến số điện thoại của bạn.");
+            if (TwilioVerifyUtil.isMockMode()) {
+                request.setAttribute("message", "Chế độ OTP demo đang bật. Mã OTP: " + TwilioVerifyUtil.getMockOtpCode());
+            } else {
+                request.setAttribute("message", "Mã OTP đã được gửi đến số điện thoại của bạn.");
+            }
         } else {
             HttpSession session = request.getSession(false);
             if (session != null) {

@@ -6,6 +6,8 @@
 <html lang="vi">
     <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/responsive-global.css">
         <title>Đặt đơn thành công - ClickEat</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -94,13 +96,36 @@
                     </div>
                 </div>
 
-                <div class="mt-10 text-center">
-                    <a href="${pageContext.request.contextPath}/home"
-                    class="inline-flex items-center gap-2 h-14 px-10 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-black shadow">
-                    <i class="fa-solid fa-house"></i>
-                    Về trang chủ
+                <div class="mt-10 flex flex-wrap justify-center gap-3">
+                    <c:choose>
+                        <c:when test="${not empty account}">
+                            <%-- Customer đã đăng nhập: xem chi tiết đơn --%>
+                            <a href="${pageContext.request.contextPath}/customer/orders?focusOrderId=${order.id}"
+                            class="inline-flex items-center gap-2 h-14 px-8 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-black shadow transition">
+                            <i class="fa-solid fa-receipt"></i> Xem chi tiết đơn
+                        </a>
+                        <a href="${pageContext.request.contextPath}/home"
+                        class="inline-flex items-center gap-2 h-14 px-8 rounded-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-bold shadow-sm transition">
+                        <i class="fa-solid fa-house"></i> Về trang chủ
+                    </a>
+                </c:when>
+                <c:otherwise>
+                    <%-- Guest: nút theo dõi đơn bằng mã đơn --%>
+                    <a href="${pageContext.request.contextPath}/guest-order-tracking?code=${order.orderCode}"
+                    class="inline-flex items-center gap-2 h-14 px-8 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-black shadow transition">
+                    <i class="fa-solid fa-magnifying-glass-location"></i> Theo dõi đơn hàng
                 </a>
+                <a href="${pageContext.request.contextPath}/home"
+                class="inline-flex items-center gap-2 h-14 px-8 rounded-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-bold shadow-sm transition">
+                <i class="fa-solid fa-house"></i> Về trang chủ
+            </a>
+            <%-- Hiển thị mã đơn nổi bật để guest copy/lưu --%>
+            <div class="w-full mt-2 text-center text-xs text-gray-500">
+                Lưu lại mã đơn <span class="font-bold text-gray-700">${order.orderCode}</span> để tra cứu sau.
             </div>
-        </main>
-    </body>
+        </c:otherwise>
+    </c:choose>
+</div>
+</main>
+</body>
 </html>

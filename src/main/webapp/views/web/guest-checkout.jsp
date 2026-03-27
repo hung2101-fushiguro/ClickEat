@@ -6,11 +6,15 @@
         <meta charset="UTF-8">
         <title>Đặt hàng nhanh - ClickEat</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/responsive-global.css">
         <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/logo-icon.png?v=2">
         <script src="https://cdn.tailwindcss.com"></script>
           <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
               integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
               crossorigin=""/>
+                <script>window.MAP4D_API_KEY = window.MAP4D_API_KEY || '${initParam["map4d.api.key"]}';</script>
+                <script>window.MAP4D_TILE_URL_TEMPLATE = window.MAP4D_TILE_URL_TEMPLATE || '${initParam["map4d.tile.url.template"]}';</script>
+                <script src="${pageContext.request.contextPath}/assets/js/map4d-api.js"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     </head>
     <body class="bg-[#f7f5f3] text-gray-900 min-h-screen flex flex-col">
@@ -197,26 +201,11 @@
             }
 
             async function guestReverseGeocode(lat, lng) {
-                const url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat='
-                        + encodeURIComponent(lat)
-                        + '&lon=' + encodeURIComponent(lng)
-                        + '&accept-language=vi';
-                const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error('Reverse geocode failed');
-                }
-                const data = await response.json();
-                return data.display_name || '';
+                return ClickEatMap4D.reverse(lat, lng);
             }
 
             async function guestSearchAddress(keyword) {
-                const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&addressdetails=1&accept-language=vi&q='
-                        + encodeURIComponent(keyword);
-                const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error('Search failed');
-                }
-                return response.json();
+                return ClickEatMap4D.geocode(keyword, 5);
             }
 
             async function renderGuestNearby(centerLat, centerLng) {
@@ -277,7 +266,7 @@
 
                     const first = results[0];
                     const lat = parseFloat(first.lat);
-                    const lng = parseFloat(first.lon);
+                    const lng = parseFloat(first.lng);
                     setGuestLocation(lat, lng, first.display_name || input.value.trim(), true);
                     renderGuestNearby(lat, lng);
                     if (hint) {
@@ -285,7 +274,7 @@
                     }
                 } catch (e) {
                     if (hint) {
-                        hint.textContent = 'Tìm kiếm tạm lỗi, vui lòng thử lại.';
+                        hint.textContent = ClickEatMap4D.messageFromError(e, 'Tìm kiếm tạm lỗi, vui lòng thử lại.');
                     }
                 }
             }
@@ -302,10 +291,11 @@
                 const initialLng = lngInput && lngInput.value ? parseFloat(lngInput.value) : 106.7009;
 
                 guestMap = L.map(mapEl).setView([initialLat, initialLng], 14);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    maxZoom: 19,
-                    attribution: '&copy; OpenStreetMap'
-                }).addTo(guestMap);
+                ClickEatMap4D.addBaseTileLayer(guestMap, {
+                    attribution: '&copy; Map4D',
+                    fallbackAttribution: '&copy; OpenStreetMap',
+                    fallbackMaxZoom: 19
+                });
 
                 guestMarker = L.marker([initialLat, initialLng], {draggable: true}).addTo(guestMap);
 

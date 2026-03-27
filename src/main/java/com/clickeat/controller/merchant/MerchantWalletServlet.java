@@ -35,8 +35,10 @@ public class MerchantWalletServlet extends HttpServlet {
         MerchantWalletDAO walletDAO = new MerchantWalletDAO();
         MerchantWithdrawalDAO withdrawDAO = new MerchantWithdrawalDAO();
 
-        // Đồng bộ lại số dư từ lịch sử đơn DELIVERED nếu dữ liệu cũ chưa được settle
-        walletDAO.synchronizeBalanceWithDeliveredIncome(merchantId);
+        // KHÔNG gọi synchronizeBalanceWithDeliveredIncome ở đây nữa:
+        // Hàm đó tính lại balance từ đầu (overwrite), sẽ xung đột với logic
+        // cộng tiền incremental được thực hiện ngay trong transaction giao hàng.
+        // Balance giờ được quản lý chuẩn xác trong completeDeliveryWithProofAndSettlement.
 
         // Lấy số dư ví
         MerchantWallet wallet = walletDAO.getWalletByMerchantId(merchantId);

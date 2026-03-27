@@ -1,4 +1,4 @@
-/* =========================================================
+﻿/* =========================================================
    CLICK EAT - FULL DATABASE (CREATE + SEED) - SQL SERVER
    One-shot script: Create DB -> Drop old tables -> Create schema -> Seed
    Fixed:
@@ -11,12 +11,19 @@ SET NOCOUNT ON;
 GO
 
 /* =========================
-   0) CREATE DATABASE
+   0) RECREATE DATABASE (always clean)
    ========================= */
-IF DB_ID(N'ClickEat') IS NULL
+USE master;
+GO
+
+IF DB_ID(N'ClickEat') IS NOT NULL
 BEGIN
-    CREATE DATABASE ClickEat;
+    ALTER DATABASE ClickEat SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE ClickEat;
 END
+GO
+
+CREATE DATABASE ClickEat;
 GO
 
 USE ClickEat;
@@ -27,6 +34,11 @@ GO
    ========================= */
 DROP TRIGGER IF EXISTS dbo.TR_CartItems_EnforceSingleMerchant;
 GO
+IF OBJECT_ID('dbo.MerchantWithdrawals','U') IS NOT NULL DROP TABLE dbo.MerchantWithdrawals;
+IF OBJECT_ID('dbo.MerchantWallets','U') IS NOT NULL DROP TABLE dbo.MerchantWallets;
+IF OBJECT_ID('dbo.Messages','U') IS NOT NULL DROP TABLE dbo.Messages;
+IF OBJECT_ID('dbo.RefundRequests','U') IS NOT NULL DROP TABLE dbo.RefundRequests;
+
 
 IF OBJECT_ID('dbo.AutoCartProposalItems','U') IS NOT NULL DROP TABLE dbo.AutoCartProposalItems;
 IF OBJECT_ID('dbo.AutoCartProposals','U') IS NOT NULL DROP TABLE dbo.AutoCartProposals;
@@ -280,6 +292,8 @@ CREATE TABLE dbo.FoodItems (
     protein_g        DECIMAL(10,2) NULL,
     carbs_g          DECIMAL(10,2) NULL,
     fat_g            DECIMAL(10,2) NULL,
+    size_options     NVARCHAR(1000) NULL,
+    topping_options  NVARCHAR(1500) NULL,
     created_at       DATETIME2     NOT NULL CONSTRAINT DF_FoodItems_Created DEFAULT SYSUTCDATETIME(),
     updated_at       DATETIME2     NOT NULL CONSTRAINT DF_FoodItems_Updated DEFAULT SYSUTCDATETIME(),
 
@@ -325,6 +339,10 @@ CREATE TABLE dbo.CartItems (
     quantity            INT           NOT NULL,
     unit_price_snapshot DECIMAL(18,2) NOT NULL,
     note                NVARCHAR(255) NULL,
+    selected_size       NVARCHAR(50)  NULL,
+    selected_toppings   NVARCHAR(500) NULL,
+    option_extra_price  DECIMAL(18,2) NOT NULL CONSTRAINT DF_CartItems_OptionExtra DEFAULT 0,
+    option_signature    NVARCHAR(255) NOT NULL CONSTRAINT DF_CartItems_OptionSignature DEFAULT N'',
 
     CONSTRAINT FK_CartItems_Cart FOREIGN KEY (cart_id) REFERENCES dbo.Carts(id) ON DELETE CASCADE,
     CONSTRAINT FK_CartItems_Food FOREIGN KEY (food_item_id) REFERENCES dbo.FoodItems(id),
@@ -332,7 +350,7 @@ CREATE TABLE dbo.CartItems (
 );
 
 CREATE INDEX IX_CartItems_Cart ON dbo.CartItems(cart_id);
-CREATE UNIQUE INDEX UX_CartItems_CartFood ON dbo.CartItems(cart_id, food_item_id);
+CREATE UNIQUE INDEX UX_CartItems_CartFood ON dbo.CartItems(cart_id, food_item_id, option_signature);
 GO
 
 CREATE TRIGGER dbo.TR_CartItems_EnforceSingleMerchant
@@ -450,6 +468,9 @@ CREATE TABLE dbo.OrderItems (
     unit_price_snapshot DECIMAL(18,2) NOT NULL,
     quantity            INT           NOT NULL,
     note                NVARCHAR(255) NULL,
+    selected_size       NVARCHAR(50)  NULL,
+    selected_toppings   NVARCHAR(500) NULL,
+    option_extra_price  DECIMAL(18,2) NOT NULL CONSTRAINT DF_OrderItems_OptionExtra DEFAULT 0,
 
     CONSTRAINT FK_OrderItems_Order FOREIGN KEY (order_id) REFERENCES dbo.Orders(id) ON DELETE CASCADE,
     CONSTRAINT FK_OrderItems_Food  FOREIGN KEY (food_item_id) REFERENCES dbo.FoodItems(id),
@@ -1022,7 +1043,7 @@ BEGIN TRY
     (@s1,N'MOTORBIKE',N'Honda Vision',    N'29A1-12345',N'ACTIVE'),
     (@s2,N'MOTORBIKE',N'Yamaha Exciter',  N'59B2-67890',N'ACTIVE'),
     (@s3,N'MOTORBIKE',N'Honda Wave Alpha',N'43H1-11223',N'ACTIVE'),
-    (@s4,N'BIKE',     N'Xe đạp thể thao', N'BIKE-0004', N'ACTIVE'),
+    (@s4,N'MOTORBIKE', N'Winner 125i', N'74H1-63345', N'ACTIVE'),
     (@s5,N'MOTORBIKE',N'Honda Air Blade', N'92K1-55667',N'ACTIVE');
 
     INSERT INTO dbo.ShipperAvailability(shipper_user_id,is_online,current_status,current_latitude,current_longitude)
@@ -1370,3 +1391,436 @@ UPDATE MerchantProfiles SET image_url = '/assets/images/id24-Lau-Mam-Can-Tho.jpg
 UPDATE MerchantProfiles SET image_url = '/assets/images/id25-Banh-Xeo-Mien-Tay.jpg' WHERE user_id = 24;
 UPDATE MerchantProfiles SET image_url = '/assets/images/id26-Banh-Da-Cua-Hai-Phong.jpg' WHERE user_id = 25;
 UPDATE MerchantProfiles SET image_url = '/assets/images/id27-Nem-Cua-Be-HP.jpg' WHERE user_id = 26;
+/* =========================================================
+    MERGED SUPPLEMENT (from ClickEat2.sql + add_missing_schema_merchant_patch.sql)
+   Purpose: keep missing schema/logic without duplicating existing richer blocks.
+   Idempotent and safe to run multiple times.
+   ========================================================= */
+
+SET NOCOUNT ON;
+GO
+
+/* A) Merchant runtime columns + constraints + chat/wallet tables */
+IF OBJECT_ID(N'dbo.MerchantProfiles', N'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH(N'dbo.MerchantProfiles', N'shop_avatar') IS NULL
+        ALTER TABLE dbo.MerchantProfiles ADD shop_avatar NVARCHAR(500) NULL;
+
+    IF COL_LENGTH(N'dbo.MerchantProfiles', N'business_hours') IS NULL
+        ALTER TABLE dbo.MerchantProfiles ADD business_hours NVARCHAR(MAX) NULL;
+
+    IF COL_LENGTH(N'dbo.MerchantProfiles', N'notification_settings') IS NULL
+        ALTER TABLE dbo.MerchantProfiles ADD notification_settings NVARCHAR(MAX) NULL;
+
+    IF COL_LENGTH(N'dbo.MerchantProfiles', N'min_order_amount') IS NULL
+        ALTER TABLE dbo.MerchantProfiles ADD min_order_amount DECIMAL(18,2) NULL;
+
+    IF COL_LENGTH(N'dbo.MerchantProfiles', N'is_open') IS NULL
+        ALTER TABLE dbo.MerchantProfiles ADD is_open BIT NULL CONSTRAINT DF_MerchantProfiles_IsOpen DEFAULT (1);
+
+    IF COL_LENGTH(N'dbo.MerchantProfiles', N'rejection_reason') IS NULL
+        ALTER TABLE dbo.MerchantProfiles ADD rejection_reason NVARCHAR(500) NULL;
+
+    IF COL_LENGTH(N'dbo.MerchantProfiles', N'shop_description') IS NULL
+        ALTER TABLE dbo.MerchantProfiles ADD shop_description NVARCHAR(1000) NULL;
+
+    IF COL_LENGTH(N'dbo.MerchantProfiles', N'source_platform') IS NULL
+        ALTER TABLE dbo.MerchantProfiles ADD source_platform NVARCHAR(20) NULL;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM sys.check_constraints
+        WHERE name = N'CK_MerchantProfiles_SourcePlatform'
+          AND parent_object_id = OBJECT_ID(N'dbo.MerchantProfiles')
+    )
+    BEGIN
+        ALTER TABLE dbo.MerchantProfiles
+        ADD CONSTRAINT CK_MerchantProfiles_SourcePlatform
+            CHECK (source_platform IS NULL OR source_platform IN (N'NONE', N'GRABFOOD', N'SHOPEEFOOD', N'OTHER'));
+    END
+END
+GO
+
+IF OBJECT_ID(N'dbo.FoodItems', N'U') IS NOT NULL
+   AND COL_LENGTH(N'dbo.FoodItems', N'out_of_stock_reason') IS NULL
+BEGIN
+    ALTER TABLE dbo.FoodItems ADD out_of_stock_reason NVARCHAR(255) NULL;
+END
+GO
+
+IF OBJECT_ID(N'dbo.FoodItems', N'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH(N'dbo.FoodItems', N'size_options') IS NULL
+        ALTER TABLE dbo.FoodItems ADD size_options NVARCHAR(1000) NULL;
+
+    IF COL_LENGTH(N'dbo.FoodItems', N'topping_options') IS NULL
+        ALTER TABLE dbo.FoodItems ADD topping_options NVARCHAR(1500) NULL;
+END
+GO
+
+IF OBJECT_ID(N'dbo.CartItems', N'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH(N'dbo.CartItems', N'selected_size') IS NULL
+        ALTER TABLE dbo.CartItems ADD selected_size NVARCHAR(50) NULL;
+
+    IF COL_LENGTH(N'dbo.CartItems', N'selected_toppings') IS NULL
+        ALTER TABLE dbo.CartItems ADD selected_toppings NVARCHAR(500) NULL;
+
+    IF COL_LENGTH(N'dbo.CartItems', N'option_extra_price') IS NULL
+        ALTER TABLE dbo.CartItems ADD option_extra_price DECIMAL(18,2) NOT NULL CONSTRAINT DF_CartItems_OptionExtra DEFAULT (0);
+
+    IF COL_LENGTH(N'dbo.CartItems', N'option_signature') IS NULL
+        ALTER TABLE dbo.CartItems ADD option_signature NVARCHAR(255) NOT NULL CONSTRAINT DF_CartItems_OptionSignature DEFAULT N'';
+
+    IF EXISTS (
+        SELECT 1 FROM sys.indexes
+        WHERE name = N'UX_CartItems_CartFood'
+          AND object_id = OBJECT_ID(N'dbo.CartItems')
+    )
+    BEGIN
+        DROP INDEX UX_CartItems_CartFood ON dbo.CartItems;
+    END
+
+    CREATE UNIQUE INDEX UX_CartItems_CartFood ON dbo.CartItems(cart_id, food_item_id, option_signature);
+END
+GO
+
+IF OBJECT_ID(N'dbo.OrderItems', N'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH(N'dbo.OrderItems', N'selected_size') IS NULL
+        ALTER TABLE dbo.OrderItems ADD selected_size NVARCHAR(50) NULL;
+
+    IF COL_LENGTH(N'dbo.OrderItems', N'selected_toppings') IS NULL
+        ALTER TABLE dbo.OrderItems ADD selected_toppings NVARCHAR(500) NULL;
+
+    IF COL_LENGTH(N'dbo.OrderItems', N'option_extra_price') IS NULL
+        ALTER TABLE dbo.OrderItems ADD option_extra_price DECIMAL(18,2) NOT NULL CONSTRAINT DF_OrderItems_OptionExtra DEFAULT (0);
+END
+GO
+
+IF OBJECT_ID(N'dbo.Orders', N'U') IS NOT NULL
+   AND COL_LENGTH(N'dbo.Orders', N'app_fee') IS NULL
+BEGIN
+    ALTER TABLE dbo.Orders ADD app_fee DECIMAL(18,2) NOT NULL CONSTRAINT DF_Orders_AppFee DEFAULT (0);
+END
+GO
+
+IF OBJECT_ID(N'dbo.Messages', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Messages (
+        id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        sender_id BIGINT NOT NULL,
+        receiver_id BIGINT NOT NULL,
+        content NVARCHAR(2000) NOT NULL,
+        is_read BIT NOT NULL CONSTRAINT DF_Messages_IsRead DEFAULT (0),
+        created_at DATETIME2 NOT NULL CONSTRAINT DF_Messages_Created DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT FK_Messages_Sender FOREIGN KEY (sender_id) REFERENCES dbo.Users(id),
+        CONSTRAINT FK_Messages_Receiver FOREIGN KEY (receiver_id) REFERENCES dbo.Users(id)
+    );
+
+    CREATE INDEX IX_Messages_SenderReceiverCreated ON dbo.Messages(sender_id, receiver_id, created_at DESC);
+    CREATE INDEX IX_Messages_ReceiverCreated ON dbo.Messages(receiver_id, created_at DESC);
+END
+GO
+
+IF OBJECT_ID(N'dbo.MerchantWallets', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.MerchantWallets (
+        merchant_user_id BIGINT NOT NULL PRIMARY KEY,
+        balance DECIMAL(18,2) NOT NULL CONSTRAINT DF_MerchantWallets_Balance DEFAULT (0),
+        updated_at DATETIME2 NOT NULL CONSTRAINT DF_MerchantWallets_Updated DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT FK_MerchantWallets_Merchant FOREIGN KEY (merchant_user_id) REFERENCES dbo.MerchantProfiles(user_id) ON DELETE CASCADE
+    );
+END
+GO
+
+IF OBJECT_ID(N'dbo.MerchantWithdrawals', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.MerchantWithdrawals (
+        id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        merchant_user_id BIGINT NOT NULL,
+        amount DECIMAL(18,2) NOT NULL,
+        bank_name NVARCHAR(100) NULL,
+        bank_account_number NVARCHAR(50) NULL,
+        status NVARCHAR(20) NOT NULL CONSTRAINT DF_MerchantWithdrawals_Status DEFAULT (N'PENDING'),
+        created_at DATETIME2 NOT NULL CONSTRAINT DF_MerchantWithdrawals_Created DEFAULT SYSUTCDATETIME(),
+        processed_at DATETIME2 NULL,
+        CONSTRAINT FK_MerchantWithdrawals_Merchant FOREIGN KEY (merchant_user_id) REFERENCES dbo.MerchantProfiles(user_id) ON DELETE CASCADE,
+        CONSTRAINT CK_MerchantWithdrawals_Status CHECK (status IN (N'PENDING', N'APPROVED', N'REJECTED')),
+        CONSTRAINT CK_MerchantWithdrawals_Amount CHECK (amount > 0)
+    );
+
+    CREATE INDEX IX_MerchantWithdrawals_MerchantCreated ON dbo.MerchantWithdrawals(merchant_user_id, created_at DESC);
+    CREATE INDEX IX_MerchantWithdrawals_Status ON dbo.MerchantWithdrawals(status, created_at);
+END
+GO
+
+/* B) Ratings enhancements */
+IF OBJECT_ID(N'dbo.Ratings', N'U') IS NOT NULL
+BEGIN
+    IF COL_LENGTH(N'dbo.Ratings', N'reply_comment') IS NULL
+        ALTER TABLE dbo.Ratings ADD reply_comment NVARCHAR(1000) NULL;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM sys.indexes
+        WHERE name = N'IX_Ratings_TargetCreated'
+          AND object_id = OBJECT_ID(N'dbo.Ratings')
+    )
+    BEGIN
+        IF COL_LENGTH(N'dbo.Ratings', N'reply_comment') IS NOT NULL
+            EXEC sp_executesql N'CREATE INDEX IX_Ratings_TargetCreated
+                ON dbo.Ratings(target_type, target_user_id, created_at DESC)
+                INCLUDE (stars, reply_comment, order_id, rater_customer_id, comment);';
+        ELSE
+            EXEC sp_executesql N'CREATE INDEX IX_Ratings_TargetCreated
+                ON dbo.Ratings(target_type, target_user_id, created_at DESC)
+                INCLUDE (stars, order_id, rater_customer_id, comment);';
+    END
+
+    IF NOT EXISTS (
+        SELECT 1 FROM sys.indexes
+        WHERE name = N'IX_Ratings_MerchantUnansweredCreated'
+          AND object_id = OBJECT_ID(N'dbo.Ratings')
+    )
+    BEGIN
+        IF COL_LENGTH(N'dbo.Ratings', N'reply_comment') IS NOT NULL
+            EXEC sp_executesql N'CREATE INDEX IX_Ratings_MerchantUnansweredCreated
+                ON dbo.Ratings(target_user_id, created_at DESC)
+                INCLUDE (stars, order_id, rater_customer_id, comment)
+                WHERE target_type = N''MERCHANT'' AND reply_comment IS NULL;';
+    END
+END
+GO
+
+/* C) Missing table from ClickEat2 */
+IF OBJECT_ID(N'dbo.RefundRequests', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.RefundRequests (
+        id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        order_id BIGINT NOT NULL,
+        merchant_user_id BIGINT NOT NULL,
+        refund_amount DECIMAL(18,2) NOT NULL,
+        reason NVARCHAR(255) NOT NULL,
+        status NVARCHAR(20) DEFAULT N'COMPLETED',
+        created_at DATETIME2 DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT FK_Refund_Order FOREIGN KEY (order_id) REFERENCES dbo.Orders(id)
+    );
+END
+GO
+
+/* D) Shipper anti-hoarding operational logic */
+IF OBJECT_ID(N'dbo.Orders', N'U') IS NOT NULL
+   AND COL_LENGTH(N'dbo.Orders', N'shipper_accepted_at') IS NULL
+BEGIN
+    ALTER TABLE dbo.Orders ADD shipper_accepted_at DATETIME2 NULL;
+END
+GO
+
+IF OBJECT_ID(N'dbo.Orders', N'U') IS NOT NULL
+BEGIN
+    UPDATE dbo.Orders
+    SET shipper_user_id = NULL,
+        order_status = N'READY_FOR_PICKUP',
+        shipper_accepted_at = NULL
+    WHERE order_status = N'DELIVERING'
+      AND shipper_accepted_at IS NOT NULL
+      AND DATEDIFF(MINUTE, shipper_accepted_at, SYSUTCDATETIME()) > 30;
+END
+GO
+
+PRINT N'Merged supplement applied successfully.';
+GO
+
+/* =========================================================
+   MERGED EXTRA - AI TRAINING TABLES
+   Source: db/AITrainingEvents.sql
+   ========================================================= */
+
+-- Optional table for collecting chatbot interactions used in AI training pipelines.
+-- Safe to run independently. Current application will continue running if this table does not exist.
+
+IF OBJECT_ID('dbo.AITrainingEvents', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.AITrainingEvents (
+        id             BIGINT IDENTITY(1,1) PRIMARY KEY,
+        user_id        BIGINT         NOT NULL,
+        user_message   NVARCHAR(2000) NOT NULL,
+        system_context NVARCHAR(4000) NULL,
+        conversation_context NVARCHAR(MAX) NULL,
+        prompt_hash    NVARCHAR(64)   NULL,
+        ai_reply       NVARCHAR(4000) NULL,
+        has_profile    BIT            NOT NULL CONSTRAINT DF_AITrainingEvents_HasProfile DEFAULT 0,
+        health_goal    NVARCHAR(255)  NULL,
+        feedback_score SMALLINT       NULL,
+        feedback_note  NVARCHAR(500)  NULL,
+        feedback_category NVARCHAR(100) NULL,
+        feedback_ground_truth NVARCHAR(2000) NULL,
+        feedback_error_type NVARCHAR(100) NULL,
+        feedback_at    DATETIME2      NULL,
+        created_at     DATETIME2      NOT NULL CONSTRAINT DF_AITrainingEvents_Created DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT FK_AITrainingEvents_User FOREIGN KEY (user_id) REFERENCES dbo.Users(id)
+    );
+
+    CREATE INDEX IX_AITrainingEvents_User_Created ON dbo.AITrainingEvents (user_id, created_at DESC);
+END;
+
+IF COL_LENGTH('dbo.AITrainingEvents', 'feedback_score') IS NULL
+BEGIN
+    ALTER TABLE dbo.AITrainingEvents ADD feedback_score SMALLINT NULL;
+END;
+
+IF COL_LENGTH('dbo.AITrainingEvents', 'feedback_note') IS NULL
+BEGIN
+    ALTER TABLE dbo.AITrainingEvents ADD feedback_note NVARCHAR(500) NULL;
+END;
+
+IF COL_LENGTH('dbo.AITrainingEvents', 'feedback_at') IS NULL
+BEGIN
+    ALTER TABLE dbo.AITrainingEvents ADD feedback_at DATETIME2 NULL;
+END;
+
+IF COL_LENGTH('dbo.AITrainingEvents', 'conversation_context') IS NULL
+BEGIN
+    ALTER TABLE dbo.AITrainingEvents ADD conversation_context NVARCHAR(MAX) NULL;
+END;
+
+IF COL_LENGTH('dbo.AITrainingEvents', 'prompt_hash') IS NULL
+BEGIN
+    ALTER TABLE dbo.AITrainingEvents ADD prompt_hash NVARCHAR(64) NULL;
+END;
+
+IF COL_LENGTH('dbo.AITrainingEvents', 'feedback_category') IS NULL
+BEGIN
+    ALTER TABLE dbo.AITrainingEvents ADD feedback_category NVARCHAR(100) NULL;
+END;
+
+IF COL_LENGTH('dbo.AITrainingEvents', 'feedback_ground_truth') IS NULL
+BEGIN
+    ALTER TABLE dbo.AITrainingEvents ADD feedback_ground_truth NVARCHAR(2000) NULL;
+END;
+
+IF COL_LENGTH('dbo.AITrainingEvents', 'feedback_error_type') IS NULL
+BEGIN
+    ALTER TABLE dbo.AITrainingEvents ADD feedback_error_type NVARCHAR(100) NULL;
+END;
+
+IF EXISTS (
+    SELECT 1
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = 'dbo'
+      AND TABLE_NAME = 'AITrainingEvents'
+      AND COLUMN_NAME = 'system_context'
+      AND CHARACTER_MAXIMUM_LENGTH = 4000
+)
+BEGIN
+    ALTER TABLE dbo.AITrainingEvents ALTER COLUMN system_context NVARCHAR(MAX) NULL;
+END;
+
+IF OBJECT_ID('dbo.AITrainingEvents', 'U') IS NOT NULL
+    AND NOT EXISTS (
+        SELECT 1
+        FROM sys.indexes
+        WHERE name = 'IX_AITrainingEvents_UserPromptHash_Created'
+          AND object_id = OBJECT_ID('dbo.AITrainingEvents')
+    )
+BEGIN
+    CREATE INDEX IX_AITrainingEvents_UserPromptHash_Created
+        ON dbo.AITrainingEvents (user_id, prompt_hash, created_at DESC);
+END;
+
+IF OBJECT_ID('dbo.AITrainingTriggerAudit', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.AITrainingTriggerAudit (
+        id                 BIGINT IDENTITY(1,1) PRIMARY KEY,
+        trigger_id         NVARCHAR(100) NOT NULL,
+        requested_by       NVARCHAR(255) NULL,
+        requested_by_role  NVARCHAR(50)  NULL,
+        source_ip          NVARCHAR(64)  NULL,
+        mode               NVARCHAR(50)  NOT NULL,
+        gate_status        NVARCHAR(20)  NULL,
+        decision_reason    NVARCHAR(100) NULL,
+        used_at            DATETIME2     NOT NULL CONSTRAINT DF_AITrainingTriggerAudit_UsedAt DEFAULT SYSUTCDATETIME()
+    );
+
+    CREATE INDEX IX_AITrainingTriggerAudit_Trigger_UsedAt
+        ON dbo.AITrainingTriggerAudit (trigger_id, used_at DESC);
+
+    CREATE INDEX IX_AITrainingTriggerAudit_UsedAt
+        ON dbo.AITrainingTriggerAudit (used_at DESC);
+END;
+
+IF OBJECT_ID('dbo.AITrainingTriggerAudit', 'U') IS NOT NULL
+    AND NOT EXISTS (
+        SELECT 1
+        FROM sys.indexes
+        WHERE name = 'IX_AITrainingTriggerAudit_Decision_Gate_UsedAt'
+          AND object_id = OBJECT_ID('dbo.AITrainingTriggerAudit')
+    )
+BEGIN
+    CREATE INDEX IX_AITrainingTriggerAudit_Decision_Gate_UsedAt
+        ON dbo.AITrainingTriggerAudit (decision_reason, gate_status, used_at DESC);
+END;
+
+IF OBJECT_ID('dbo.AITrainingTriggerAudit', 'U') IS NOT NULL
+    AND NOT EXISTS (
+        SELECT 1
+        FROM sys.indexes
+        WHERE name = 'IX_AITrainingTriggerAudit_RequestedBy_UsedAt'
+          AND object_id = OBJECT_ID('dbo.AITrainingTriggerAudit')
+    )
+BEGIN
+    CREATE INDEX IX_AITrainingTriggerAudit_RequestedBy_UsedAt
+        ON dbo.AITrainingTriggerAudit (requested_by, used_at DESC);
+END;
+
+IF OBJECT_ID('dbo.AIUserPreferenceSignals', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.AIUserPreferenceSignals (
+        id            BIGINT IDENTITY(1,1) PRIMARY KEY,
+        user_id       BIGINT         NOT NULL,
+        signal_key    NVARCHAR(100)  NOT NULL,
+        signal_label  NVARCHAR(200)  NOT NULL,
+        signal_score  INT            NOT NULL CONSTRAINT DF_AIUserPreferenceSignals_Score DEFAULT 1,
+        last_seen_at  DATETIME2      NOT NULL CONSTRAINT DF_AIUserPreferenceSignals_LastSeen DEFAULT SYSUTCDATETIME(),
+        created_at    DATETIME2      NOT NULL CONSTRAINT DF_AIUserPreferenceSignals_Created DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT FK_AIUserPreferenceSignals_User FOREIGN KEY (user_id) REFERENCES dbo.Users(id)
+    );
+
+    CREATE UNIQUE INDEX UX_AIUserPreferenceSignals_UserKey
+        ON dbo.AIUserPreferenceSignals (user_id, signal_key);
+
+    CREATE INDEX IX_AIUserPreferenceSignals_UserScore
+        ON dbo.AIUserPreferenceSignals (user_id, signal_score DESC, last_seen_at DESC);
+END;
+
+
+/* =========================================================
+   MERGED EXTRA - VOUCHER TYPE MIGRATION
+   Source: db/migration_vouchers_type.sql
+   ========================================================= */
+
+USE ClickEat;
+GO
+
+-- 1. Drop existing constraints and indexes related to merchant_user_id
+ALTER TABLE dbo.Vouchers DROP CONSTRAINT FK_Vouchers_Merchant;
+DROP INDEX UX_Vouchers_MerchantCode ON dbo.Vouchers;
+GO
+
+-- 2. Alter column to allow NULLs
+ALTER TABLE dbo.Vouchers ALTER COLUMN merchant_user_id BIGINT NULL;
+GO
+
+-- 3. Add new voucher_type column
+ALTER TABLE dbo.Vouchers ADD voucher_type NVARCHAR(20) NOT NULL CONSTRAINT DF_Vouchers_Type DEFAULT 'MERCHANT';
+GO
+
+-- 4. Re-add FK constraint and add new CHECK constraint
+ALTER TABLE dbo.Vouchers ADD CONSTRAINT CK_Vouchers_Type CHECK (voucher_type IN (N'MERCHANT', N'SYSTEM'));
+ALTER TABLE dbo.Vouchers ADD CONSTRAINT FK_Vouchers_Merchant FOREIGN KEY (merchant_user_id) REFERENCES dbo.MerchantProfiles(user_id) ON DELETE CASCADE;
+GO
+
+-- 5. Add conditional unique indexes to support NULL values properly (SQL Server requires filtered indexes for this)
+CREATE UNIQUE INDEX UX_Vouchers_Code_System ON dbo.Vouchers(code) WHERE merchant_user_id IS NULL;
+CREATE UNIQUE INDEX UX_Vouchers_MerchantCode ON dbo.Vouchers(merchant_user_id, code) WHERE merchant_user_id IS NOT NULL;
+GO

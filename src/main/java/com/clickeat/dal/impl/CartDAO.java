@@ -1,5 +1,7 @@
 package com.clickeat.dal.impl;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
@@ -146,6 +148,11 @@ public class CartDAO extends AbstractDAO<Cart> implements ICartDAO {
         return update(sql, cartId) > 0;
     }
 
+    public boolean markCartCheckedOut(Connection conn, int cartId) throws SQLException {
+        String sql = "UPDATE Carts SET status = 'CHECKED_OUT' WHERE id = ?";
+        return update(conn, sql, cartId) > 0;
+    }
+
     public boolean clearActiveCartByCustomerId(int customerId) {
         Cart activeCart = getActiveCartByCustomerId(customerId);
         if (activeCart == null) {
@@ -153,7 +160,7 @@ public class CartDAO extends AbstractDAO<Cart> implements ICartDAO {
         }
 
         CartItemDAO cartItemDAO = new CartItemDAO();
-        cartItemDAO.delete(activeCart.getId());
+        cartItemDAO.deleteByCartId(activeCart.getId());
 
         return markCartCheckedOut(activeCart.getId());
     }
@@ -165,10 +172,60 @@ public class CartDAO extends AbstractDAO<Cart> implements ICartDAO {
         }
 
         CartItemDAO cartItemDAO = new CartItemDAO();
-        boolean deletedItems = cartItemDAO.delete(activeCart.getId());
+        boolean deletedItems = cartItemDAO.deleteByCartId(activeCart.getId());
         boolean checkedOut = markCartCheckedOut(activeCart.getId());
 
         return deletedItems && checkedOut;
+    }
+
+    public boolean clearActiveCartByCustomerId(Connection conn, int customerId) throws SQLException {
+        Cart activeCart = getActiveCartByCustomerId(conn, customerId);
+        if (activeCart == null) {
+            return true;
+        }
+
+        CartItemDAO cartItemDAO = new CartItemDAO();
+        boolean deletedItems = cartItemDAO.deleteByCartId(conn, activeCart.getId());
+        boolean checkedOut = markCartCheckedOut(conn, activeCart.getId());
+        return deletedItems && checkedOut;
+    }
+
+    public boolean clearActiveCartByGuestId(Connection conn, String guestId) throws SQLException {
+        Cart activeCart = getActiveCartByGuestId(conn, guestId);
+        if (activeCart == null) {
+            return true;
+        }
+
+        CartItemDAO cartItemDAO = new CartItemDAO();
+        boolean deletedItems = cartItemDAO.deleteByCartId(conn, activeCart.getId());
+        boolean checkedOut = markCartCheckedOut(conn, activeCart.getId());
+        return deletedItems && checkedOut;
+    }
+
+    private Cart getActiveCartByCustomerId(Connection conn, int customerId) throws SQLException {
+        String sql = "SELECT * FROM Carts WHERE customer_user_id = ? AND status = 'ACTIVE'";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, customerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapRow(rs);
+                }
+            }
+        }
+        return null;
+    }
+
+    private Cart getActiveCartByGuestId(Connection conn, String guestId) throws SQLException {
+        String sql = "SELECT * FROM Carts WHERE guest_id = ? AND status = 'ACTIVE'";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, guestId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapRow(rs);
+                }
+            }
+        }
+        return null;
     }
 
     public boolean attachGuestCartToCustomer(String guestId, int customerId) {

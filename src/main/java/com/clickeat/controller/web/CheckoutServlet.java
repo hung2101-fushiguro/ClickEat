@@ -1,6 +1,8 @@
 package com.clickeat.controller.web;
 
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
@@ -9,12 +11,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.clickeat.config.DBContext;
 import com.clickeat.config.VnpayConfig;
 import com.clickeat.dal.impl.AddressDAO;
 import com.clickeat.dal.impl.CartDAO;
 import com.clickeat.dal.impl.CartItemDAO;
 import com.clickeat.dal.impl.FoodItemDAO;
 import com.clickeat.dal.impl.MerchantDAO;
+import com.clickeat.dal.impl.NotificationDAO;
 import com.clickeat.dal.impl.OrderDAO;
 import com.clickeat.dal.impl.OrderItemDAO;
 import com.clickeat.dal.impl.PaymentTransactionDAO;
@@ -156,65 +160,32 @@ public class CheckoutServlet extends HttpServlet {
             note = "";
         }
 
-        String voucherCode = request.getParameter("voucherCode");
-        Voucher appliedVoucher = null;
-        double discountAmount = 0;
-        String voucherMessage = null;
-        String voucherError = null;
-
-        if (voucherCode != null) {
-            voucherCode = voucherCode.trim();
-        }
-
-        if (voucherCode != null && !voucherCode.isEmpty()) {
-            Integer merchantId = cart.getMerchantUserId();
-
-            if (merchantId == null || merchantId <= 0) {
-                voucherError = "Không xác định được nhà hàng của giỏ hàng.";
-            } else {
-                Voucher voucher = voucherDAO.findValidVoucherByCode(merchantId, voucherCode);
-
-                if (voucher == null) {
-                    voucherError = "Mã voucher không tồn tại, đã hết hạn hoặc không thuộc cửa hàng này.";
-                } else if (voucher.getMinOrderAmount() != null && subTotal < voucher.getMinOrderAmount()) {
-                    voucherError = "Đơn hàng chưa đạt giá trị tối thiểu để áp dụng voucher.";
-                } else if (voucher.getMaxUsesTotal() != null
-                        && voucher.getUsedOrderCount() >= voucher.getMaxUsesTotal()) {
-                    voucherError = "Voucher đã hết lượt sử dụng.";
-                } else if (account != null && voucher.getMaxUsesPerUser() != null) {
-                    int usedByUser = voucherDAO.countUsageByVoucherAndCustomer(voucher.getId(), customerId);
-                    if (usedByUser >= voucher.getMaxUsesPerUser()) {
-                        voucherError = "Bạn đã sử dụng hết số lượt cho voucher này.";
-                    } else {
-                        appliedVoucher = voucher;
-                    }
-                } else {
-                    appliedVoucher = voucher;
-                }
-
-                if (appliedVoucher != null) {
-                    discountAmount = calculateDiscount(appliedVoucher, subTotal);
-
-                    if (discountAmount > 0) {
-                        voucherMessage = "Áp dụng voucher thành công: " + appliedVoucher.getCode();
-                    } else {
-                        voucherError = "Voucher hợp lệ nhưng không áp dụng được cho đơn hàng này.";
+        List<Voucher> availableVouchers = voucherDAO.getAvailableVouchersForCustomer(account != null ? customerId : 0);
+        List<Voucher> validVouchersForThisOrder = new ArrayList<>();
+        if (availableVouchers != null) {
+            for (Voucher v : availableVouchers) {
+                if (v.getMerchantUserId() == null || v.getMerchantUserId().equals(cart.getMerchantUserId())) {
+                    if (v.getMinOrderAmount() == null || subTotal >= v.getMinOrderAmount()) {
+                        validVouchersForThisOrder.add(v);
                     }
                 }
             }
         }
+
+        request.setAttribute("availableVouchers", validVouchersForThisOrder);
+
+        double discountAmount = 0; // Calculated on client-side (JS) and verified on POST
+        String voucherCode = "";
+        Voucher appliedVoucher = null;
+        String voucherMessage = null;
+        String voucherError = null;
 
         double totalAmount = subTotal + deliveryFee - discountAmount;
         if (totalAmount < 0) {
             totalAmount = 0;
         }
 
-        VoucherSuggestion suggestedVoucher = suggestBestVoucher(
-                voucherDAO,
-                cart.getMerchantUserId(),
-                account != null ? customerId : 0,
-                subTotal
-        );
+        VoucherSuggestion suggestedVoucher = suggestBestVoucher(validVouchersForThisOrder, subTotal);
 
         request.setAttribute("checkoutItems", checkoutItems);
         request.setAttribute("subTotal", subTotal);
@@ -322,7 +293,12 @@ public class CheckoutServlet extends HttpServlet {
         Double cookieHomeLongitude = parseCoordinate(readCookie(request, "ce_home_lng"));
 
         if (paymentMethod == null || paymentMethod.isBlank()) {
-            paymentMethod = "COD";
+            paymentMethod = account != null ? "COD" : "VNPAY";
+        }
+
+        // Guest chỉ được phép thanh toán VNPAY — không có tiền mặt
+        if (account == null && !"VNPAY".equalsIgnoreCase(paymentMethod)) {
+            paymentMethod = "VNPAY";
         }
 
         AddressDAO addressDAO = new AddressDAO();
@@ -444,6 +420,7 @@ public class CheckoutServlet extends HttpServlet {
         OrderItemDAO orderItemDAO = new OrderItemDAO();
         PaymentTransactionDAO paymentTransactionDAO = new PaymentTransactionDAO();
         FoodItemDAO foodDAO = new FoodItemDAO();
+        VoucherDAO voucherDAO = new VoucherDAO();
 
         Cart cart;
         if (account != null) {
@@ -485,27 +462,45 @@ public class CheckoutServlet extends HttpServlet {
         double deliveryFee = shippingQuote.deliveryFee;
 
         // Re-validate voucher server-side (never trust client-side discountAmount)
-        String voucherCodePost = request.getParameter("voucherCode");
-        if (voucherCodePost != null) {
-            voucherCodePost = voucherCodePost.trim();
-        }
+        String[] voucherCodesPost = request.getParameterValues("voucherCodes");
         double discountAmount = 0;
-        Voucher appliedVoucher = null;
-        if (voucherCodePost != null && !voucherCodePost.isEmpty() && cart.getMerchantUserId() != null && cart.getMerchantUserId() > 0) {
-            VoucherDAO voucherDAO = new VoucherDAO();
-            Voucher voucher = voucherDAO.findValidVoucherByCode(cart.getMerchantUserId(), voucherCodePost);
-            if (voucher != null
-                    && (voucher.getMinOrderAmount() == null || subTotal >= voucher.getMinOrderAmount())
-                    && (voucher.getMaxUsesTotal() == null || voucher.getUsedOrderCount() < voucher.getMaxUsesTotal())) {
-                boolean perUserOk = true;
-                if (account != null && voucher.getMaxUsesPerUser() != null) {
-                    int usedByUser = voucherDAO.countUsageByVoucherAndCustomer(voucher.getId(), account.getId());
-                    perUserOk = usedByUser < voucher.getMaxUsesPerUser();
+        List<Voucher> appliedVouchers = new ArrayList<>();
+
+        if (voucherCodesPost != null && voucherCodesPost.length > 0 && cart.getMerchantUserId() != null && cart.getMerchantUserId() > 0) {
+            List<String> codesList = java.util.Arrays.asList(voucherCodesPost);
+            List<Voucher> vouchers = voucherDAO.findValidVouchersByCodes(cart.getMerchantUserId(), codesList);
+
+            int merchantVoucherCount = 0;
+            int systemVoucherCount = 0;
+
+            for (Voucher voucher : vouchers) {
+                if ("SYSTEM".equalsIgnoreCase(voucher.getVoucherType())) {
+                    if (systemVoucherCount >= 1) {
+                        continue;
+                    }
+                    systemVoucherCount++;
+                } else {
+                    if (merchantVoucherCount >= 1) {
+                        continue;
+                    }
+                    merchantVoucherCount++;
                 }
-                if (perUserOk) {
-                    appliedVoucher = voucher;
-                    discountAmount = calculateDiscount(appliedVoucher, subTotal);
+
+                if ((voucher.getMinOrderAmount() == null || subTotal >= voucher.getMinOrderAmount())
+                        && (voucher.getMaxUsesTotal() == null || voucher.getUsedOrderCount() < voucher.getMaxUsesTotal())) {
+                    boolean perUserOk = true;
+                    if (account != null && voucher.getMaxUsesPerUser() != null) {
+                        int usedByUser = voucherDAO.countUsageByVoucherAndCustomer(voucher.getId(), account.getId());
+                        perUserOk = usedByUser < voucher.getMaxUsesPerUser();
+                    }
+                    if (perUserOk) {
+                        appliedVouchers.add(voucher);
+                        discountAmount += calculateDiscount(voucher, subTotal);
+                    }
                 }
+            }
+            if (discountAmount > subTotal) {
+                discountAmount = subTotal;
             }
         }
 
@@ -557,16 +552,9 @@ public class CheckoutServlet extends HttpServlet {
             order.setOrderStatus("CREATED");
         }
 
-        int orderId = orderDAO.insert(order);
-        if (orderId <= 0) {
-            session.setAttribute("toastError", "Không thể tạo đơn hàng.");
-            response.sendRedirect(request.getContextPath() + "/checkout");
-            return;
-        }
-
+        List<OrderItem> orderItems = new ArrayList<>();
         for (CartItem c : cartItems) {
             OrderItem oi = new OrderItem();
-            oi.setOrderId(orderId);
             oi.setFoodItemId(c.getFoodItemId());
 
             String itemName = "";
@@ -585,59 +573,128 @@ public class CheckoutServlet extends HttpServlet {
             oi.setSelectedSize(c.getSelectedSize());
             oi.setSelectedToppings(c.getSelectedToppings());
             oi.setOptionExtraPrice(c.getOptionExtraPrice());
-            orderItemDAO.insert(oi);
+            orderItems.add(oi);
         }
 
-        // Record voucher usage so it counts toward usage limits
-        if (appliedVoucher != null) {
-            VoucherDAO voucherDAO = new VoucherDAO();
-            int customerId = account != null ? account.getId() : 0;
-            voucherDAO.recordUsage(appliedVoucher.getId(), orderId, customerId, guestId);
+        int orderId;
+        String paymentUrl = null;
+        try (Connection conn = DBContext.getConnection()) {
+            conn.setAutoCommit(false);
+
+            orderId = orderDAO.insert(conn, order);
+            if (orderId <= 0) {
+                conn.rollback();
+                session.setAttribute("toastError", "Không thể tạo đơn hàng.");
+                response.sendRedirect(request.getContextPath() + "/checkout");
+                return;
+            }
+
+            for (OrderItem item : orderItems) {
+                item.setOrderId(orderId);
+            }
+            int[] batchResults = orderItemDAO.insertBatch(conn, orderItems);
+            if (orderItemDAO.hasBatchFailure(batchResults)) {
+                conn.rollback();
+                session.setAttribute("toastError", "Không thể lưu chi tiết đơn hàng. Vui lòng thử lại.");
+                response.sendRedirect(request.getContextPath() + "/checkout");
+                return;
+            }
+
+            if (!appliedVouchers.isEmpty()) {
+                int customerId = account != null ? account.getId() : 0;
+                for (Voucher voucher : appliedVouchers) {
+                    boolean usageRecorded = voucherDAO.validateAndRecordUsage(
+                            conn,
+                            voucher.getId(),
+                            cart.getMerchantUserId(),
+                            orderId,
+                            customerId,
+                            guestId,
+                            subTotal
+                    );
+                    if (!usageRecorded) {
+                        conn.rollback();
+                        session.setAttribute("toastError", "Voucher " + voucher.getCode() + " vừa hết lượt hoặc không còn hợp lệ. Vui lòng thử lại.");
+                        response.sendRedirect(request.getContextPath() + "/checkout");
+                        return;
+                    }
+                }
+            }
+
+            if ("VNPAY".equalsIgnoreCase(paymentMethod)) {
+                String vnpTxnRef = "VNP_" + orderId + "_" + System.currentTimeMillis();
+
+                Map<String, String> vnpParams = new LinkedHashMap<>();
+                Date now = new Date();
+                Date expire = VnpayUtil.addMinutes(now, 15);
+
+                vnpParams.put("vnp_Version", VnpayConfig.VNP_VERSION);
+                vnpParams.put("vnp_Command", VnpayConfig.VNP_COMMAND);
+                vnpParams.put("vnp_TmnCode", VnpayConfig.VNP_TMN_CODE);
+                vnpParams.put("vnp_Amount", String.valueOf((long) (totalAmount * 100)));
+                vnpParams.put("vnp_CurrCode", VnpayConfig.VNP_CURR_CODE);
+                vnpParams.put("vnp_TxnRef", vnpTxnRef);
+                vnpParams.put("vnp_OrderInfo", "Thanh toan don hang " + order.getOrderCode());
+                vnpParams.put("vnp_OrderType", VnpayConfig.VNP_ORDER_TYPE);
+                vnpParams.put("vnp_Locale", VnpayConfig.VNP_LOCALE);
+                vnpParams.put("vnp_ReturnUrl", VnpayConfig.VNP_RETURN_URL);
+                vnpParams.put("vnp_IpAddr", VnpayUtil.getIpAddress(request));
+                vnpParams.put("vnp_CreateDate", VnpayUtil.formatDate(now));
+                vnpParams.put("vnp_ExpireDate", VnpayUtil.formatDate(expire));
+
+                String signData = VnpayUtil.buildQuery(vnpParams, true);
+                String secureHash = VnpayUtil.hmacSHA512(VnpayConfig.VNP_HASH_SECRET, signData);
+                vnpParams.put("vnp_SecureHash", secureHash);
+
+                paymentUrl = VnpayConfig.VNP_PAY_URL + "?" + VnpayUtil.buildQuery(vnpParams, true);
+                int paymentInserted = paymentTransactionDAO.insertVnpay(
+                        conn,
+                        orderId,
+                        totalAmount,
+                        order.getOrderCode(),
+                        vnpTxnRef,
+                        paymentUrl
+                );
+                if (paymentInserted <= 0) {
+                    conn.rollback();
+                    session.setAttribute("toastError", "Không thể khởi tạo giao dịch VNPAY. Vui lòng thử lại.");
+                    response.sendRedirect(request.getContextPath() + "/checkout");
+                    return;
+                }
+            } else {
+                boolean cartCleared;
+                if (account != null) {
+                    cartCleared = cartDAO.clearActiveCartByCustomerId(conn, account.getId());
+                } else {
+                    cartCleared = cartDAO.clearActiveCartByGuestId(conn, guestId);
+                }
+
+                if (!cartCleared) {
+                    conn.rollback();
+                    session.setAttribute("toastError", "Không thể cập nhật giỏ hàng sau khi tạo đơn. Vui lòng thử lại.");
+                    response.sendRedirect(request.getContextPath() + "/checkout");
+                    return;
+                }
+            }
+
+            conn.commit();
+        } catch (SQLException ex) {
+            session.setAttribute("toastError", "Đặt hàng thất bại do lỗi hệ thống. Vui lòng thử lại.");
+            response.sendRedirect(request.getContextPath() + "/checkout");
+            return;
         }
 
         if ("VNPAY".equalsIgnoreCase(paymentMethod)) {
-            String vnpTxnRef = "VNP_" + orderId + "_" + System.currentTimeMillis();
-
-            Map<String, String> vnpParams = new LinkedHashMap<>();
-            Date now = new Date();
-            Date expire = VnpayUtil.addMinutes(now, 15);
-
-            vnpParams.put("vnp_Version", VnpayConfig.VNP_VERSION);
-            vnpParams.put("vnp_Command", VnpayConfig.VNP_COMMAND);
-            vnpParams.put("vnp_TmnCode", VnpayConfig.VNP_TMN_CODE);
-            vnpParams.put("vnp_Amount", String.valueOf((long) (totalAmount * 100)));
-            vnpParams.put("vnp_CurrCode", VnpayConfig.VNP_CURR_CODE);
-            vnpParams.put("vnp_TxnRef", vnpTxnRef);
-            vnpParams.put("vnp_OrderInfo", "Thanh toan don hang " + order.getOrderCode());
-            vnpParams.put("vnp_OrderType", VnpayConfig.VNP_ORDER_TYPE);
-            vnpParams.put("vnp_Locale", VnpayConfig.VNP_LOCALE);
-            vnpParams.put("vnp_ReturnUrl", VnpayConfig.VNP_RETURN_URL);
-            vnpParams.put("vnp_IpAddr", VnpayUtil.getIpAddress(request));
-            vnpParams.put("vnp_CreateDate", VnpayUtil.formatDate(now));
-            vnpParams.put("vnp_ExpireDate", VnpayUtil.formatDate(expire));
-
-            String signData = VnpayUtil.buildQuery(vnpParams, true);
-            String secureHash = VnpayUtil.hmacSHA512(VnpayConfig.VNP_HASH_SECRET, signData);
-            vnpParams.put("vnp_SecureHash", secureHash);
-
-            String paymentUrl = VnpayConfig.VNP_PAY_URL + "?" + VnpayUtil.buildQuery(vnpParams, true);
-
-            paymentTransactionDAO.insertVnpay(
-                    orderId,
-                    totalAmount,
-                    order.getOrderCode(),
-                    vnpTxnRef,
-                    paymentUrl
-            );
-
             response.sendRedirect(paymentUrl);
             return;
         }
 
+        NotificationDAO notificationDAO = new NotificationDAO();
         if (account != null) {
-            cartDAO.clearActiveCartByCustomerId(account.getId());
-        } else {
-            cartDAO.clearActiveCartByGuestId(guestId);
+            notificationDAO.createForUser(account.getId(), "ORDER", "Đơn #" + order.getOrderCode() + " đã được tạo thành công.");
+        }
+        if (order.getMerchantId() > 0) {
+            notificationDAO.createForUser(order.getMerchantId(), "ORDER", "Bạn có đơn mới #" + order.getOrderCode() + ".");
         }
 
         session.setAttribute("toastMsg", "Đặt hàng thành công.");
@@ -700,22 +757,16 @@ public class CheckoutServlet extends HttpServlet {
         return quote;
     }
 
-    private VoucherSuggestion suggestBestVoucher(VoucherDAO voucherDAO, Integer merchantUserId, int customerId, double subTotal) {
-        if (merchantUserId == null || merchantUserId <= 0 || subTotal <= 0) {
+    private VoucherSuggestion suggestBestVoucher(List<Voucher> vouchers, double subTotal) {
+        if (subTotal <= 0 || vouchers == null || vouchers.isEmpty()) {
             return null;
         }
 
-        List<Voucher> vouchers = voucherDAO.findByMerchant(merchantUserId);
-        if (vouchers == null || vouchers.isEmpty()) {
-            return null;
-        }
-
-        long now = System.currentTimeMillis();
         Voucher bestVoucher = null;
         double bestDiscount = 0;
 
         for (Voucher voucher : vouchers) {
-            if (!isVoucherEligibleForSuggestion(voucher, now, subTotal, customerId, voucherDAO)) {
+            if (voucher == null) {
                 continue;
             }
 
@@ -734,46 +785,6 @@ public class CheckoutServlet extends HttpServlet {
         suggestion.voucher = bestVoucher;
         suggestion.discountAmount = bestDiscount;
         return suggestion;
-    }
-
-    private boolean isVoucherEligibleForSuggestion(Voucher voucher, long nowMillis, double subTotal,
-            int customerId, VoucherDAO voucherDAO) {
-        if (voucher == null) {
-            return false;
-        }
-
-        if (!voucher.isPublished()) {
-            return false;
-        }
-
-        if (voucher.getStatus() == null || !"ACTIVE".equalsIgnoreCase(voucher.getStatus().trim())) {
-            return false;
-        }
-
-        if (voucher.getStartAt() == null || voucher.getEndAt() == null) {
-            return false;
-        }
-
-        if (nowMillis < voucher.getStartAt().getTime() || nowMillis > voucher.getEndAt().getTime()) {
-            return false;
-        }
-
-        if (voucher.getMinOrderAmount() != null && subTotal < voucher.getMinOrderAmount()) {
-            return false;
-        }
-
-        if (voucher.getMaxUsesTotal() != null && voucher.getUsedOrderCount() >= voucher.getMaxUsesTotal()) {
-            return false;
-        }
-
-        if (customerId > 0 && voucher.getMaxUsesPerUser() != null) {
-            int usedByCustomer = voucherDAO.countUsageByVoucherAndCustomer(voucher.getId(), customerId);
-            if (usedByCustomer >= voucher.getMaxUsesPerUser()) {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     private double getConfigDouble(String key, double defaultValue) {

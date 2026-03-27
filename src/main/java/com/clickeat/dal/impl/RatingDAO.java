@@ -1,10 +1,10 @@
 package com.clickeat.dal.impl;
 
-import com.clickeat.model.Rating;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 
+import com.clickeat.model.Rating;
 
 public class RatingDAO extends AbstractDAO<Rating> {
 
@@ -64,8 +64,7 @@ public class RatingDAO extends AbstractDAO<Rating> {
         } else if ("negative".equals(filter)) {
             sql += " AND r.stars <= 3 ";
         }
-        try (java.sql.Connection conn = getConnection();
-             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (java.sql.Connection conn = getConnection(); java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, merchantId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -148,6 +147,31 @@ public class RatingDAO extends AbstractDAO<Rating> {
     public boolean updateReply(long ratingId, int merchantId, String replyText) {
         String sql = "UPDATE Ratings SET reply_comment = ? WHERE id = ? AND target_type = 'MERCHANT' AND target_user_id = ?";
         return update(sql, replyText, ratingId, merchantId) > 0;
+    }
+
+    public boolean hasCustomerRatingForTarget(int orderId, long customerId, String targetType) {
+        String sql = "SELECT 1 FROM Ratings WHERE order_id = ? AND rater_customer_id = ? AND target_type = ?";
+        try (java.sql.Connection conn = getConnection(); java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, orderId);
+            ps.setLong(2, customerId);
+            ps.setString(3, targetType);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        } catch (SQLException e) {
+            return false;
+        }
+    }
+
+    public boolean insertCustomerRating(int orderId, long customerId, String targetType, long targetUserId, int stars, String comment) {
+        String normalizedComment = comment == null ? null : comment.trim();
+        if (normalizedComment != null && normalizedComment.length() > 1000) {
+            normalizedComment = normalizedComment.substring(0, 1000);
+        }
+
+        String sql = "INSERT INTO Ratings (order_id, rater_customer_id, target_type, target_user_id, stars, comment, created_at) "
+                + "VALUES (?, ?, ?, ?, ?, ?, GETDATE())";
+        return update(sql, orderId, customerId, targetType, targetUserId, stars, normalizedComment) > 0;
     }
 
     @Override

@@ -10,6 +10,8 @@ public class TwilioVerifyUtil {
 
     private static volatile boolean initialized = false;
     private static final ThreadLocal<String> LAST_ERROR = new ThreadLocal<>();
+    private static final String OTP_MODE_MOCK = "MOCK";
+    private static final String DEFAULT_MOCK_CODE = "123456";
 
     private TwilioVerifyUtil() {
     }
@@ -20,6 +22,10 @@ public class TwilioVerifyUtil {
         if (phoneE164 == null || phoneE164.isBlank() || !phoneE164.matches("^\\+[1-9]\\d{8,14}$")) {
             setLastError("Số điện thoại chưa đúng chuẩn quốc tế E.164 (ví dụ: +84900000000).");
             return false;
+        }
+
+        if (isMockMode()) {
+            return true;
         }
 
         if (!ensureInitialized()) {
@@ -42,6 +48,10 @@ public class TwilioVerifyUtil {
     public static boolean verifyOtp(String phoneE164, String code) {
         clearLastError();
 
+        if (isMockMode()) {
+            return code != null && code.trim().equals(getMockOtpCode());
+        }
+
         if (!ensureInitialized()) {
             return false;
         }
@@ -60,6 +70,21 @@ public class TwilioVerifyUtil {
 
     public static String getLastError() {
         return LAST_ERROR.get();
+    }
+
+    public static boolean isMockMode() {
+        return OTP_MODE_MOCK.equalsIgnoreCase(TwilioVerifyConfig.OTP_MODE);
+    }
+
+    public static String getMockOtpCode() {
+        String configuredCode = TwilioVerifyConfig.OTP_MOCK_CODE;
+        if (configuredCode != null) {
+            configuredCode = configuredCode.trim();
+        }
+        if (configuredCode != null && configuredCode.matches("^\\d{4,8}$")) {
+            return configuredCode;
+        }
+        return DEFAULT_MOCK_CODE;
     }
 
     private static boolean ensureInitialized() {

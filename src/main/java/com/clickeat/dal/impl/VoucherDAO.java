@@ -1,5 +1,7 @@
 package com.clickeat.dal.impl;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
@@ -13,7 +15,20 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
         Voucher v = new Voucher();
 
         v.setId(rs.getInt("id"));
-        v.setMerchantUserId(rs.getInt("merchant_user_id"));
+        
+        Object merchantIdObj = rs.getObject("merchant_user_id");
+        if (merchantIdObj != null) {
+            v.setMerchantUserId(((Number) merchantIdObj).intValue());
+        } else {
+            v.setMerchantUserId(null);
+        }
+        
+        try {
+            v.setVoucherType(rs.getString("voucher_type"));
+        } catch (SQLException e) {
+            v.setVoucherType("MERCHANT");
+        }
+        
         v.setCode(rs.getString("code"));
         v.setTitle(rs.getString("title"));
         v.setDescription(rs.getString("description"));
@@ -105,11 +120,11 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
                    ELSE v.discount_value
                END AS effective_discount_value
         FROM Vouchers v
-        INNER JOIN MerchantProfiles mp ON mp.user_id = v.merchant_user_id
+        LEFT JOIN MerchantProfiles mp ON mp.user_id = v.merchant_user_id
         WHERE v.is_published = 1
           AND v.status = N'ACTIVE'
           AND (GETUTCDATE() BETWEEN v.start_at AND v.end_at OR GETDATE() BETWEEN v.start_at AND v.end_at)
-          AND (mp.status = N'APPROVED' OR mp.status = N'Approved' OR mp.status = N'active')
+          AND (v.merchant_user_id IS NULL OR mp.status IN (N'APPROVED', N'Approved', N'active'))
         ORDER BY
             CASE
                 WHEN UPPER(v.discount_type) = 'PERCENT'
@@ -198,9 +213,10 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
                 max_uses_total,
                 max_uses_per_user,
                 is_published,
-                status
+                status,
+                voucher_type
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
         return update(sql,
@@ -217,7 +233,8 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
                 v.getMaxUsesTotal(),
                 v.getMaxUsesPerUser(),
                 v.isPublished(),
-                v.getStatus()
+                v.getStatus(),
+                v.getVoucherType() != null ? v.getVoucherType() : "MERCHANT"
         );
     }
 
@@ -238,7 +255,8 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
                 max_uses_total = ?,
                 max_uses_per_user = ?,
                 is_published = ?,
-                status = ?
+                status = ?,
+                voucher_type = ?
             WHERE id = ?
         """;
 
@@ -257,6 +275,7 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
                 v.getMaxUsesPerUser(),
                 v.isPublished(),
                 v.getStatus(),
+                v.getVoucherType() != null ? v.getVoucherType() : "MERCHANT",
                 v.getId()
         ) > 0;
     }
@@ -317,11 +336,11 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
         SELECT v.*,
                mp.shop_name AS merchant_name
         FROM Vouchers v
-        INNER JOIN MerchantProfiles mp ON mp.user_id = v.merchant_user_id
+        LEFT JOIN MerchantProfiles mp ON mp.user_id = v.merchant_user_id
         WHERE v.is_published = 1
           AND v.status = N'ACTIVE'
           AND (GETUTCDATE() BETWEEN v.start_at AND v.end_at OR GETDATE() BETWEEN v.start_at AND v.end_at)
-          AND (mp.status = N'APPROVED' OR mp.status = N'Approved' OR mp.status = N'active')
+          AND (v.merchant_user_id IS NULL OR mp.status IN (N'APPROVED', N'Approved', N'active'))
           AND (
                 v.max_uses_per_user IS NULL
                 OR v.max_uses_per_user >
@@ -362,11 +381,11 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
         StringBuilder sql = new StringBuilder("""
         SELECT COUNT(1)
         FROM Vouchers v
-        INNER JOIN MerchantProfiles mp ON mp.user_id = v.merchant_user_id
+        LEFT JOIN MerchantProfiles mp ON mp.user_id = v.merchant_user_id
         WHERE v.is_published = 1
           AND v.status = N'ACTIVE'
           AND (GETUTCDATE() BETWEEN v.start_at AND v.end_at OR GETDATE() BETWEEN v.start_at AND v.end_at)
-          AND (mp.status = N'APPROVED' OR mp.status = N'Approved' OR mp.status = N'active')
+          AND (v.merchant_user_id IS NULL OR mp.status IN (N'APPROVED', N'Approved', N'active'))
           AND (
                 v.max_uses_per_user IS NULL
                 OR v.max_uses_per_user >
@@ -423,11 +442,11 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
         StringBuilder sql = new StringBuilder("""
             SELECT v.*, mp.shop_name AS merchant_name
             FROM Vouchers v
-            INNER JOIN MerchantProfiles mp ON mp.user_id = v.merchant_user_id
+            LEFT JOIN MerchantProfiles mp ON mp.user_id = v.merchant_user_id
             WHERE v.is_published = 1
               AND v.status = N'ACTIVE'
               AND (GETUTCDATE() BETWEEN v.start_at AND v.end_at OR GETDATE() BETWEEN v.start_at AND v.end_at)
-              AND (mp.status = N'APPROVED' OR mp.status = N'Approved' OR mp.status = N'active')
+              AND (v.merchant_user_id IS NULL OR mp.status IN (N'APPROVED', N'Approved', N'active'))
         """);
 
         java.util.List<Object> params = new java.util.ArrayList<>();
@@ -457,11 +476,11 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
         StringBuilder sql = new StringBuilder("""
             SELECT COUNT(1)
             FROM Vouchers v
-            INNER JOIN MerchantProfiles mp ON mp.user_id = v.merchant_user_id
+            LEFT JOIN MerchantProfiles mp ON mp.user_id = v.merchant_user_id
             WHERE v.is_published = 1
               AND v.status = N'ACTIVE'
               AND (GETUTCDATE() BETWEEN v.start_at AND v.end_at OR GETDATE() BETWEEN v.start_at AND v.end_at)
-              AND (mp.status = N'APPROVED' OR mp.status = N'Approved' OR mp.status = N'active')
+              AND (v.merchant_user_id IS NULL OR mp.status IN (N'APPROVED', N'Approved', N'active'))
         """);
 
         java.util.List<Object> params = new java.util.ArrayList<>();
@@ -492,26 +511,40 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
         return update(sql, publish, voucherId, merchantId) > 0;
     }
 
-    public Voucher findValidVoucherByCode(int merchantUserId, String code) {
-        String sql = """
-        SELECT v.*,
-               mp.shop_name AS merchant_name,
-               ISNULL(vu.used_order_count, 0) AS used_order_count
-        FROM Vouchers v
-        INNER JOIN MerchantProfiles mp ON mp.user_id = v.merchant_user_id
-        LEFT JOIN (
-            SELECT voucher_id, COUNT(*) AS used_order_count
-            FROM VoucherUsages
-            GROUP BY voucher_id
-        ) vu ON vu.voucher_id = v.id
-        WHERE v.merchant_user_id = ?
-          AND UPPER(LTRIM(RTRIM(v.code))) = UPPER(LTRIM(RTRIM(?)))
-          AND v.is_published = 1
-          AND v.status = N'ACTIVE'
-          AND (SYSUTCDATETIME() BETWEEN v.start_at AND v.end_at
-               OR GETDATE() BETWEEN v.start_at AND v.end_at)
-    """;
-        return queryOne(sql, merchantUserId, code);
+    public List<Voucher> findValidVouchersByCodes(int merchantUserId, List<String> codes) {
+        if (codes == null || codes.isEmpty()) {
+            return new java.util.ArrayList<>();
+        }
+        StringBuilder placeHolders = new StringBuilder();
+        for (int i = 0; i < codes.size(); i++) {
+            placeHolders.append("?");
+            if (i < codes.size() - 1) placeHolders.append(",");
+        }
+        
+        String sql = "SELECT v.*, "
+            + "       mp.shop_name AS merchant_name, "
+            + "       ISNULL(vu.used_order_count, 0) AS used_order_count "
+            + "FROM Vouchers v "
+            + "LEFT JOIN MerchantProfiles mp ON mp.user_id = v.merchant_user_id "
+            + "LEFT JOIN ( "
+            + "    SELECT voucher_id, COUNT(*) AS used_order_count "
+            + "    FROM VoucherUsages "
+            + "    GROUP BY voucher_id "
+            + ") vu ON vu.voucher_id = v.id "
+            + "WHERE (v.merchant_user_id = ? OR v.merchant_user_id IS NULL) "
+            + "  AND UPPER(LTRIM(RTRIM(v.code))) IN (" + placeHolders.toString() + ") "
+            + "  AND v.is_published = 1 "
+            + "  AND v.status = N'ACTIVE' "
+            + "  AND (SYSUTCDATETIME() BETWEEN v.start_at AND v.end_at "
+            + "       OR GETDATE() BETWEEN v.start_at AND v.end_at)";
+        
+        java.util.List<Object> params = new java.util.ArrayList<>();
+        params.add(merchantUserId);
+        for (String c : codes) {
+            params.add(c.trim().toUpperCase());
+        }
+        
+        return query(sql, params.toArray());
     }
 
     public boolean recordUsage(int voucherId, int orderId, int customerUserId, String guestId) {
@@ -525,6 +558,67 @@ public class VoucherDAO extends AbstractDAO<Voucher> {
                 customerUserId > 0 ? customerUserId : null,
                 guestId
         ) > 0;
+    }
+
+    public boolean validateAndRecordUsage(
+            Connection conn,
+            int voucherId,
+            int merchantUserId,
+            int orderId,
+            int customerUserId,
+            String guestId,
+            double subTotal
+    ) throws SQLException {
+        String sql = """
+            INSERT INTO VoucherUsages (voucher_id, order_id, customer_user_id, guest_id, used_at)
+            SELECT ?, ?, ?, ?, SYSUTCDATETIME()
+            WHERE EXISTS (
+                SELECT 1
+                FROM Vouchers v WITH (UPDLOCK, HOLDLOCK)
+                WHERE v.id = ?
+                  AND (v.merchant_user_id = ? OR v.merchant_user_id IS NULL)
+                  AND v.is_published = 1
+                  AND v.status = N'ACTIVE'
+                  AND (SYSUTCDATETIME() BETWEEN v.start_at AND v.end_at
+                       OR GETDATE() BETWEEN v.start_at AND v.end_at)
+                  AND (v.min_order_amount IS NULL OR ? >= v.min_order_amount)
+                  AND (
+                      v.max_uses_total IS NULL
+                      OR (
+                          SELECT COUNT(*)
+                          FROM VoucherUsages vu WITH (UPDLOCK, HOLDLOCK)
+                          WHERE vu.voucher_id = v.id
+                      ) < v.max_uses_total
+                  )
+                  AND (
+                      ? <= 0
+                      OR v.max_uses_per_user IS NULL
+                      OR (
+                          SELECT COUNT(*)
+                          FROM VoucherUsages vu2 WITH (UPDLOCK, HOLDLOCK)
+                          WHERE vu2.voucher_id = v.id
+                            AND vu2.customer_user_id = ?
+                      ) < v.max_uses_per_user
+                  )
+            )
+        """;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, voucherId);
+            ps.setInt(2, orderId);
+            if (customerUserId > 0) {
+                ps.setInt(3, customerUserId);
+            } else {
+                ps.setObject(3, null);
+            }
+            ps.setString(4, guestId);
+            ps.setInt(5, voucherId);
+            ps.setInt(6, merchantUserId);
+            ps.setDouble(7, subTotal);
+            ps.setInt(8, customerUserId);
+            ps.setInt(9, customerUserId);
+            return ps.executeUpdate() > 0;
+        }
     }
 
     public int countUsageByVoucherAndCustomer(int voucherId, int customerUserId) {

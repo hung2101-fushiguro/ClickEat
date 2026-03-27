@@ -1,5 +1,6 @@
 package com.clickeat.dal.impl;
 
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
@@ -118,5 +119,15 @@ public class CartItemDAO extends AbstractDAO<CartItem> implements ICartItemDAO {
     public boolean delete(int id) {
         String sql = "DELETE FROM CartItems WHERE id = ?";
         return update(sql, id) > 0;
+    }
+
+    public boolean deleteByCartId(int cartId) {
+        String sql = "DELETE FROM CartItems WHERE cart_id = ?";
+        return update(sql, cartId) >= 0;
+    }
+
+    public boolean deleteByCartId(Connection conn, int cartId) throws SQLException {
+        String sql = "DELETE FROM CartItems WHERE cart_id = ?";
+        return update(conn, sql, cartId) >= 0;
     }
 }

@@ -10,6 +10,8 @@ public class TwilioVerifyConfig {
     public static final String ACCOUNT_SID = readConfig("TWILIO_ACCOUNT_SID");
     public static final String AUTH_TOKEN = readConfig("TWILIO_AUTH_TOKEN");
     public static final String VERIFY_SERVICE_SID = readConfig("TWILIO_VERIFY_SERVICE_SID");
+    public static final String OTP_MODE = readConfig("OTP_MODE");
+    public static final String OTP_MOCK_CODE = readConfig("OTP_MOCK_CODE");
 
     private TwilioVerifyConfig() {
     }
