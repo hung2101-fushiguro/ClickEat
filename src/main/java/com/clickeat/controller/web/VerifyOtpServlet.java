@@ -1,9 +1,8 @@
 package com.clickeat.controller.web;
 
+import com.clickeat.util.VonageVerifyUtil;
 import java.io.IOException;
-
-import com.clickeat.util.TwilioVerifyUtil;
-
+import java.io.PrintWriter;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -19,137 +18,101 @@ public class VerifyOtpServlet extends HttpServlet {
             throws ServletException, IOException {
 
         request.setCharacterEncoding("UTF-8");
+        response.setContentType("application/json;charset=UTF-8");
 
-        String fullName = request.getParameter("fullName");
-        String email = request.getParameter("email");
-        String phone = request.getParameter("phone");
-        String addressLine = request.getParameter("addressLine");
-        String shippingLat = request.getParameter("shippingLat");
-        String shippingLng = request.getParameter("shippingLng");
-        String otpCode = request.getParameter("otpCode");
+        HttpSession session = request.getSession();
+        PrintWriter out = response.getWriter();
 
-        if (fullName != null) {
-            fullName = fullName.trim();
+        String fullName = trim(request.getParameter("fullName"));
+        String email = trim(request.getParameter("email"));
+        String phone = trim(request.getParameter("phone"));
+        String addressLine = trim(request.getParameter("addressLine"));
+        String otpCode = trim(request.getParameter("otpCode"));
+
+        // fallback từ session nếu hidden input bị rỗng
+        if (isBlank(fullName)) {
+            fullName = stringSession(session, "guestFullName");
         }
-        if (email != null) {
-            email = email.trim();
+        if (isBlank(email)) {
+            email = stringSession(session, "guestEmail");
         }
-        if (phone != null) {
-            phone = phone.trim();
+        if (isBlank(phone)) {
+            phone = stringSession(session, "guestPhone");
         }
-        if (addressLine != null) {
-            addressLine = addressLine.trim();
-        }
-        if (shippingLat != null) {
-            shippingLat = shippingLat.trim();
-        }
-        if (shippingLng != null) {
-            shippingLng = shippingLng.trim();
-        }
-        if (otpCode != null) {
-            otpCode = otpCode.trim();
+        if (isBlank(addressLine)) {
+            addressLine = stringSession(session, "guestAddress");
         }
 
-        if (fullName == null || fullName.isBlank()
-                || email == null || email.isBlank()
-                || phone == null || phone.isBlank()
-                || addressLine == null || addressLine.isBlank()
-                || otpCode == null || otpCode.isBlank()) {
-
-            request.setAttribute("error", "Vui lòng nhập đầy đủ thông tin và mã OTP.");
-            request.setAttribute("fullName", fullName);
-            request.setAttribute("email", email);
-            request.setAttribute("phone", phone);
-            request.setAttribute("addressLine", addressLine);
-            request.setAttribute("shippingLat", shippingLat);
-            request.setAttribute("shippingLng", shippingLng);
-            request.setAttribute("otpSent", true);
-            request.getRequestDispatcher("/views/web/guest-checkout.jsp").forward(request, response);
+        if (isBlank(fullName) || isBlank(email) || isBlank(phone) || isBlank(addressLine)) {
+            out.print("{\"success\":false,\"message\":\"Thông tin giao hàng không hợp lệ. Vui lòng nhập lại.\"}");
             return;
         }
 
-        HttpSession session = request.getSession(false);
-        String sessionPhoneE164 = null;
-        if (session != null) {
-            Object sessionPhoneObj = session.getAttribute("guest_phone_e164");
-            if (sessionPhoneObj != null) {
-                sessionPhoneE164 = sessionPhoneObj.toString();
-            }
-        }
-
-        if (sessionPhoneE164 == null || sessionPhoneE164.isBlank()) {
-            request.setAttribute("error", "Phiên OTP không hợp lệ hoặc đã hết hạn. Vui lòng gửi mã OTP lại.");
-            request.setAttribute("fullName", fullName);
-            request.setAttribute("email", email);
-            request.setAttribute("phone", phone);
-            request.setAttribute("addressLine", addressLine);
-            request.setAttribute("shippingLat", shippingLat);
-            request.setAttribute("shippingLng", shippingLng);
-            request.setAttribute("otpSent", false);
-            request.getRequestDispatcher("/views/web/guest-checkout.jsp").forward(request, response);
+        if (isBlank(otpCode)) {
+            out.print("{\"success\":false,\"message\":\"Vui lòng nhập mã OTP.\"}");
             return;
         }
 
-        String normalizedPhone = TwilioVerifyUtil.normalizePhoneToE164VN(phone);
-
-        if (normalizedPhone == null || normalizedPhone.isBlank() || !normalizedPhone.startsWith("+")) {
-            request.setAttribute("error", "Số điện thoại không hợp lệ. Vui lòng nhập đúng định dạng.");
-            request.setAttribute("fullName", fullName);
-            request.setAttribute("email", email);
-            request.setAttribute("phone", phone);
-            request.setAttribute("addressLine", addressLine);
-            request.setAttribute("shippingLat", shippingLat);
-            request.setAttribute("shippingLng", shippingLng);
-            request.setAttribute("otpSent", true);
-            request.getRequestDispatcher("/views/web/guest-checkout.jsp").forward(request, response);
+        if (!otpCode.matches("^\\d{6}$")) {
+            out.print("{\"success\":false,\"message\":\"Mã OTP phải gồm đúng 6 chữ số.\"}");
             return;
         }
 
-        if (!sessionPhoneE164.equals(normalizedPhone)) {
-            request.setAttribute("error", "Số điện thoại xác thực không khớp với số đã gửi OTP. Vui lòng gửi OTP lại.");
-            request.setAttribute("fullName", fullName);
-            request.setAttribute("email", email);
-            request.setAttribute("phone", phone);
-            request.setAttribute("addressLine", addressLine);
-            request.setAttribute("shippingLat", shippingLat);
-            request.setAttribute("shippingLng", shippingLng);
-            request.setAttribute("otpSent", false);
-            request.getRequestDispatcher("/views/web/guest-checkout.jsp").forward(request, response);
+        String normalizedPhone = VonageVerifyUtil.normalizePhoneToE164VN(phone);
+
+        if (normalizedPhone == null
+                || normalizedPhone.isBlank()
+                || !normalizedPhone.matches("^\\+[1-9]\\d{8,14}$")) {
+            out.print("{\"success\":false,\"message\":\"Số điện thoại không hợp lệ.\"}");
             return;
         }
 
-        boolean approved = TwilioVerifyUtil.verifyOtp(sessionPhoneE164, otpCode);
+        String requestId = (String) session.getAttribute("guestVerifyRequestId");
+        Long expiresAt = (Long) session.getAttribute("guestOtpExpiresAt");
+        long now = System.currentTimeMillis();
+
+        if (requestId == null || requestId.isBlank() || expiresAt == null) {
+            out.print("{\"success\":false,\"expired\":true,\"message\":\"Phiên xác thực OTP không tồn tại. Vui lòng gửi lại mã.\"}");
+            return;
+        }
+
+        if (now > expiresAt) {
+            session.removeAttribute("guestVerifyRequestId");
+            session.removeAttribute("guestOtpExpiresAt");
+            out.print("{\"success\":false,\"expired\":true,\"message\":\"Mã OTP đã hết hạn. Vui lòng bấm Gửi lại mã OTP.\"}");
+            return;
+        }
+
+        boolean approved = VonageVerifyUtil.verifyOtp(requestId, otpCode);
 
         if (!approved) {
-            request.setAttribute("error", "Mã OTP không đúng hoặc đã hết hạn.");
-            request.setAttribute("fullName", fullName);
-            request.setAttribute("email", email);
-            request.setAttribute("phone", phone);
-            request.setAttribute("addressLine", addressLine);
-            request.setAttribute("shippingLat", shippingLat);
-            request.setAttribute("shippingLng", shippingLng);
-            request.setAttribute("otpSent", true);
-            request.getRequestDispatcher("/views/web/guest-checkout.jsp").forward(request, response);
+            out.print("{\"success\":false,\"message\":\"Mã OTP không chính xác hoặc không hợp lệ.\"}");
             return;
         }
 
-        session = request.getSession();
+        session.setAttribute("guestVerified", true);
+        session.setAttribute("guestFullName", fullName);
+        session.setAttribute("guestEmail", email);
+        session.setAttribute("guestPhone", phone);
+        session.setAttribute("guestPhoneE164", normalizedPhone);
+        session.setAttribute("guestAddress", addressLine);
 
-        session.setAttribute("guest_verified", true);
-        session.setAttribute("guest_fullName", fullName);
-        session.setAttribute("guest_email", email);
-        session.setAttribute("guest_phone", phone);
-        session.setAttribute("guest_phone_e164", sessionPhoneE164);
-        session.setAttribute("guest_address", addressLine);
+        session.removeAttribute("guestVerifyRequestId");
+        session.removeAttribute("guestOtpExpiresAt");
 
-        if (shippingLat != null && !shippingLat.isBlank() && shippingLng != null && !shippingLng.isBlank()) {
-            session.setAttribute("guest_latitude", shippingLat);
-            session.setAttribute("guest_longitude", shippingLng);
-        } else {
-            session.removeAttribute("guest_latitude");
-            session.removeAttribute("guest_longitude");
-        }
+        out.print("{\"success\":true,\"redirect\":\"" + request.getContextPath() + "/checkout\"}");
+    }
 
-        response.sendRedirect(request.getContextPath() + "/checkout");
+    private String trim(String value) {
+        return value == null ? null : value.trim();
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    private String stringSession(HttpSession session, String key) {
+        Object value = session.getAttribute(key);
+        return value == null ? "" : value.toString();
     }
 }

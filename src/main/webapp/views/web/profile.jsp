@@ -7,7 +7,6 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/responsive-global.css">
         <title>ClickEat - Thông tin tài khoản</title>
         <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/logo-icon.png?v=2">
         <link rel="shortcut icon" href="${pageContext.request.contextPath}/logo-icon.png?v=2">
@@ -417,5 +416,6 @@
                 clientError.classList.add('hidden');
             });
         </script>
+        <jsp:include page="footer.jsp" />
     </body>
 </html>

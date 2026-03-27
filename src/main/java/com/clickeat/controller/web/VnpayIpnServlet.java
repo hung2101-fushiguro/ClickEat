@@ -1,19 +1,15 @@
 package com.clickeat.controller.web;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.sql.Connection;
-import java.util.HashMap;
-import java.util.Map;
-
-import com.clickeat.config.DBContext;
 import com.clickeat.config.VnpayConfig;
 import com.clickeat.dal.impl.CartDAO;
 import com.clickeat.dal.impl.OrderDAO;
 import com.clickeat.dal.impl.PaymentTransactionDAO;
 import com.clickeat.model.Order;
 import com.clickeat.util.VnpayUtil;
-
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.HashMap;
+import java.util.Map;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -67,51 +63,30 @@ public class VnpayIpnServlet extends HttpServlet {
             String payload = request.getQueryString();
 
             if ("00".equals(responseCode) && "00".equals(transactionStatus)) {
-                try (Connection conn = DBContext.getConnection()) {
-                    conn.setAutoCommit(false);
+                paymentDAO.markSuccess(orderId, vnpTransactionNo, responseCode, vnpPayDate, payload);
+                orderDAO.markPaidByVnpay(orderId);
 
-                    boolean paymentOk = paymentDAO.markSuccess(conn, orderId, vnpTransactionNo, responseCode, vnpPayDate, payload);
-                    boolean orderOk = orderDAO.markPaidByVnpay(conn, orderId);
+                Order order = orderDAO.findById(orderId);
+                if (order != null) {
+                    if (order.getVoucherId() > 0 && order.getCustomerUserId() > 0) {
+                        com.clickeat.dal.impl.VoucherDAO voucherDAO = new com.clickeat.dal.impl.VoucherDAO();
+                        com.clickeat.dal.impl.CustomerVoucherDAO customerVoucherDAO = new com.clickeat.dal.impl.CustomerVoucherDAO();
 
-                    if (!paymentOk || !orderOk) {
-                        conn.rollback();
-                        out.print("{\"RspCode\":\"99\",\"Message\":\"Update failed\"}");
-                        return;
+                        voucherDAO.insertUsage(order.getVoucherId(), orderId, order.getCustomerUserId(), null);
+                        customerVoucherDAO.markUsed(order.getCustomerUserId(), order.getVoucherId());
                     }
 
-                    Order order = orderDAO.findById(conn, orderId);
-                    if (order != null) {
-                        if (order.getCustomerUserId() > 0) {
-                            cartDAO.clearActiveCartByCustomerId(conn, order.getCustomerUserId());
-                        } else if (order.getGuestId() != null && !order.getGuestId().isBlank()) {
-                            cartDAO.clearActiveCartByGuestId(conn, order.getGuestId());
-                        }
+                    if (order.getCustomerUserId() > 0) {
+                        cartDAO.clearActiveCartByCustomerId(order.getCustomerUserId());
                     }
-
-                    conn.commit();
-                } catch (Exception ex) {
-                    out.print("{\"RspCode\":\"99\",\"Message\":\"Internal error\"}");
-                    return;
                 }
 
                 out.print("{\"RspCode\":\"00\",\"Message\":\"Confirm Success\"}");
                 return;
             }
 
-            try (Connection conn = DBContext.getConnection()) {
-                conn.setAutoCommit(false);
-                boolean paymentOk = paymentDAO.markFailed(conn, orderId, responseCode, payload);
-                boolean orderOk = orderDAO.markPaymentFailed(conn, orderId);
-                if (!paymentOk || !orderOk) {
-                    conn.rollback();
-                    out.print("{\"RspCode\":\"99\",\"Message\":\"Update failed\"}");
-                    return;
-                }
-                conn.commit();
-            } catch (Exception ex) {
-                out.print("{\"RspCode\":\"99\",\"Message\":\"Internal error\"}");
-                return;
-            }
+            paymentDAO.markFailed(orderId, responseCode, payload);
+            orderDAO.markPaymentFailed(orderId);
             out.print("{\"RspCode\":\"00\",\"Message\":\"Confirm Success\"}");
         }
     }

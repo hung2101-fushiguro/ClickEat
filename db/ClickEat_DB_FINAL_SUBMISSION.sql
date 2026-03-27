@@ -62,6 +62,7 @@ IF OBJECT_ID('dbo.ShipperReviews','U') IS NOT NULL DROP TABLE dbo.ShipperReviews
 IF OBJECT_ID('dbo.ShipperProfiles','U') IS NOT NULL DROP TABLE dbo.ShipperProfiles;
 
 IF OBJECT_ID('dbo.VoucherUsages','U') IS NOT NULL DROP TABLE dbo.VoucherUsages;
+IF OBJECT_ID('dbo.CustomerVouchers','U') IS NOT NULL DROP TABLE dbo.CustomerVouchers;
 IF OBJECT_ID('dbo.Vouchers','U') IS NOT NULL DROP TABLE dbo.Vouchers;
 
 IF OBJECT_ID('dbo.PaymentTransactions','U') IS NOT NULL DROP TABLE dbo.PaymentTransactions;
@@ -601,6 +602,74 @@ CREATE TABLE dbo.VoucherUsages (
 );
 
 CREATE UNIQUE INDEX UX_VoucherUsages_Order ON dbo.VoucherUsages(order_id);
+GO
+
+/* =========================
+   10.1) CUSTOMER SAVED VOUCHERS (merged from legacy SQL)
+   ========================= */
+IF OBJECT_ID('dbo.CustomerVouchers', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.CustomerVouchers (
+        id               BIGINT IDENTITY(1,1) PRIMARY KEY,
+        customer_user_id BIGINT       NOT NULL,
+        voucher_id       BIGINT       NOT NULL,
+        saved_code       NVARCHAR(50) NOT NULL,
+        status           NVARCHAR(20) NOT NULL CONSTRAINT DF_CustomerVouchers_Status DEFAULT N'SAVED',
+        saved_at         DATETIME2    NOT NULL CONSTRAINT DF_CustomerVouchers_SavedAt DEFAULT SYSUTCDATETIME(),
+        used_at          DATETIME2    NULL,
+
+        CONSTRAINT FK_CustomerVouchers_Customer
+            FOREIGN KEY (customer_user_id) REFERENCES dbo.Users(id),
+
+        CONSTRAINT FK_CustomerVouchers_Voucher
+            FOREIGN KEY (voucher_id) REFERENCES dbo.Vouchers(id)
+    );
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.check_constraints
+    WHERE name = N'CK_CustomerVouchers_Status'
+)
+BEGIN
+    ALTER TABLE dbo.CustomerVouchers
+    ADD CONSTRAINT CK_CustomerVouchers_Status
+    CHECK (status IN (N'SAVED', N'USED', N'EXPIRED'));
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1
+    FROM sys.indexes
+    WHERE name = N'UX_CustomerVouchers_CustomerVoucher'
+      AND object_id = OBJECT_ID(N'dbo.CustomerVouchers')
+)
+BEGIN
+    CREATE UNIQUE INDEX UX_CustomerVouchers_CustomerVoucher
+    ON dbo.CustomerVouchers(customer_user_id, voucher_id);
+END
+GO
+
+/* Optional linkage from legacy SQL: keep voucher_id nullable for applied voucher tracking */
+IF COL_LENGTH('dbo.Orders', 'voucher_id') IS NULL
+BEGIN
+    ALTER TABLE dbo.Orders
+    ADD voucher_id BIGINT NULL;
+END
+GO
+
+IF COL_LENGTH('dbo.Orders', 'voucher_id') IS NOT NULL
+   AND NOT EXISTS (
+       SELECT 1
+       FROM sys.foreign_keys
+       WHERE name = N'FK_Orders_Voucher'
+   )
+BEGIN
+    ALTER TABLE dbo.Orders
+    ADD CONSTRAINT FK_Orders_Voucher
+        FOREIGN KEY (voucher_id) REFERENCES dbo.Vouchers(id);
+END
 GO
 
 /* =========================
@@ -1392,7 +1461,7 @@ UPDATE MerchantProfiles SET image_url = '/assets/images/id25-Banh-Xeo-Mien-Tay.j
 UPDATE MerchantProfiles SET image_url = '/assets/images/id26-Banh-Da-Cua-Hai-Phong.jpg' WHERE user_id = 25;
 UPDATE MerchantProfiles SET image_url = '/assets/images/id27-Nem-Cua-Be-HP.jpg' WHERE user_id = 26;
 /* =========================================================
-    MERGED SUPPLEMENT (from ClickEat2.sql + add_missing_schema_merchant_patch.sql)
+    MERGED SUPPLEMENT (from ClickEat.sql + add_missing_schema_merchant_patch.sql)
    Purpose: keep missing schema/logic without duplicating existing richer blocks.
    Idempotent and safe to run multiple times.
    ========================================================= */
@@ -1592,7 +1661,7 @@ BEGIN
 END
 GO
 
-/* C) Missing table from ClickEat2 */
+/* C) Missing table from ClickEat */
 IF OBJECT_ID(N'dbo.RefundRequests', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.RefundRequests (

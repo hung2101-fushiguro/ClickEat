@@ -6,8 +6,7 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/responsive-global.css">
-        <title>ClickEat - Đăng ký Shipper / Merchant</title>
+        <title>ClickEat - Đăng ký shipper / merchant</title>
         <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/logo-icon.png?v=2">
         <link rel="shortcut icon" href="${pageContext.request.contextPath}/logo-icon.png?v=2">
         <script src="https://cdn.tailwindcss.com"></script>
@@ -24,7 +23,7 @@
                     <i class="fa-solid fa-store"></i>
                     Phát triển cùng ClickEat
                 </div>
-                <h1 class="mt-4 text-4xl font-black tracking-tight">Đăng ký Shipper / Merchant</h1>
+                <h1 class="mt-4 text-4xl font-black tracking-tight">Đăng ký shipper / merchant</h1>
                 <p class="mt-2 text-gray-500 text-lg">
                     Mở rộng vai trò của bạn để giao hàng hoặc trở thành đối tác kinh doanh trên nền tảng.
                 </p>
@@ -63,7 +62,7 @@
 
                         <a href="${pageContext.request.contextPath}/shipper/register"
                         class="inline-flex mt-8 h-12 px-6 items-center justify-center rounded-full bg-orange-500 text-white font-extrabold hover:bg-orange-600 transition shadow">
-                        Đăng ký làm Shipper
+                        Đăng ký làm shipper
                     </a>
                 </div>
 
@@ -94,11 +93,12 @@
 
                     <a href="${pageContext.request.contextPath}/merchant-register"
                     class="inline-flex mt-8 h-12 px-6 items-center justify-center rounded-full border border-orange-200 text-orange-600 font-extrabold hover:bg-orange-50 transition">
-                    Đăng ký làm Merchant
+                    Đăng ký merchant
                 </a>
             </div>
         </section>
     </div>
 </main>
+<jsp:include page="footer.jsp" />
 </body>
 </html>

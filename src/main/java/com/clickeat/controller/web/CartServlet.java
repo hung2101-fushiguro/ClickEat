@@ -1,23 +1,15 @@
 package com.clickeat.controller.web;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
 import com.clickeat.dal.impl.CartDAO;
 import com.clickeat.dal.impl.CartItemDAO;
-import com.clickeat.dal.impl.CartItemViewDAO;
 import com.clickeat.dal.impl.FoodItemDAO;
 import com.clickeat.dal.impl.GuestSessionDAO;
 import com.clickeat.model.Cart;
 import com.clickeat.model.CartItem;
-import com.clickeat.model.CartItemView;
 import com.clickeat.model.FoodItem;
 import com.clickeat.model.User;
-
+import java.io.IOException;
+import java.util.List;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -33,22 +25,33 @@ public class CartServlet extends HttpServlet {
         return (ref != null && !ref.isBlank()) ? ref : (request.getContextPath() + fallback);
     }
 
-    private String getOrCreateGuestId(HttpSession session, GuestSessionDAO guestSessionDAO) {
-        String guestId = (String) session.getAttribute("guestId");
+    private void syncGuestIdSession(HttpSession session) {
+        String guestId = (String) session.getAttribute("guest_id");
 
         if (guestId == null || guestId.isBlank()) {
-            guestId = (String) session.getAttribute("guest_id");
+            guestId = (String) session.getAttribute("guestId");
+        }
+
+        if (guestId != null && !guestId.isBlank()) {
+            session.setAttribute("guest_id", guestId);
+            session.setAttribute("guestId", guestId);
+        }
+    }
+
+    private String getOrCreateGuestId(HttpSession session, GuestSessionDAO guestSessionDAO) {
+        String guestId = (String) session.getAttribute("guest_id");
+
+        if (guestId == null || guestId.isBlank()) {
+            guestId = (String) session.getAttribute("guestId");
         }
 
         if (guestId == null || guestId.isBlank()) {
             guestId = guestSessionDAO.createGuestSession();
-            if (guestId != null && !guestId.isBlank()) {
-                session.setAttribute("guestId", guestId);
-                session.setAttribute("guest_id", guestId);
-            }
-        } else {
-            session.setAttribute("guestId", guestId);
+        }
+
+        if (guestId != null && !guestId.isBlank()) {
             session.setAttribute("guest_id", guestId);
+            session.setAttribute("guestId", guestId);
         }
 
         return guestId;
@@ -94,15 +97,13 @@ public class CartServlet extends HttpServlet {
 
         HttpSession session = request.getSession();
         User account = (User) session.getAttribute("account");
+        syncGuestIdSession(session);
 
         CartDAO cartDAO = new CartDAO();
         CartItemDAO cartItemDAO = new CartItemDAO();
         FoodItemDAO foodDAO = new FoodItemDAO();
         GuestSessionDAO guestSessionDAO = new GuestSessionDAO();
 
-        // --------------------------------------------------------
-        // ADD (GET /cart?action=add&id=FOOD_ID)
-        // --------------------------------------------------------
         if ("add".equals(action)) {
             try {
                 String foodIdRaw = request.getParameter("id");
@@ -135,7 +136,6 @@ public class CartServlet extends HttpServlet {
                     return;
                 }
 
-                // Nếu cart đang rỗng thì chủ động gán merchant cho cart
                 List<CartItem> currentItems = cartItemDAO.getItemsByCartId(cart.getId());
                 boolean cartIsEmpty = (currentItems == null || currentItems.isEmpty());
 
@@ -151,7 +151,6 @@ public class CartServlet extends HttpServlet {
                         e.printStackTrace();
                     }
                 } else {
-                    // Rule: single merchant
                     FoodItem firstFoodInCart = foodDAO.findById(currentItems.get(0).getFoodItemId());
                     if (firstFoodInCart != null
                             && firstFoodInCart.getMerchantUserId() != food.getMerchantUserId()) {
@@ -162,12 +161,7 @@ public class CartServlet extends HttpServlet {
                     }
                 }
 
-                FoodOptionSelection selection = resolveSelection(
-                        food,
-                        request.getParameter("selectedSize"),
-                        request.getParameter("selectedToppings")
-                );
-                CartItem existItem = cartItemDAO.checkItemExist(cart.getId(), foodId, selection.signature);
+                CartItem existItem = cartItemDAO.checkItemExist(cart.getId(), foodId);
                 boolean isSuccess;
 
                 if (existItem != null) {
@@ -178,12 +172,8 @@ public class CartServlet extends HttpServlet {
                     newItem.setCartId(cart.getId());
                     newItem.setFoodItemId(foodId);
                     newItem.setQuantity(1);
-                    newItem.setUnitPriceSnapshot(food.getPrice() + selection.extraPrice);
+                    newItem.setUnitPriceSnapshot(food.getPrice());
                     newItem.setNote("");
-                    newItem.setSelectedSize(selection.selectedSize);
-                    newItem.setSelectedToppings(selection.selectedToppings);
-                    newItem.setOptionExtraPrice(selection.extraPrice);
-                    newItem.setOptionSignature(selection.signature);
                     isSuccess = (cartItemDAO.insert(newItem) > 0);
                 }
 
@@ -205,9 +195,6 @@ public class CartServlet extends HttpServlet {
             return;
         }
 
-        // --------------------------------------------------------
-        // DELETE (GET /cart?action=delete&itemId=CART_ITEM_ID)
-        // --------------------------------------------------------
         if ("delete".equals(action)) {
             try {
                 Cart cart = getOrCreateActiveCart(session, account, cartDAO, guestSessionDAO);
@@ -253,9 +240,6 @@ public class CartServlet extends HttpServlet {
             return;
         }
 
-        // --------------------------------------------------------
-        // VIEW (GET /cart?action=view)
-        // --------------------------------------------------------
         if ("view".equals(action)) {
             Cart cart = getOrCreateActiveCart(session, account, cartDAO, guestSessionDAO);
 
@@ -283,14 +267,10 @@ public class CartServlet extends HttpServlet {
         response.sendRedirect(request.getContextPath() + "/cart?action=view");
     }
 
-    // --------------------------------------------------------
-    // POST: AJAX add / AJAX remove / update
-    // --------------------------------------------------------
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        request.setCharacterEncoding("UTF-8");
         String action = request.getParameter("action");
         if (action == null) {
             action = "";
@@ -298,127 +278,16 @@ public class CartServlet extends HttpServlet {
 
         HttpSession session = request.getSession();
         User account = (User) session.getAttribute("account");
-
-        CartDAO cartDAO = new CartDAO();
-        CartItemDAO cartItemDAO = new CartItemDAO();
-        GuestSessionDAO guestSessionDAO = new GuestSessionDAO();
-
-        // ---- AJAX: Add item (POST /cart action=ajax-add) ----
-        if ("ajax-add".equals(action)) {
-            response.setContentType("application/json;charset=UTF-8");
-            response.setCharacterEncoding("UTF-8");
-            FoodItemDAO foodDAO = new FoodItemDAO();
-            boolean success = false;
-            String message = "";
-            Cart cart = null;
-            try {
-                int foodId = Integer.parseInt(request.getParameter("id").trim());
-                int qty = 1;
-                try {
-                    qty = Math.max(1, Integer.parseInt(request.getParameter("qty")));
-                } catch (Exception ignored) {
-                }
-
-                FoodItem food = foodDAO.findById(foodId);
-                if (food == null) {
-                    message = "Món ăn không tồn tại.";
-                } else if (!food.isAvailable()) {
-                    message = "Món ăn tạm ngừng bán.";
-                } else {
-                    cart = getOrCreateActiveCart(session, account, cartDAO, guestSessionDAO);
-                    if (cart == null) {
-                        message = "Không thể khởi tạo giỏ hàng.";
-                    } else {
-                        List<CartItem> currentItems = cartItemDAO.getItemsByCartId(cart.getId());
-                        if (currentItems == null || currentItems.isEmpty()) {
-                            Integer cm = cart.getMerchantUserId();
-                            if (cm == null || cm.intValue() != food.getMerchantUserId()) {
-                                cart.setMerchantUserId(food.getMerchantUserId());
-                                cartDAO.update(cart);
-                            }
-                        } else {
-                            FoodItem first = foodDAO.findById(currentItems.get(0).getFoodItemId());
-                            if (first != null && first.getMerchantUserId() != food.getMerchantUserId()) {
-                                message = "Giỏ hàng chỉ chứa món từ 1 nhà hàng. Xóa giỏ cũ trước khi thêm.";
-                                cart = null;
-                            }
-                        }
-                        if (cart != null) {
-                            FoodOptionSelection selection = resolveSelection(
-                                    food,
-                                    request.getParameter("selectedSize"),
-                                    request.getParameter("selectedToppings")
-                            );
-                            CartItem exist = cartItemDAO.checkItemExist(cart.getId(), foodId, selection.signature);
-                            boolean ok;
-                            if (exist != null) {
-                                ok = cartItemDAO.updateQuantity(exist.getId(), exist.getQuantity() + qty);
-                            } else {
-                                CartItem ni = new CartItem();
-                                ni.setCartId(cart.getId());
-                                ni.setFoodItemId(foodId);
-                                ni.setQuantity(qty);
-                                ni.setUnitPriceSnapshot(food.getPrice() + selection.extraPrice);
-                                ni.setNote("");
-                                ni.setSelectedSize(selection.selectedSize);
-                                ni.setSelectedToppings(selection.selectedToppings);
-                                ni.setOptionExtraPrice(selection.extraPrice);
-                                ni.setOptionSignature(selection.signature);
-                                ok = cartItemDAO.insert(ni) > 0;
-                            }
-                            if (ok) {
-                                success = true;
-                                message = "Đã thêm vào giỏ hàng!";
-                            } else {
-                                message = "Lỗi cơ sở dữ liệu.";
-                                cart = null;
-                            }
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                message = "Lỗi: " + e.getMessage();
-            }
-            writeCartJson(response, success, message, cart);
-            return;
-        }
-
-        // ---- AJAX: Remove item (POST /cart action=ajax-remove) ----
-        if ("ajax-remove".equals(action)) {
-            response.setContentType("application/json;charset=UTF-8");
-            response.setCharacterEncoding("UTF-8");
-            boolean success = false;
-            String message = "";
-            Cart cart = null;
-            try {
-                cart = getOrCreateActiveCart(session, account, cartDAO, guestSessionDAO);
-                int itemId = Integer.parseInt(request.getParameter("itemId").trim());
-                CartItem target = cartItemDAO.findById(itemId);
-                if (target != null && cart != null && target.getCartId() == cart.getId()) {
-                    if (cartItemDAO.delete(itemId)) {
-                        List<CartItem> remain = cartItemDAO.getItemsByCartId(cart.getId());
-                        if (remain == null || remain.isEmpty()) {
-                            cartDAO.clearMerchant(cart.getId());
-                        }
-                        success = true;
-                        message = "Đã xóa món.";
-                    } else {
-                        message = "Không thể xóa món.";
-                    }
-                } else {
-                    message = "Món không thuộc giỏ hàng.";
-                }
-            } catch (Exception e) {
-                message = "Lỗi: " + e.getMessage();
-            }
-            writeCartJson(response, success, message, cart);
-            return;
-        }
+        syncGuestIdSession(session);
 
         if (!"update".equals(action)) {
             response.sendRedirect(request.getContextPath() + "/cart?action=view");
             return;
         }
+
+        CartDAO cartDAO = new CartDAO();
+        CartItemDAO cartItemDAO = new CartItemDAO();
+        GuestSessionDAO guestSessionDAO = new GuestSessionDAO();
 
         try {
             Cart cart = getOrCreateActiveCart(session, account, cartDAO, guestSessionDAO);
@@ -427,7 +296,6 @@ public class CartServlet extends HttpServlet {
                 return;
             }
 
-            // 1) Remove one item
             String removeIdRaw = request.getParameter("removeId");
             if (removeIdRaw != null && !removeIdRaw.isBlank()) {
                 int cartItemId = Integer.parseInt(removeIdRaw);
@@ -450,7 +318,6 @@ public class CartServlet extends HttpServlet {
                 return;
             }
 
-            // 2) Update qty_* params
             request.getParameterMap().forEach((key, val) -> {
                 if (key != null && key.startsWith("qty_")) {
                     try {
@@ -478,137 +345,5 @@ public class CartServlet extends HttpServlet {
         }
 
         response.sendRedirect(backOrDefault(request, "/home"));
-    }
-
-    // ---- Helpers ----
-    private void writeCartJson(HttpServletResponse resp, boolean success, String message, Cart cart)
-            throws IOException {
-        int cartCount = 0;
-        double cartTotal = 0;
-        StringBuilder items = new StringBuilder("[");
-        if (cart != null) {
-            CartItemViewDAO civDAO = new CartItemViewDAO();
-            List<CartItemView> list = civDAO.getByCartId(cart.getId());
-            if (list != null) {
-                boolean first = true;
-                for (CartItemView iv : list) {
-                    cartCount += iv.getQuantity();
-                    cartTotal += iv.getLineTotal();
-                    if (!first) {
-                        items.append(",");
-                    }
-                    first = false;
-                    items.append("{\"id\":").append(iv.getCartItemId())
-                            .append(",\"name\":\"").append(escJson(iv.getName())).append("\"")
-                            .append(",\"quantity\":").append(iv.getQuantity())
-                            .append(",\"unitPrice\":").append((long) iv.getUnitPrice())
-                            .append(",\"lineTotal\":").append((long) iv.getLineTotal())
-                            .append(",\"optionSummary\":\"").append(escJson(iv.getOptionSummary())).append("\"")
-                            .append("}");
-                }
-            }
-        }
-        items.append("]");
-        resp.getWriter().print("{\"success\":" + success
-                + ",\"message\":\"" + escJson(message) + "\""
-                + ",\"cartCount\":" + cartCount
-                + ",\"cartTotal\":" + (long) cartTotal
-                + ",\"items\":" + items + "}");
-    }
-
-    private String escJson(String s) {
-        if (s == null) {
-            return "";
-        }
-        return s.replace("\\", "\\\\").replace("\"", "\\\"")
-                .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t");
-    }
-
-    private FoodOptionSelection resolveSelection(FoodItem food, String selectedSize, String selectedToppingsRaw) {
-        FoodOptionSelection selection = new FoodOptionSelection();
-
-        Map<String, Double> sizePriceMap = parseOptionMap(food.getSizeOptions());
-        Map<String, Double> toppingPriceMap = parseOptionMap(food.getToppingOptions());
-
-        String normalizedSize = normalizeOptionName(selectedSize);
-        if (normalizedSize != null && !normalizedSize.isBlank() && sizePriceMap.containsKey(normalizedSize)) {
-            selection.selectedSize = normalizedSize;
-            selection.extraPrice += sizePriceMap.getOrDefault(normalizedSize, 0d);
-        }
-
-        List<String> selectedToppings = new ArrayList<>();
-        if (selectedToppingsRaw != null && !selectedToppingsRaw.isBlank()) {
-            String[] parts = selectedToppingsRaw.split(",");
-            for (String raw : parts) {
-                String normalized = normalizeOptionName(raw);
-                if (normalized != null && !normalized.isBlank() && toppingPriceMap.containsKey(normalized) && !selectedToppings.contains(normalized)) {
-                    selectedToppings.add(normalized);
-                    selection.extraPrice += toppingPriceMap.getOrDefault(normalized, 0d);
-                }
-            }
-        }
-
-        if (!selectedToppings.isEmpty()) {
-            selection.selectedToppings = String.join(", ", selectedToppings);
-        }
-
-        selection.signature = buildOptionSignature(selection.selectedSize, selection.selectedToppings);
-        return selection;
-    }
-
-    private Map<String, Double> parseOptionMap(String optionText) {
-        Map<String, Double> map = new LinkedHashMap<>();
-        if (optionText == null || optionText.isBlank()) {
-            return map;
-        }
-
-        String[] tokens = optionText.split(";");
-        for (String token : tokens) {
-            if (token == null || token.isBlank()) {
-                continue;
-            }
-            String[] pair = token.split(":", 2);
-            String name = normalizeOptionName(pair[0]);
-            if (name == null || name.isBlank()) {
-                continue;
-            }
-            double extra = 0;
-            if (pair.length > 1 && pair[1] != null && !pair[1].isBlank()) {
-                try {
-                    extra = Double.parseDouble(pair[1].trim());
-                } catch (NumberFormatException ignored) {
-                }
-            }
-            map.put(name, Math.max(0, extra));
-        }
-        return map;
-    }
-
-    private String normalizeOptionName(String raw) {
-        if (raw == null) {
-            return null;
-        }
-        return raw.trim().replaceAll("\\s+", " ");
-    }
-
-    private String buildOptionSignature(String size, String toppings) {
-        String normalizedSize = size == null ? "" : size.trim();
-        String normalizedToppings = "";
-        if (toppings != null && !toppings.isBlank()) {
-            normalizedToppings = java.util.Arrays.stream(toppings.split(","))
-                    .map(this::normalizeOptionName)
-                    .filter(s -> s != null && !s.isBlank())
-                    .sorted(String.CASE_INSENSITIVE_ORDER)
-                    .collect(Collectors.joining("|"));
-        }
-        return "size=" + normalizedSize + ";tops=" + normalizedToppings;
-    }
-
-    private static class FoodOptionSelection {
-
-        String selectedSize = "";
-        String selectedToppings = "";
-        double extraPrice = 0;
-        String signature = "";
     }
 }

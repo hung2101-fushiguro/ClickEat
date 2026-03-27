@@ -6,9 +6,9 @@
 <html lang="vi">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/responsive-global.css">
         <title>Đặt đơn thành công - ClickEat</title>
+        <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/logo-icon.png?v=2">
+        <link rel="shortcut icon" href="${pageContext.request.contextPath}/logo-icon.png?v=2">
         <script src="https://cdn.tailwindcss.com"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     </head>
@@ -48,84 +48,55 @@
                                 <div>
                                     <div class="font-bold text-lg">${empty item.itemNameSnapshot ? 'Món ăn' : item.itemNameSnapshot}</div>
                                     <div class="text-sm text-gray-500">Số lượng: ${item.quantity}</div>
-                                    <c:if test="${not empty item.selectedSize}">
-                                        <div class="text-xs text-gray-500">Size: ${item.selectedSize}</div>
-                                    </c:if>
-                                    <c:if test="${not empty item.selectedToppings}">
-                                        <div class="text-xs text-gray-500">Topping: ${item.selectedToppings}</div>
-                                    </c:if>
                                 </div>
                                 <div class="font-black text-lg text-orange-500">
                                     <fmt:formatNumber value="${item.unitPriceSnapshot * item.quantity}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ
-                                    </div>
                                 </div>
-                            </c:forEach>
-                        </div>
-
-                        <div class="mt-6 pt-5 border-t border-dashed border-gray-200 space-y-3">
-                            <div class="flex justify-between">
-                                <span class="text-gray-500">Hình thức thanh toán</span>
-                                <span class="font-bold">${order.paymentMethod}</span>
                             </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-500">Tạm tính</span>
-                                <span class="font-bold"><fmt:formatNumber value="${order.subtotalAmount}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ</span>
-                            </div>
-                            <div class="flex justify-between">
-                                <span class="text-gray-500">Phí giao hàng</span>
-                                <span class="font-bold"><fmt:formatNumber value="${order.deliveryFee}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ</span>
-                            </div>
-                            <div class="flex justify-between text-2xl">
-                                <span class="font-black">Tổng cộng</span>
-                                <span class="font-black text-orange-500"><fmt:formatNumber value="${order.totalAmount}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ</span>
-                            </div>
-                        </div>
+                        </c:forEach>
                     </div>
 
-                    <div class="bg-white rounded-3xl border border-gray-200 p-6 h-fit">
-                        <h3 class="text-xl font-black mb-4">Giao đến</h3>
-                        <div class="space-y-2 text-gray-700">
-                            <div class="font-bold">${order.receiverName}</div>
-                            <div>${order.receiverPhone}</div>
-                            <div>${order.deliveryAddressLine}</div>
-                            <div>${order.wardName}, ${order.districtName}, ${order.provinceName}</div>
-                            <c:if test="${not empty order.deliveryNote}">
-                                <div class="pt-2 text-sm text-gray-500">Ghi chú: ${order.deliveryNote}</div>
-                            </c:if>
+                    <div class="mt-6 pt-5 border-t border-dashed border-gray-200 space-y-3">
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Hình thức thanh toán</span>
+                            <span class="font-bold">${order.paymentMethod}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Tạm tính</span>
+                            <span class="font-bold"><fmt:formatNumber value="${order.subtotalAmount}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Phí giao hàng</span>
+                            <span class="font-bold"><fmt:formatNumber value="${order.deliveryFee}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ</span>
+                        </div>
+                        <div class="flex justify-between text-2xl">
+                            <span class="font-black">Tổng cộng</span>
+                            <span class="font-black text-orange-500"><fmt:formatNumber value="${order.totalAmount}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="mt-10 flex flex-wrap justify-center gap-3">
-                    <c:choose>
-                        <c:when test="${not empty account}">
-                            <%-- Customer đã đăng nhập: xem chi tiết đơn --%>
-                            <a href="${pageContext.request.contextPath}/customer/orders?focusOrderId=${order.id}"
-                            class="inline-flex items-center gap-2 h-14 px-8 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-black shadow transition">
-                            <i class="fa-solid fa-receipt"></i> Xem chi tiết đơn
-                        </a>
-                        <a href="${pageContext.request.contextPath}/home"
-                        class="inline-flex items-center gap-2 h-14 px-8 rounded-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-bold shadow-sm transition">
-                        <i class="fa-solid fa-house"></i> Về trang chủ
-                    </a>
-                </c:when>
-                <c:otherwise>
-                    <%-- Guest: nút theo dõi đơn bằng mã đơn --%>
-                    <a href="${pageContext.request.contextPath}/guest-order-tracking?code=${order.orderCode}"
-                    class="inline-flex items-center gap-2 h-14 px-8 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-black shadow transition">
-                    <i class="fa-solid fa-magnifying-glass-location"></i> Theo dõi đơn hàng
-                </a>
-                <a href="${pageContext.request.contextPath}/home"
-                class="inline-flex items-center gap-2 h-14 px-8 rounded-full bg-white border border-gray-200 hover:bg-gray-50 text-gray-800 font-bold shadow-sm transition">
-                <i class="fa-solid fa-house"></i> Về trang chủ
-            </a>
-            <%-- Hiển thị mã đơn nổi bật để guest copy/lưu --%>
-            <div class="w-full mt-2 text-center text-xs text-gray-500">
-                Lưu lại mã đơn <span class="font-bold text-gray-700">${order.orderCode}</span> để tra cứu sau.
+                <div class="bg-white rounded-3xl border border-gray-200 p-6 h-fit">
+                    <h3 class="text-xl font-black mb-4">Giao đến</h3>
+                    <div class="space-y-2 text-gray-700">
+                        <div class="font-bold">${order.receiverName}</div>
+                        <div>${order.receiverPhone}</div>
+                        <div>${order.deliveryAddressLine}</div>
+                        <div>${order.wardName}, ${order.districtName}, ${order.provinceName}</div>
+                        <c:if test="${not empty order.deliveryNote}">
+                            <div class="pt-2 text-sm text-gray-500">Ghi chú: ${order.deliveryNote}</div>
+                        </c:if>
+                    </div>
+                </div>
             </div>
-        </c:otherwise>
-    </c:choose>
-</div>
-</main>
-</body>
+
+            <div class="mt-10 text-center">
+                <a href="${pageContext.request.contextPath}/home"
+                   class="inline-flex items-center gap-2 h-14 px-10 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-black shadow">
+                    <i class="fa-solid fa-house"></i>
+                    Về trang chủ
+                </a>
+            </div>
+        </main>
+    </body>
 </html>

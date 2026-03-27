@@ -1,24 +1,12 @@
 package com.clickeat.controller.web;
 
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import com.clickeat.config.DBContext;
 import com.clickeat.config.VnpayConfig;
 import com.clickeat.dal.impl.AddressDAO;
 import com.clickeat.dal.impl.CartDAO;
 import com.clickeat.dal.impl.CartItemDAO;
+import com.clickeat.dal.impl.CustomerVoucherDAO;
 import com.clickeat.dal.impl.FoodItemDAO;
-import com.clickeat.dal.impl.MerchantDAO;
-import com.clickeat.dal.impl.NotificationDAO;
+import com.clickeat.dal.impl.MerchantProfileDAO;
 import com.clickeat.dal.impl.OrderDAO;
 import com.clickeat.dal.impl.OrderItemDAO;
 import com.clickeat.dal.impl.PaymentTransactionDAO;
@@ -26,17 +14,26 @@ import com.clickeat.dal.impl.VoucherDAO;
 import com.clickeat.model.Address;
 import com.clickeat.model.Cart;
 import com.clickeat.model.CartItem;
+import com.clickeat.model.CustomerVoucher;
 import com.clickeat.model.FoodItem;
 import com.clickeat.model.MerchantProfile;
 import com.clickeat.model.Order;
 import com.clickeat.model.OrderItem;
 import com.clickeat.model.User;
 import com.clickeat.model.Voucher;
+import com.clickeat.util.DeliveryLocation;
+import com.clickeat.util.GeoPoint;
+import com.clickeat.util.MapRoutingUtil;
+import com.clickeat.util.ShippingFeeUtil;
+import com.clickeat.util.ShippingQuote;
 import com.clickeat.util.VnpayUtil;
-
+import java.io.IOException;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -45,20 +42,14 @@ import jakarta.servlet.http.HttpSession;
 @WebServlet(name = "CheckoutServlet", urlPatterns = {"/checkout"})
 public class CheckoutServlet extends HttpServlet {
 
-    private static final double DEFAULT_BASE_SHIPPING_FEE = 10000;
-    private static final double DEFAULT_PER_KM_FEE = 5000;
-    private static final double DEFAULT_PLATFORM_FEE = 3000;
-    private static final double DEFAULT_MAX_DELIVERY_KM = 12;
-    private static final double DEFAULT_INCLUDED_DISTANCE_KM = 1;
-
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
         HttpSession session = request.getSession();
         User account = (User) session.getAttribute("account");
-        Boolean guestVerified = (Boolean) session.getAttribute("guest_verified");
-        String guestId = resolveGuestId(session);
+        Boolean guestVerified = (Boolean) session.getAttribute("guestVerified");
+        String guestId = (String) session.getAttribute("guestId");
 
         if (account == null && (guestVerified == null || !guestVerified)) {
             response.sendRedirect(request.getContextPath() + "/guest-checkout");
@@ -70,6 +61,7 @@ public class CheckoutServlet extends HttpServlet {
         FoodItemDAO foodDAO = new FoodItemDAO();
         AddressDAO addressDAO = new AddressDAO();
         VoucherDAO voucherDAO = new VoucherDAO();
+        MerchantProfileDAO merchantProfileDAO = new MerchantProfileDAO();
 
         Cart cart;
         int customerId = 0;
@@ -103,56 +95,16 @@ public class CheckoutServlet extends HttpServlet {
             subTotal += item.getQuantity() * item.getUnitPriceSnapshot();
         }
 
-        Double requestLatitude = parseCoordinate(request.getParameter("shippingLat"));
-        Double requestLongitude = parseCoordinate(request.getParameter("shippingLng"));
-        Double sessionHomeLatitude = parseCoordinate(stringSession(session, "customer_home_latitude"));
-        Double sessionHomeLongitude = parseCoordinate(stringSession(session, "customer_home_longitude"));
-        Double cookieHomeLatitude = parseCoordinate(readCookie(request, "ce_home_lat"));
-        Double cookieHomeLongitude = parseCoordinate(readCookie(request, "ce_home_lng"));
-
-        Double customerLatitude = null;
-        Double customerLongitude = null;
-
-        if (requestLatitude != null && requestLongitude != null) {
-            customerLatitude = requestLatitude;
-            customerLongitude = requestLongitude;
-        } else if (sessionHomeLatitude != null && sessionHomeLongitude != null) {
-            customerLatitude = sessionHomeLatitude;
-            customerLongitude = sessionHomeLongitude;
-        } else if (cookieHomeLatitude != null && cookieHomeLongitude != null) {
-            customerLatitude = cookieHomeLatitude;
-            customerLongitude = cookieHomeLongitude;
-        } else if (defaultAddress != null) {
-            if (defaultAddress.getLatitude() != 0) {
-                customerLatitude = defaultAddress.getLatitude();
-            }
-            if (defaultAddress.getLongitude() != 0) {
-                customerLongitude = defaultAddress.getLongitude();
-            }
-        } else {
-            customerLatitude = parseCoordinate(stringSession(session, "guest_latitude"));
-            customerLongitude = parseCoordinate(stringSession(session, "guest_longitude"));
+        MerchantProfile merchant = null;
+        if (cart.getMerchantUserId() != null) {
+            merchant = merchantProfileDAO.findById(cart.getMerchantUserId());
         }
 
-        if (customerLatitude != null && customerLongitude != null) {
-            session.setAttribute("customer_home_latitude", String.valueOf(customerLatitude));
-            session.setAttribute("customer_home_longitude", String.valueOf(customerLongitude));
-        }
-
-        ShippingQuote shippingQuote = calculateShippingQuote(cart.getMerchantUserId(), customerLatitude, customerLongitude);
-        double deliveryFee = shippingQuote.deliveryFee;
+        DeliveryLocation deliveryLocation = resolveCheckoutDeliveryLocation(session, account, defaultAddress);
 
         String shippingAddress = request.getParameter("shippingAddress");
         if (shippingAddress == null || shippingAddress.isBlank()) {
-            shippingAddress = request.getParameter("addressLine");
-        }
-        if (shippingAddress == null || shippingAddress.isBlank()) {
-            if (account != null) {
-                shippingAddress = buildFullAddress(defaultAddress);
-            } else {
-                Object guestAddress = session.getAttribute("guest_address");
-                shippingAddress = guestAddress == null ? "" : guestAddress.toString();
-            }
+            shippingAddress = deliveryLocation.getAddress();
         }
 
         String note = request.getParameter("note");
@@ -160,42 +112,74 @@ public class CheckoutServlet extends HttpServlet {
             note = "";
         }
 
-        List<Voucher> availableVouchers = voucherDAO.getAvailableVouchersForCustomer(account != null ? customerId : 0);
-        List<Voucher> validVouchersForThisOrder = new ArrayList<>();
-        if (availableVouchers != null) {
-            for (Voucher v : availableVouchers) {
-                if (v.getMerchantUserId() == null || v.getMerchantUserId().equals(cart.getMerchantUserId())) {
-                    if (v.getMinOrderAmount() == null || subTotal >= v.getMinOrderAmount()) {
-                        validVouchersForThisOrder.add(v);
+        ShippingQuote shippingQuote = buildShippingQuoteForView(deliveryLocation, shippingAddress, merchant);
+        double deliveryFee = shippingQuote.getFee() > 0 ? shippingQuote.getFee() : 15000;
+
+        String voucherCode = request.getParameter("voucherCode");
+        Voucher appliedVoucher = null;
+        double discountAmount = 0;
+        String voucherMessage = null;
+        String voucherError = null;
+
+        if (voucherCode != null) {
+            voucherCode = voucherCode.trim();
+        }
+
+        if (voucherCode != null && !voucherCode.isEmpty()) {
+            Integer merchantId = cart.getMerchantUserId();
+
+            if (account == null) {
+                voucherError = "Bạn cần đăng nhập và lưu voucher vào kho trước khi áp dụng.";
+            } else if (merchantId == null || merchantId <= 0) {
+                voucherError = "Không xác định được nhà hàng của giỏ hàng.";
+            } else {
+                CustomerVoucherDAO customerVoucherDAO = new CustomerVoucherDAO();
+                CustomerVoucher savedVoucher = customerVoucherDAO.findSavedVoucherForCheckout(account.getId(), merchantId, voucherCode);
+
+                if (savedVoucher == null) {
+                    voucherError = "Mã voucher không nằm trong kho voucher của bạn, đã hết hạn hoặc không thuộc cửa hàng này.";
+                } else {
+                    Voucher voucher = voucherDAO.findPublicActiveById(savedVoucher.getVoucherId());
+
+                    if (voucher == null) {
+                        voucherError = "Voucher không còn tồn tại trên hệ thống.";
+                    } else if (voucher.getMinOrderAmount() != null && subTotal < voucher.getMinOrderAmount()) {
+                        voucherError = "Đơn hàng chưa đạt giá trị tối thiểu để áp dụng voucher.";
+                    } else if (voucher.getMaxUsesTotal() != null
+                            && voucher.getUsedOrderCount() >= voucher.getMaxUsesTotal()) {
+                        voucherError = "Voucher đã hết lượt sử dụng.";
+                    } else if (voucher.getMaxUsesPerUser() != null) {
+                        int usedByUser = voucherDAO.countUsageByVoucherAndCustomer(voucher.getId(), account.getId());
+                        if (usedByUser >= voucher.getMaxUsesPerUser()) {
+                            voucherError = "Bạn đã sử dụng hết số lượt cho voucher này.";
+                        } else {
+                            appliedVoucher = voucher;
+                        }
+                    } else {
+                        appliedVoucher = voucher;
+                    }
+
+                    if (appliedVoucher != null) {
+                        discountAmount = calculateDiscount(appliedVoucher, subTotal);
+
+                        if (discountAmount > 0) {
+                            voucherMessage = "Áp dụng voucher thành công từ kho voucher của bạn: " + voucherCode;
+                        } else {
+                            voucherError = "Voucher hợp lệ nhưng không áp dụng được cho đơn hàng này.";
+                        }
                     }
                 }
             }
         }
-
-        request.setAttribute("availableVouchers", validVouchersForThisOrder);
-
-        double discountAmount = 0; // Calculated on client-side (JS) and verified on POST
-        String voucherCode = "";
-        Voucher appliedVoucher = null;
-        String voucherMessage = null;
-        String voucherError = null;
 
         double totalAmount = subTotal + deliveryFee - discountAmount;
         if (totalAmount < 0) {
             totalAmount = 0;
         }
 
-        VoucherSuggestion suggestedVoucher = suggestBestVoucher(validVouchersForThisOrder, subTotal);
-
         request.setAttribute("checkoutItems", checkoutItems);
         request.setAttribute("subTotal", subTotal);
         request.setAttribute("deliveryFee", deliveryFee);
-        request.setAttribute("baseShippingFee", shippingQuote.baseFee);
-        request.setAttribute("distanceSurcharge", shippingQuote.distanceSurcharge);
-        request.setAttribute("platformFee", shippingQuote.platformFee);
-        request.setAttribute("distanceKm", shippingQuote.distanceKm);
-        request.setAttribute("deliveryBlocked", shippingQuote.deliveryBlocked);
-        request.setAttribute("deliveryError", shippingQuote.message);
         request.setAttribute("discountAmount", discountAmount);
         request.setAttribute("totalAmount", totalAmount);
 
@@ -207,59 +191,48 @@ public class CheckoutServlet extends HttpServlet {
         request.setAttribute("shippingAddress", shippingAddress);
         request.setAttribute("note", note);
         request.setAttribute("defaultAddress", defaultAddress);
-        request.setAttribute("shippingLat", customerLatitude);
-        request.setAttribute("shippingLng", customerLongitude);
+        request.setAttribute("merchantProfile", merchant);
+        request.setAttribute("deliverySource", deliveryLocation.getSource());
 
-        if (suggestedVoucher != null) {
-            request.setAttribute("suggestedVoucher", suggestedVoucher.voucher);
-            request.setAttribute("suggestedDiscount", suggestedVoucher.discountAmount);
-
-            if (suggestedVoucher.voucher.getMinOrderAmount() != null
-                    && subTotal < suggestedVoucher.voucher.getMinOrderAmount()
-                    && cart.getMerchantUserId() != null
-                    && cart.getMerchantUserId() > 0) {
-                double amountToUnlock = suggestedVoucher.voucher.getMinOrderAmount() - subTotal;
-                List<FoodItem> merchantFoods = foodDAO.findStoreFoodsPaged(
-                        cart.getMerchantUserId(),
-                        null,
-                        null,
-                        null,
-                        "price_asc",
-                        1,
-                        30
-                );
-
-                Set<Integer> existingFoodIds = new HashSet<>();
-                for (CartItem item : checkoutItems) {
-                    existingFoodIds.add(item.getFoodItemId());
-                }
-
-                List<FoodItem> upsellFoods = new ArrayList<>();
-                for (FoodItem f : merchantFoods) {
-                    if (f == null || existingFoodIds.contains(f.getId())) {
-                        continue;
-                    }
-                    upsellFoods.add(f);
-                    if (upsellFoods.size() >= 3) {
-                        break;
-                    }
-                }
-
-                if (!upsellFoods.isEmpty()) {
-                    request.setAttribute("upsellFoods", upsellFoods);
-                    request.setAttribute("upsellTargetAmount", amountToUnlock);
-                    request.setAttribute("upsellMerchantId", cart.getMerchantUserId());
-                }
-            }
-        }
+        request.setAttribute("shippingDistanceKm", shippingQuote.getDistanceKm());
+        request.setAttribute("shippingDurationMinutes", shippingQuote.getDurationMinutes());
+        request.setAttribute("shippingQuoteMessage", shippingQuote.getMessage());
+        request.setAttribute("shippingQuoteFromApi", shippingQuote.isFromApi());
 
         if (account != null) {
             request.setAttribute("user", account);
+
+            String displayFullName = account.getFullName();
+            String displayPhone = account.getPhone();
+
+            if (defaultAddress != null) {
+                if (defaultAddress.getReceiverName() != null && !defaultAddress.getReceiverName().isBlank()) {
+                    displayFullName = defaultAddress.getReceiverName();
+                }
+                if (defaultAddress.getReceiverPhone() != null && !defaultAddress.getReceiverPhone().isBlank()) {
+                    displayPhone = defaultAddress.getReceiverPhone();
+                }
+            }
+
+            request.setAttribute("displayFullName", displayFullName);
+            request.setAttribute("displayEmail", account.getEmail());
+            request.setAttribute("displayPhone", displayPhone);
+            request.setAttribute("displayAddress", shippingAddress);
         } else {
-            request.setAttribute("guestFullName", session.getAttribute("guest_fullName"));
-            request.setAttribute("guestEmail", session.getAttribute("guest_email"));
-            request.setAttribute("guestPhone", session.getAttribute("guest_phone"));
-            request.setAttribute("guestAddress", session.getAttribute("guest_address"));
+            String guestFullName = stringSession(session, "guestFullName");
+            String guestEmail = stringSession(session, "guestEmail");
+            String guestPhone = stringSession(session, "guestPhone");
+            String guestAddress = stringSession(session, "guestAddress");
+
+            request.setAttribute("guestFullName", guestFullName);
+            request.setAttribute("guestEmail", guestEmail);
+            request.setAttribute("guestPhone", guestPhone);
+            request.setAttribute("guestAddress", guestAddress);
+
+            request.setAttribute("displayFullName", guestFullName);
+            request.setAttribute("displayEmail", guestEmail);
+            request.setAttribute("displayPhone", guestPhone);
+            request.setAttribute("displayAddress", shippingAddress);
         }
 
         request.setAttribute("foodDAO", foodDAO);
@@ -274,8 +247,8 @@ public class CheckoutServlet extends HttpServlet {
 
         HttpSession session = request.getSession();
         User account = (User) session.getAttribute("account");
-        Boolean guestVerified = (Boolean) session.getAttribute("guest_verified");
-        String guestId = resolveGuestId(session);
+        Boolean guestVerified = (Boolean) session.getAttribute("guestVerified");
+        String guestId = (String) session.getAttribute("guestId");
 
         if (account == null && (guestVerified == null || !guestVerified)) {
             response.sendRedirect(request.getContextPath() + "/guest-checkout");
@@ -285,20 +258,13 @@ public class CheckoutServlet extends HttpServlet {
         String addressLineInput = request.getParameter("addressLine");
         String paymentMethod = request.getParameter("paymentMethod");
         String note = request.getParameter("note");
-        Double requestLatitude = parseCoordinate(request.getParameter("shippingLat"));
-        Double requestLongitude = parseCoordinate(request.getParameter("shippingLng"));
-        Double sessionHomeLatitude = parseCoordinate(stringSession(session, "customer_home_latitude"));
-        Double sessionHomeLongitude = parseCoordinate(stringSession(session, "customer_home_longitude"));
-        Double cookieHomeLatitude = parseCoordinate(readCookie(request, "ce_home_lat"));
-        Double cookieHomeLongitude = parseCoordinate(readCookie(request, "ce_home_lng"));
 
         if (paymentMethod == null || paymentMethod.isBlank()) {
-            paymentMethod = account != null ? "COD" : "VNPAY";
+            paymentMethod = "COD";
         }
 
-        // Guest chỉ được phép thanh toán VNPAY — không có tiền mặt
-        if (account == null && !"VNPAY".equalsIgnoreCase(paymentMethod)) {
-            paymentMethod = "VNPAY";
+        if (note == null) {
+            note = "";
         }
 
         AddressDAO addressDAO = new AddressDAO();
@@ -320,6 +286,8 @@ public class CheckoutServlet extends HttpServlet {
 
         if (account != null) {
             defaultAddress = addressDAO.findDefaultByUserId(account.getId());
+            DeliveryLocation deliveryLocation = resolveCheckoutDeliveryLocation(session, account, defaultAddress);
+
             receiverName = account.getFullName();
             receiverPhone = account.getPhone();
 
@@ -329,17 +297,6 @@ public class CheckoutServlet extends HttpServlet {
                 }
                 if (defaultAddress.getReceiverPhone() != null && !defaultAddress.getReceiverPhone().isBlank()) {
                     receiverPhone = defaultAddress.getReceiverPhone();
-                }
-
-                if (defaultAddress.getAddressLine() != null && !defaultAddress.getAddressLine().isBlank()) {
-                    deliveryAddressLine = defaultAddress.getAddressLine();
-                }
-
-                if (addressLineInput != null && !addressLineInput.isBlank()) {
-                    String fullDefaultAddress = buildFullAddress(defaultAddress);
-                    if (!addressLineInput.equals(fullDefaultAddress)) {
-                        deliveryAddressLine = addressLineInput.trim();
-                    }
                 }
 
                 if (defaultAddress.getProvinceCode() != null && !defaultAddress.getProvinceCode().isBlank()) {
@@ -360,52 +317,43 @@ public class CheckoutServlet extends HttpServlet {
                 if (defaultAddress.getWardName() != null && !defaultAddress.getWardName().isBlank()) {
                     wardName = defaultAddress.getWardName();
                 }
-
-                if (defaultAddress.getLatitude() != 0) {
-                    latitude = defaultAddress.getLatitude();
-                }
-                if (defaultAddress.getLongitude() != 0) {
-                    longitude = defaultAddress.getLongitude();
-                }
             }
 
-            if (requestLatitude != null && requestLongitude != null) {
-                latitude = requestLatitude;
-                longitude = requestLongitude;
-            } else if (sessionHomeLatitude != null && sessionHomeLongitude != null) {
-                latitude = sessionHomeLatitude;
-                longitude = sessionHomeLongitude;
-            } else if (cookieHomeLatitude != null && cookieHomeLongitude != null) {
-                latitude = cookieHomeLatitude;
-                longitude = cookieHomeLongitude;
+            if (deliveryLocation != null && deliveryLocation.getAddress() != null && !deliveryLocation.getAddress().isBlank()) {
+                deliveryAddressLine = deliveryLocation.getAddress();
             }
+
+            if (addressLineInput != null && !addressLineInput.isBlank()) {
+                deliveryAddressLine = addressLineInput.trim();
+            }
+
+            if (deliveryLocation != null && deliveryLocation.getLatitude() != null && deliveryLocation.getLatitude() != 0) {
+                latitude = deliveryLocation.getLatitude();
+            }
+            if (deliveryLocation != null && deliveryLocation.getLongitude() != null && deliveryLocation.getLongitude() != 0) {
+                longitude = deliveryLocation.getLongitude();
+            }
+
         } else {
-            receiverName = stringSession(session, "guest_fullName");
-            receiverPhone = stringSession(session, "guest_phone");
+            receiverName = stringSession(session, "guestFullName");
+            receiverPhone = stringSession(session, "guestPhone");
 
-            Object guestAddress = session.getAttribute("guest_address");
-            if ((deliveryAddressLine == null || deliveryAddressLine.isBlank()) && guestAddress != null) {
-                deliveryAddressLine = guestAddress.toString();
+            DeliveryLocation deliveryLocation = resolveCheckoutDeliveryLocation(session, null, null);
+
+            if (deliveryLocation != null && deliveryLocation.getAddress() != null && !deliveryLocation.getAddress().isBlank()) {
+                deliveryAddressLine = deliveryLocation.getAddress();
             }
 
-            if (requestLatitude != null && requestLongitude != null) {
-                latitude = requestLatitude;
-                longitude = requestLongitude;
-            } else if (sessionHomeLatitude != null && sessionHomeLongitude != null) {
-                latitude = sessionHomeLatitude;
-                longitude = sessionHomeLongitude;
-            } else if (cookieHomeLatitude != null && cookieHomeLongitude != null) {
-                latitude = cookieHomeLatitude;
-                longitude = cookieHomeLongitude;
-            } else {
-                latitude = parseCoordinate(stringSession(session, "guest_latitude"));
-                longitude = parseCoordinate(stringSession(session, "guest_longitude"));
+            if (addressLineInput != null && !addressLineInput.isBlank()) {
+                deliveryAddressLine = addressLineInput.trim();
             }
-        }
 
-        if (latitude != null && longitude != null) {
-            session.setAttribute("customer_home_latitude", String.valueOf(latitude));
-            session.setAttribute("customer_home_longitude", String.valueOf(longitude));
+            if (deliveryLocation != null && deliveryLocation.getLatitude() != null && deliveryLocation.getLatitude() != 0) {
+                latitude = deliveryLocation.getLatitude();
+            }
+            if (deliveryLocation != null && deliveryLocation.getLongitude() != null && deliveryLocation.getLongitude() != 0) {
+                longitude = deliveryLocation.getLongitude();
+            }
         }
 
         if (deliveryAddressLine == null || deliveryAddressLine.isBlank()) {
@@ -421,6 +369,8 @@ public class CheckoutServlet extends HttpServlet {
         PaymentTransactionDAO paymentTransactionDAO = new PaymentTransactionDAO();
         FoodItemDAO foodDAO = new FoodItemDAO();
         VoucherDAO voucherDAO = new VoucherDAO();
+        CustomerVoucherDAO customerVoucherDAO = new CustomerVoucherDAO();
+        MerchantProfileDAO merchantProfileDAO = new MerchantProfileDAO();
 
         Cart cart;
         if (account != null) {
@@ -452,55 +402,94 @@ public class CheckoutServlet extends HttpServlet {
             subTotal += item.getQuantity() * item.getUnitPriceSnapshot();
         }
 
-        ShippingQuote shippingQuote = calculateShippingQuote(cart.getMerchantUserId(), latitude, longitude);
-        if (shippingQuote.deliveryBlocked) {
-            session.setAttribute("toastError", shippingQuote.message);
-            response.sendRedirect(request.getContextPath() + "/checkout");
-            return;
+        MerchantProfile merchant = null;
+        if (cart.getMerchantUserId() != null) {
+            merchant = merchantProfileDAO.findById(cart.getMerchantUserId());
         }
 
-        double deliveryFee = shippingQuote.deliveryFee;
+        GeoPoint customerPoint = null;
+        if (latitude != null && longitude != null && latitude != 0 && longitude != 0) {
+            customerPoint = new GeoPoint(latitude, longitude);
+        } else if (deliveryAddressLine != null && !deliveryAddressLine.isBlank()) {
+            GeoPoint geocoded = MapRoutingUtil.geocodeAddress(deliveryAddressLine);
+            if (geocoded != null && geocoded.isValid()) {
+                customerPoint = geocoded;
+                latitude = geocoded.getLatitude();
+                longitude = geocoded.getLongitude();
+            }
+        }
 
-        // Re-validate voucher server-side (never trust client-side discountAmount)
-        String[] voucherCodesPost = request.getParameterValues("voucherCodes");
+        ShippingQuote shippingQuote = buildShippingQuote(customerPoint, merchant);
+        double deliveryFee = shippingQuote.getFee() > 0 ? shippingQuote.getFee() : 15000;
         double discountAmount = 0;
-        List<Voucher> appliedVouchers = new ArrayList<>();
 
-        if (voucherCodesPost != null && voucherCodesPost.length > 0 && cart.getMerchantUserId() != null && cart.getMerchantUserId() > 0) {
-            List<String> codesList = java.util.Arrays.asList(voucherCodesPost);
-            List<Voucher> vouchers = voucherDAO.findValidVouchersByCodes(cart.getMerchantUserId(), codesList);
+        String voucherCode = request.getParameter("voucherCode");
+        if (voucherCode != null) {
+            voucherCode = voucherCode.trim();
+        }
 
-            int merchantVoucherCount = 0;
-            int systemVoucherCount = 0;
+        Voucher appliedVoucher = null;
 
-            for (Voucher voucher : vouchers) {
-                if ("SYSTEM".equalsIgnoreCase(voucher.getVoucherType())) {
-                    if (systemVoucherCount >= 1) {
-                        continue;
-                    }
-                    systemVoucherCount++;
-                } else {
-                    if (merchantVoucherCount >= 1) {
-                        continue;
-                    }
-                    merchantVoucherCount++;
-                }
+        if (voucherCode != null && !voucherCode.isEmpty()) {
+            if (account == null) {
+                session.setAttribute("toastError", "Khách chưa đăng nhập không thể dùng voucher đã lưu.");
+                response.sendRedirect(request.getContextPath() + "/checkout");
+                return;
+            }
 
-                if ((voucher.getMinOrderAmount() == null || subTotal >= voucher.getMinOrderAmount())
-                        && (voucher.getMaxUsesTotal() == null || voucher.getUsedOrderCount() < voucher.getMaxUsesTotal())) {
-                    boolean perUserOk = true;
-                    if (account != null && voucher.getMaxUsesPerUser() != null) {
-                        int usedByUser = voucherDAO.countUsageByVoucherAndCustomer(voucher.getId(), account.getId());
-                        perUserOk = usedByUser < voucher.getMaxUsesPerUser();
-                    }
-                    if (perUserOk) {
-                        appliedVouchers.add(voucher);
-                        discountAmount += calculateDiscount(voucher, subTotal);
-                    }
+            Integer merchantId = cart.getMerchantUserId();
+            if (merchantId == null || merchantId <= 0) {
+                session.setAttribute("toastError", "Không xác định được cửa hàng của giỏ hàng.");
+                response.sendRedirect(request.getContextPath() + "/checkout");
+                return;
+            }
+
+            CustomerVoucher savedVoucher = customerVoucherDAO.findSavedVoucherForCheckout(
+                    account.getId(), merchantId, voucherCode
+            );
+
+            if (savedVoucher == null) {
+                session.setAttribute("toastError", "Voucher không nằm trong kho của bạn hoặc không còn hợp lệ.");
+                response.sendRedirect(request.getContextPath() + "/checkout");
+                return;
+            }
+
+            Voucher voucher = voucherDAO.findById(savedVoucher.getVoucherId());
+            if (voucher == null) {
+                session.setAttribute("toastError", "Voucher không tồn tại.");
+                response.sendRedirect(request.getContextPath() + "/checkout");
+                return;
+            }
+
+            if (voucher.getMinOrderAmount() != null && subTotal < voucher.getMinOrderAmount()) {
+                session.setAttribute("toastError", "Đơn hàng chưa đạt mức tối thiểu để dùng voucher.");
+                response.sendRedirect(request.getContextPath() + "/checkout");
+                return;
+            }
+
+            if (voucher.getMaxUsesTotal() != null
+                    && voucher.getUsedOrderCount() >= voucher.getMaxUsesTotal()) {
+                session.setAttribute("toastError", "Voucher đã hết lượt sử dụng.");
+                response.sendRedirect(request.getContextPath() + "/checkout");
+                return;
+            }
+
+            if (voucher.getMaxUsesPerUser() != null) {
+                int usedByUser = voucherDAO.countUsageByVoucherAndCustomer(voucher.getId(), account.getId());
+                if (usedByUser >= voucher.getMaxUsesPerUser()) {
+                    session.setAttribute("toastError", "Bạn đã dùng hết số lượt của voucher này.");
+                    response.sendRedirect(request.getContextPath() + "/checkout");
+                    return;
                 }
             }
-            if (discountAmount > subTotal) {
-                discountAmount = subTotal;
+
+            appliedVoucher = voucher;
+            discountAmount = calculateDiscount(appliedVoucher, subTotal);
+
+            if (discountAmount <= 0) {
+                session.setAttribute("toastError", "Voucher không áp dụng được cho đơn hàng này.");
+                response.sendRedirect(request.getContextPath() + "/checkout");
+                return;
             }
         }
 
@@ -544,6 +533,10 @@ public class CheckoutServlet extends HttpServlet {
         order.setDiscountAmount(discountAmount);
         order.setTotalAmount(totalAmount);
 
+        if (appliedVoucher != null) {
+            order.setVoucherId(appliedVoucher.getId());
+        }
+
         if ("VNPAY".equalsIgnoreCase(paymentMethod)) {
             order.setPaymentStatus("PENDING");
             order.setOrderStatus("PENDING_PAYMENT");
@@ -552,9 +545,16 @@ public class CheckoutServlet extends HttpServlet {
             order.setOrderStatus("CREATED");
         }
 
-        List<OrderItem> orderItems = new ArrayList<>();
+        int orderId = orderDAO.insert(order);
+        if (orderId <= 0) {
+            session.setAttribute("toastError", "Không thể tạo đơn hàng.");
+            response.sendRedirect(request.getContextPath() + "/checkout");
+            return;
+        }
+
         for (CartItem c : cartItems) {
             OrderItem oi = new OrderItem();
+            oi.setOrderId(orderId);
             oi.setFoodItemId(c.getFoodItemId());
 
             String itemName = "";
@@ -570,268 +570,61 @@ public class CheckoutServlet extends HttpServlet {
             oi.setUnitPriceSnapshot(c.getUnitPriceSnapshot());
             oi.setQuantity(c.getQuantity());
             oi.setNote(c.getNote());
-            oi.setSelectedSize(c.getSelectedSize());
-            oi.setSelectedToppings(c.getSelectedToppings());
-            oi.setOptionExtraPrice(c.getOptionExtraPrice());
-            orderItems.add(oi);
-        }
-
-        int orderId;
-        String paymentUrl = null;
-        try (Connection conn = DBContext.getConnection()) {
-            conn.setAutoCommit(false);
-
-            orderId = orderDAO.insert(conn, order);
-            if (orderId <= 0) {
-                conn.rollback();
-                session.setAttribute("toastError", "Không thể tạo đơn hàng.");
-                response.sendRedirect(request.getContextPath() + "/checkout");
-                return;
-            }
-
-            for (OrderItem item : orderItems) {
-                item.setOrderId(orderId);
-            }
-            int[] batchResults = orderItemDAO.insertBatch(conn, orderItems);
-            if (orderItemDAO.hasBatchFailure(batchResults)) {
-                conn.rollback();
-                session.setAttribute("toastError", "Không thể lưu chi tiết đơn hàng. Vui lòng thử lại.");
-                response.sendRedirect(request.getContextPath() + "/checkout");
-                return;
-            }
-
-            if (!appliedVouchers.isEmpty()) {
-                int customerId = account != null ? account.getId() : 0;
-                for (Voucher voucher : appliedVouchers) {
-                    boolean usageRecorded = voucherDAO.validateAndRecordUsage(
-                            conn,
-                            voucher.getId(),
-                            cart.getMerchantUserId(),
-                            orderId,
-                            customerId,
-                            guestId,
-                            subTotal
-                    );
-                    if (!usageRecorded) {
-                        conn.rollback();
-                        session.setAttribute("toastError", "Voucher " + voucher.getCode() + " vừa hết lượt hoặc không còn hợp lệ. Vui lòng thử lại.");
-                        response.sendRedirect(request.getContextPath() + "/checkout");
-                        return;
-                    }
-                }
-            }
-
-            if ("VNPAY".equalsIgnoreCase(paymentMethod)) {
-                String vnpTxnRef = "VNP_" + orderId + "_" + System.currentTimeMillis();
-
-                Map<String, String> vnpParams = new LinkedHashMap<>();
-                Date now = new Date();
-                Date expire = VnpayUtil.addMinutes(now, 15);
-
-                vnpParams.put("vnp_Version", VnpayConfig.VNP_VERSION);
-                vnpParams.put("vnp_Command", VnpayConfig.VNP_COMMAND);
-                vnpParams.put("vnp_TmnCode", VnpayConfig.VNP_TMN_CODE);
-                vnpParams.put("vnp_Amount", String.valueOf((long) (totalAmount * 100)));
-                vnpParams.put("vnp_CurrCode", VnpayConfig.VNP_CURR_CODE);
-                vnpParams.put("vnp_TxnRef", vnpTxnRef);
-                vnpParams.put("vnp_OrderInfo", "Thanh toan don hang " + order.getOrderCode());
-                vnpParams.put("vnp_OrderType", VnpayConfig.VNP_ORDER_TYPE);
-                vnpParams.put("vnp_Locale", VnpayConfig.VNP_LOCALE);
-                vnpParams.put("vnp_ReturnUrl", VnpayConfig.VNP_RETURN_URL);
-                vnpParams.put("vnp_IpAddr", VnpayUtil.getIpAddress(request));
-                vnpParams.put("vnp_CreateDate", VnpayUtil.formatDate(now));
-                vnpParams.put("vnp_ExpireDate", VnpayUtil.formatDate(expire));
-
-                String signData = VnpayUtil.buildQuery(vnpParams, true);
-                String secureHash = VnpayUtil.hmacSHA512(VnpayConfig.VNP_HASH_SECRET, signData);
-                vnpParams.put("vnp_SecureHash", secureHash);
-
-                paymentUrl = VnpayConfig.VNP_PAY_URL + "?" + VnpayUtil.buildQuery(vnpParams, true);
-                int paymentInserted = paymentTransactionDAO.insertVnpay(
-                        conn,
-                        orderId,
-                        totalAmount,
-                        order.getOrderCode(),
-                        vnpTxnRef,
-                        paymentUrl
-                );
-                if (paymentInserted <= 0) {
-                    conn.rollback();
-                    session.setAttribute("toastError", "Không thể khởi tạo giao dịch VNPAY. Vui lòng thử lại.");
-                    response.sendRedirect(request.getContextPath() + "/checkout");
-                    return;
-                }
-            } else {
-                boolean cartCleared;
-                if (account != null) {
-                    cartCleared = cartDAO.clearActiveCartByCustomerId(conn, account.getId());
-                } else {
-                    cartCleared = cartDAO.clearActiveCartByGuestId(conn, guestId);
-                }
-
-                if (!cartCleared) {
-                    conn.rollback();
-                    session.setAttribute("toastError", "Không thể cập nhật giỏ hàng sau khi tạo đơn. Vui lòng thử lại.");
-                    response.sendRedirect(request.getContextPath() + "/checkout");
-                    return;
-                }
-            }
-
-            conn.commit();
-        } catch (SQLException ex) {
-            session.setAttribute("toastError", "Đặt hàng thất bại do lỗi hệ thống. Vui lòng thử lại.");
-            response.sendRedirect(request.getContextPath() + "/checkout");
-            return;
+            orderItemDAO.insert(oi);
         }
 
         if ("VNPAY".equalsIgnoreCase(paymentMethod)) {
+            String vnpTxnRef = "VNP_" + orderId + "_" + System.currentTimeMillis();
+
+            Map<String, String> vnpParams = new LinkedHashMap<>();
+            Date now = new Date();
+            Date expire = VnpayUtil.addMinutes(now, 15);
+
+            vnpParams.put("vnp_Version", VnpayConfig.VNP_VERSION);
+            vnpParams.put("vnp_Command", VnpayConfig.VNP_COMMAND);
+            vnpParams.put("vnp_TmnCode", VnpayConfig.VNP_TMN_CODE);
+            vnpParams.put("vnp_Amount", String.valueOf((long) (totalAmount * 100)));
+            vnpParams.put("vnp_CurrCode", VnpayConfig.VNP_CURR_CODE);
+            vnpParams.put("vnp_TxnRef", vnpTxnRef);
+            vnpParams.put("vnp_OrderInfo", "Thanh toan don hang " + order.getOrderCode());
+            vnpParams.put("vnp_OrderType", VnpayConfig.VNP_ORDER_TYPE);
+            vnpParams.put("vnp_Locale", VnpayConfig.VNP_LOCALE);
+            vnpParams.put("vnp_ReturnUrl", VnpayConfig.VNP_RETURN_URL);
+            vnpParams.put("vnp_IpAddr", VnpayUtil.getIpAddress(request));
+            vnpParams.put("vnp_CreateDate", VnpayUtil.formatDate(now));
+            vnpParams.put("vnp_ExpireDate", VnpayUtil.formatDate(expire));
+
+            String signData = VnpayUtil.buildQuery(vnpParams, true);
+            String secureHash = VnpayUtil.hmacSHA512(VnpayConfig.VNP_HASH_SECRET, signData);
+            vnpParams.put("vnp_SecureHash", secureHash);
+
+            String paymentUrl = VnpayConfig.VNP_PAY_URL + "?" + VnpayUtil.buildQuery(vnpParams, true);
+
+            paymentTransactionDAO.insertVnpay(
+                    orderId,
+                    totalAmount,
+                    order.getOrderCode(),
+                    vnpTxnRef,
+                    paymentUrl
+            );
+
             response.sendRedirect(paymentUrl);
             return;
         }
 
-        NotificationDAO notificationDAO = new NotificationDAO();
-        if (account != null) {
-            notificationDAO.createForUser(account.getId(), "ORDER", "Đơn #" + order.getOrderCode() + " đã được tạo thành công.");
+        if (appliedVoucher != null && account != null) {
+            voucherDAO.insertUsage(appliedVoucher.getId(), orderId, account.getId(), null);
+            customerVoucherDAO.markUsed(account.getId(), appliedVoucher.getId());
         }
-        if (order.getMerchantId() > 0) {
-            notificationDAO.createForUser(order.getMerchantId(), "ORDER", "Bạn có đơn mới #" + order.getOrderCode() + ".");
+
+        if (account != null) {
+            cartDAO.clearActiveCartByCustomerId(account.getId());
+        } else {
+            cartDAO.clearActiveCartByGuestId(guestId);
         }
 
         session.setAttribute("toastMsg", "Đặt hàng thành công.");
         response.sendRedirect(request.getContextPath() + "/payment-success?orderId=" + orderId);
-    }
-
-    private ShippingQuote calculateShippingQuote(Integer merchantUserId, Double customerLatitude, Double customerLongitude) {
-        double baseFee = getConfigDouble("clickeat.shipping.baseFee", DEFAULT_BASE_SHIPPING_FEE);
-        double perKmFee = getConfigDouble("clickeat.shipping.perKmFee", DEFAULT_PER_KM_FEE);
-        double platformFee = getConfigDouble("clickeat.shipping.platformFee", DEFAULT_PLATFORM_FEE);
-        double maxDistanceKm = getConfigDouble("clickeat.shipping.maxDistanceKm", DEFAULT_MAX_DELIVERY_KM);
-        double includedDistanceKm = getConfigDouble("clickeat.shipping.includedDistanceKm", DEFAULT_INCLUDED_DISTANCE_KM);
-
-        ShippingQuote quote = new ShippingQuote();
-        quote.baseFee = Math.max(0, baseFee);
-        quote.platformFee = Math.max(0, platformFee);
-        quote.distanceSurcharge = 0;
-        quote.distanceKm = null;
-        quote.deliveryBlocked = false;
-
-        if (merchantUserId == null || merchantUserId <= 0) {
-            quote.deliveryFee = quote.baseFee + quote.platformFee;
-            quote.message = "Không xác định được nhà hàng để tính phí giao hàng.";
-            return quote;
-        }
-
-        MerchantProfile merchant = new MerchantDAO().getMerchantByUserId(merchantUserId);
-        if (merchant == null || merchant.getLatitude() == null || merchant.getLongitude() == null
-                || merchant.getLatitude() == 0 || merchant.getLongitude() == 0
-                || customerLatitude == null || customerLongitude == null) {
-            quote.deliveryFee = quote.baseFee + quote.platformFee;
-            quote.message = "Chưa đủ tọa độ để tính khoảng cách chính xác, hệ thống tạm áp dụng phí mặc định.";
-            return quote;
-        }
-
-        double distanceKm = haversineDistanceKm(
-                merchant.getLatitude(),
-                merchant.getLongitude(),
-                customerLatitude,
-                customerLongitude
-        );
-
-        quote.distanceKm = distanceKm;
-        if (maxDistanceKm > 0 && distanceKm > maxDistanceKm) {
-            quote.deliveryBlocked = true;
-            quote.deliveryFee = 0;
-            quote.message = String.format(
-                    "Địa chỉ giao hàng cách quán %.1f km, vượt giới hạn giao tối đa %.1f km.",
-                    distanceKm,
-                    maxDistanceKm
-            );
-            return quote;
-        }
-
-        double extraDistance = Math.max(0, distanceKm - Math.max(0, includedDistanceKm));
-        double chargedKm = Math.ceil(extraDistance);
-        quote.distanceSurcharge = chargedKm * Math.max(0, perKmFee);
-        quote.deliveryFee = quote.baseFee + quote.distanceSurcharge + quote.platformFee;
-        quote.message = null;
-        return quote;
-    }
-
-    private VoucherSuggestion suggestBestVoucher(List<Voucher> vouchers, double subTotal) {
-        if (subTotal <= 0 || vouchers == null || vouchers.isEmpty()) {
-            return null;
-        }
-
-        Voucher bestVoucher = null;
-        double bestDiscount = 0;
-
-        for (Voucher voucher : vouchers) {
-            if (voucher == null) {
-                continue;
-            }
-
-            double discount = calculateDiscount(voucher, subTotal);
-            if (discount > bestDiscount) {
-                bestDiscount = discount;
-                bestVoucher = voucher;
-            }
-        }
-
-        if (bestVoucher == null || bestDiscount <= 0) {
-            return null;
-        }
-
-        VoucherSuggestion suggestion = new VoucherSuggestion();
-        suggestion.voucher = bestVoucher;
-        suggestion.discountAmount = bestDiscount;
-        return suggestion;
-    }
-
-    private double getConfigDouble(String key, double defaultValue) {
-        String value = System.getProperty(key);
-        if (value == null || value.isBlank()) {
-            String envKey = key.toUpperCase().replace('.', '_');
-            value = System.getenv(envKey);
-        }
-        if (value == null || value.isBlank()) {
-            return defaultValue;
-        }
-        try {
-            return Double.parseDouble(value.trim());
-        } catch (NumberFormatException ex) {
-            return defaultValue;
-        }
-    }
-
-    private double haversineDistanceKm(double lat1, double lon1, double lat2, double lon2) {
-        double earthRadiusKm = 6371.0;
-        double latRad1 = Math.toRadians(lat1);
-        double latRad2 = Math.toRadians(lat2);
-        double deltaLat = Math.toRadians(lat2 - lat1);
-        double deltaLon = Math.toRadians(lon2 - lon1);
-
-        double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2)
-                + Math.cos(latRad1) * Math.cos(latRad2)
-                * Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return earthRadiusKm * c;
-    }
-
-    private static class ShippingQuote {
-
-        private double baseFee;
-        private double distanceSurcharge;
-        private double platformFee;
-        private double deliveryFee;
-        private Double distanceKm;
-        private boolean deliveryBlocked;
-        private String message;
-    }
-
-    private static class VoucherSuggestion {
-
-        private Voucher voucher;
-        private double discountAmount;
     }
 
     private String buildFullAddress(Address address) {
@@ -871,47 +664,70 @@ public class CheckoutServlet extends HttpServlet {
         return value == null ? "" : value.toString();
     }
 
-    private String resolveGuestId(HttpSession session) {
-        if (session == null) {
-            return null;
-        }
-
-        String guestId = (String) session.getAttribute("guest_id");
-        if (guestId == null || guestId.isBlank()) {
-            guestId = (String) session.getAttribute("guestId");
-        }
-
-        if (guestId != null && !guestId.isBlank()) {
-            session.setAttribute("guest_id", guestId);
-            session.setAttribute("guestId", guestId);
-            return guestId;
-        }
-
-        return null;
+    private String stringValue(Object value) {
+        return value == null ? null : value.toString();
     }
 
-    private Double parseCoordinate(String value) {
-        if (value == null || value.isBlank()) {
+    private Double toDouble(Object value) {
+        if (value == null) {
             return null;
+        }
+        if (value instanceof Double) {
+            return (Double) value;
+        }
+        if (value instanceof Number) {
+            return ((Number) value).doubleValue();
         }
         try {
-            return Double.parseDouble(value.trim());
-        } catch (NumberFormatException ex) {
+            return Double.parseDouble(value.toString());
+        } catch (Exception e) {
             return null;
         }
     }
 
-    private String readCookie(HttpServletRequest request, String name) {
-        Cookie[] cookies = request.getCookies();
-        if (cookies == null || name == null) {
-            return null;
-        }
-        for (Cookie cookie : cookies) {
-            if (name.equals(cookie.getName())) {
-                return cookie.getValue();
+    private DeliveryLocation resolveCheckoutDeliveryLocation(HttpSession session, User account, Address defaultAddress) {
+        Double sessionLat = toDouble(session.getAttribute("currentDeliveryLat"));
+        Double sessionLng = toDouble(session.getAttribute("currentDeliveryLng"));
+        String sessionAddress = stringValue(session.getAttribute("currentDeliveryAddress"));
+        String sessionSource = stringValue(session.getAttribute("currentDeliverySource"));
+
+        if (account != null && "CUSTOMER".equalsIgnoreCase(account.getRole())) {
+            if (sessionLat != null && sessionLng != null && sessionLat != 0 && sessionLng != 0) {
+                return new DeliveryLocation(
+                        sessionLat,
+                        sessionLng,
+                        (sessionAddress == null || sessionAddress.isBlank()) ? "Vị trí hiện tại" : sessionAddress,
+                        (sessionSource == null || sessionSource.isBlank()) ? "GPS" : sessionSource
+                );
+            }
+
+            if (defaultAddress != null
+                    && defaultAddress.getLatitude() != 0
+                    && defaultAddress.getLongitude() != 0) {
+                return new DeliveryLocation(
+                        defaultAddress.getLatitude(),
+                        defaultAddress.getLongitude(),
+                        buildFullAddress(defaultAddress),
+                        "DEFAULT_ADDRESS"
+                );
             }
         }
-        return null;
+
+        if (sessionLat != null && sessionLng != null && sessionLat != 0 && sessionLng != 0) {
+            return new DeliveryLocation(
+                    sessionLat,
+                    sessionLng,
+                    (sessionAddress == null || sessionAddress.isBlank()) ? "Vị trí hiện tại" : sessionAddress,
+                    (sessionSource == null || sessionSource.isBlank()) ? "GPS" : sessionSource
+            );
+        }
+
+        String guestAddress = stringSession(session, "guestAddress");
+        if (guestAddress != null && !guestAddress.isBlank()) {
+            return new DeliveryLocation(null, null, guestAddress, "GUEST_ADDRESS");
+        }
+
+        return new DeliveryLocation(null, null, "", "NONE");
     }
 
     private double calculateDiscount(Voucher voucher, double subTotal) {
@@ -944,5 +760,52 @@ public class CheckoutServlet extends HttpServlet {
         }
 
         return discount;
+    }
+
+    private ShippingQuote buildShippingQuoteForView(DeliveryLocation deliveryLocation,
+            String shippingAddress, MerchantProfile merchant) {
+
+        GeoPoint customerPoint = null;
+
+        if (deliveryLocation != null
+                && deliveryLocation.getLatitude() != null
+                && deliveryLocation.getLongitude() != null
+                && deliveryLocation.getLatitude() != 0
+                && deliveryLocation.getLongitude() != 0) {
+            customerPoint = new GeoPoint(deliveryLocation.getLatitude(), deliveryLocation.getLongitude());
+        }
+
+        if (customerPoint == null && shippingAddress != null && !shippingAddress.isBlank()) {
+            GeoPoint geocoded = MapRoutingUtil.geocodeAddress(shippingAddress);
+            if (geocoded != null && geocoded.isValid()) {
+                customerPoint = geocoded;
+            }
+        }
+
+        return buildShippingQuote(customerPoint, merchant);
+    }
+
+    private ShippingQuote buildShippingQuote(GeoPoint customerPoint, MerchantProfile merchant) {
+        if (merchant == null || merchant.getLatitude() == null || merchant.getLongitude() == null
+                || merchant.getLatitude() == 0 || merchant.getLongitude() == 0) {
+            ShippingQuote quote = new ShippingQuote();
+            quote.setAvailable(false);
+            quote.setFromApi(false);
+            quote.setFee(15000);
+            quote.setMessage("Quán chưa có tọa độ, đang dùng phí giao mặc định.");
+            return quote;
+        }
+
+        if (customerPoint == null || !customerPoint.isValid()) {
+            ShippingQuote quote = new ShippingQuote();
+            quote.setAvailable(false);
+            quote.setFromApi(false);
+            quote.setFee(15000);
+            quote.setMessage("Chưa xác định được vị trí giao hàng, đang dùng phí giao mặc định.");
+            return quote;
+        }
+
+        GeoPoint merchantPoint = new GeoPoint(merchant.getLatitude(), merchant.getLongitude());
+        return ShippingFeeUtil.buildQuote(customerPoint, merchantPoint);
     }
 }

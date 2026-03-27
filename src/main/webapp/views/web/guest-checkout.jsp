@@ -6,15 +6,8 @@
         <meta charset="UTF-8">
         <title>Đặt hàng nhanh - ClickEat</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/responsive-global.css">
         <link rel="icon" type="image/png" href="${pageContext.request.contextPath}/logo-icon.png?v=2">
         <script src="https://cdn.tailwindcss.com"></script>
-          <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-              integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-              crossorigin=""/>
-                <script>window.MAP4D_API_KEY = window.MAP4D_API_KEY || '${initParam["map4d.api.key"]}';</script>
-                <script>window.MAP4D_TILE_URL_TEMPLATE = window.MAP4D_TILE_URL_TEMPLATE || '${initParam["map4d.tile.url.template"]}';</script>
-                <script src="${pageContext.request.contextPath}/assets/js/map4d-api.js"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     </head>
     <body class="bg-[#f7f5f3] text-gray-900 min-h-screen flex flex-col">
@@ -33,7 +26,9 @@
                     Đặt hàng nhanh
                 </div>
                 <h1 class="mt-4 text-4xl font-black tracking-tight">Thông tin giao hàng</h1>
-                <p class="mt-2 text-gray-500 text-lg">Nhập thông tin cần thiết và xác thực OTP để tiếp tục thanh toán mà không cần đăng nhập.</p>
+                <p class="mt-2 text-gray-500 text-lg">
+                    Nhập thông tin cần thiết và xác thực OTP để tiếp tục thanh toán mà không cần đăng nhập.
+                </p>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 bg-white rounded-[32px] overflow-hidden border border-[#eee4dc] shadow-[0_18px_45px_rgba(15,23,42,.08)]">
@@ -61,13 +56,20 @@
                         </div>
                     </c:if>
 
-                    <c:if test="${not empty error}">
+                    <c:if test="${not empty error and not otpSent}">
                         <div class="mb-4 rounded-2xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 font-semibold">
                             ${error}
                         </div>
                     </c:if>
 
-                    <form action="${pageContext.request.contextPath}/guest-send-otp" method="post" class="space-y-4">
+                    <c:if test="${not empty debugError}">
+                        <div class="mb-4 rounded-2xl border border-yellow-300 bg-yellow-50 text-yellow-800 px-4 py-3">
+                            <div><strong>Debug:</strong> ${debugError}</div>
+                            <div class="mt-1"><strong>SĐT chuẩn hoá:</strong> ${normalizedPhone}</div>
+                        </div>
+                    </c:if>
+
+                    <form action="${pageContext.request.contextPath}/guest-send-otp" method="post" class="space-y-4" id="sendOtpForm">
                         <div>
                             <label class="block text-sm font-bold text-gray-800 mb-2">Họ và tên</label>
                             <input type="text" name="fullName" value="${fullName}" required
@@ -88,60 +90,75 @@
 
                         <div>
                             <label class="block text-sm font-bold text-gray-800 mb-2">Địa chỉ giao hàng</label>
-                            <textarea id="guestAddressLine" name="addressLine" required rows="4"
+                            <textarea name="addressLine" required rows="4"
                                       class="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 resize-none">${addressLine}</textarea>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-bold text-gray-800 mb-2">Tìm vị trí bằng bản đồ</label>
-                            <div class="flex gap-2 mb-2">
-                                <input type="text"
-                                       id="guestMapSearchInput"
-                                       placeholder="Tìm địa chỉ gần bạn..."
-                                       class="flex-1 h-12 px-4 rounded-2xl border border-gray-200 bg-white outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400">
-                                <button type="button"
-                                        id="guestMapSearchBtn"
-                                        class="px-4 rounded-2xl bg-gray-900 hover:bg-black text-white font-bold">
-                                    Tìm
-                                </button>
-                            </div>
-                            <div id="guestNearbyWrap" class="mb-2 hidden">
-                                <p class="text-xs font-semibold text-gray-500 mb-1">Địa chỉ gợi ý gần bạn</p>
-                                <div id="guestNearbyList" class="flex flex-wrap gap-2"></div>
-                            </div>
-                            <div id="guestLeafletMap" class="w-full h-56 rounded-2xl border border-gray-200 overflow-hidden"></div>
-                            <p id="guestMapHint" class="mt-2 text-xs text-gray-500">Chọn điểm trên bản đồ để điền nhanh địa chỉ giao hàng.</p>
-                            <input type="hidden" id="guestShippingLat" name="shippingLat" value="${shippingLat}">
-                            <input type="hidden" id="guestShippingLng" name="shippingLng" value="${shippingLng}">
-                        </div>
-
-                        <button type="submit"
-                                class="w-full h-12 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-black shadow">
-                            Gửi mã OTP
+                        <button type="submit" id="sendOtpBtn"
+                                class="w-full h-12 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-black shadow transition disabled:opacity-60 disabled:cursor-not-allowed">
+                            <c:choose>
+                                <c:when test="${otpSent}">Đã gửi mã OTP</c:when>
+                                <c:when test="${canResendOtp}">Gửi lại mã OTP</c:when>
+                                <c:otherwise>Gửi mã OTP</c:otherwise>
+                            </c:choose>
                         </button>
                     </form>
 
                     <c:if test="${otpSent}">
-                        <form action="${pageContext.request.contextPath}/guest-verify-otp" method="post"
-                              class="mt-6 space-y-4 border-t border-gray-100 pt-6">
-                            <input type="hidden" name="fullName" value="${fullName}">
-                            <input type="hidden" name="email" value="${email}">
-                            <input type="hidden" name="phone" value="${phone}">
-                            <input type="hidden" name="addressLine" value="${addressLine}">
-                            <input type="hidden" name="shippingLat" id="otpShippingLat" value="${shippingLat}">
-                            <input type="hidden" name="shippingLng" id="otpShippingLng" value="${shippingLng}">
+                        <div class="mt-8 border-t border-gray-100 pt-6">
+                            <h3 class="text-3xl md:text-4xl leading-tight font-black text-[#111827]">Nhập mã xác minh</h3>
 
-                            <div>
-                                <label class="block text-sm font-bold text-gray-800 mb-2">Nhập mã OTP</label>
-                                <input type="text" name="otpCode" required maxlength="6" placeholder="Nhập mã gồm 6 số"
-                                       class="w-full h-12 px-4 rounded-2xl border border-gray-200 bg-white outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400">
+                            <p class="mt-3 text-base md:text-lg text-gray-500">
+                                Mã OTP đã được gửi đến:
+                                <span class="font-black text-[#1f2937]">${phone}</span>
+                            </p>
+
+                            <div id="otpTimerBox"
+                                 class="mt-4 inline-flex items-center gap-2 px-4 py-3 rounded-full bg-[#fff3eb] text-[#ea580c] font-black text-lg md:text-xl">
+                                <i class="fa-regular fa-clock text-lg md:text-xl"></i>
+                                <span>Còn lại: <span id="otpCountdown">02:00</span></span>
                             </div>
 
-                            <button type="submit"
-                                    class="w-full h-12 rounded-full bg-gray-900 hover:bg-black text-white font-black shadow">
-                                Tiếp tục thanh toán
-                            </button>
-                        </form>
+                            <form action="${pageContext.request.contextPath}/guest-verify-otp" method="post"
+                                  id="verifyOtpForm"
+                                  class="mt-6 space-y-4">
+                                <input type="hidden" name="fullName" value="${not empty fullName ? fullName : guestFullName}">
+                                <input type="hidden" name="email" value="${not empty email ? email : guestEmail}">
+                                <input type="hidden" name="phone" value="${not empty phone ? phone : guestPhone}">
+                                <input type="hidden" name="addressLine" value="${not empty addressLine ? addressLine : guestAddress}">
+
+                                <div>
+                                    <label class="block text-base md:text-lg font-black text-[#1f2937] mb-3">Mã xác minh 6 số</label>
+
+                                    <input type="text"
+                                           name="otpCode"
+                                           id="otpCode"
+                                           maxlength="6"
+                                           inputmode="numeric"
+                                           autocomplete="one-time-code"
+                                           placeholder="000000"
+                                           class="w-full h-16 md:h-[72px] px-4 rounded-[24px] border-2 border-orange-200 bg-[#fffaf5]
+                                           text-center text-3xl md:text-4xl font-black tracking-[0.22em] text-[#111827]
+                                           outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400
+                                           placeholder:text-gray-400">
+
+                                    <p id="otpInlineError"
+                                       class="mt-2 text-sm font-semibold text-red-600 ${not empty error and otpSent ? '' : 'hidden'}">
+                                        <c:if test="${not empty error and otpSent}">${error}</c:if>
+                                        </p>
+
+                                        <p class="mt-2 text-sm text-gray-500">
+                                            Mã OTP chỉ có hiệu lực trong 2 phút.
+                                        </p>
+                                    </div>
+
+                                    <button type="submit"
+                                            id="verifyOtpBtn"
+                                            class="w-full h-12 rounded-full bg-[#0f172a] hover:bg-black text-white text-base md:text-lg font-black shadow transition disabled:opacity-60 disabled:cursor-not-allowed">
+                                        Tiếp tục thanh toán
+                                    </button>
+                                </form>
+                            </div>
                     </c:if>
                 </div>
             </div>
@@ -149,216 +166,170 @@
 
         <jsp:include page="footer.jsp" />
 
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-                integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-                crossorigin=""></script>
+        <c:if test="${otpSent and not empty otpExpiresAt}">
+            <script>
+                window.otpExpiresAt = ${otpExpiresAt};
+            </script>
+        </c:if>
+
         <script>
-            let guestMap;
-            let guestMarker;
+            document.addEventListener("DOMContentLoaded", function () {
+                const sendBtn = document.getElementById("sendOtpBtn");
+                const verifyBtn = document.getElementById("verifyOtpBtn");
+                const otpInput = document.getElementById("otpCode");
+                const countdownEl = document.getElementById("otpCountdown");
+                const inlineError = document.getElementById("otpInlineError");
+                const verifyForm = document.getElementById("verifyOtpForm");
 
-            function syncGuestOtpHidden() {
-                const address = document.getElementById('guestAddressLine');
-                const lat = document.getElementById('guestShippingLat');
-                const lng = document.getElementById('guestShippingLng');
-                const otpAddress = document.querySelector('input[name="addressLine"][type="hidden"]');
-                const otpLat = document.getElementById('otpShippingLat');
-                const otpLng = document.getElementById('otpShippingLng');
-
-                if (address && otpAddress) {
-                    otpAddress.value = address.value;
+            <c:if test="${otpSent}">
+                if (sendBtn) {
+                    sendBtn.disabled = true;
                 }
-                if (lat && otpLat) {
-                    otpLat.value = lat.value;
-                }
-                if (lng && otpLng) {
-                    otpLng.value = lng.value;
-                }
-            }
+            </c:if>
 
-            function setGuestLocation(lat, lng, addressText, moveMap) {
-                const address = document.getElementById('guestAddressLine');
-                const latInput = document.getElementById('guestShippingLat');
-                const lngInput = document.getElementById('guestShippingLng');
+                if (otpInput) {
+                    otpInput.addEventListener("input", function () {
+                        this.value = this.value.replace(/\D/g, "").slice(0, 6);
 
-                if (latInput) {
-                    latInput.value = Number(lat).toFixed(7);
-                }
-                if (lngInput) {
-                    lngInput.value = Number(lng).toFixed(7);
-                }
-                if (addressText && address) {
-                    address.value = addressText;
-                }
-
-                if (guestMarker) {
-                    guestMarker.setLatLng([lat, lng]);
-                }
-                if (guestMap && moveMap) {
-                    guestMap.setView([lat, lng], Math.max(guestMap.getZoom(), 16));
-                }
-
-                syncGuestOtpHidden();
-            }
-
-            async function guestReverseGeocode(lat, lng) {
-                return ClickEatMap4D.reverse(lat, lng);
-            }
-
-            async function guestSearchAddress(keyword) {
-                return ClickEatMap4D.geocode(keyword, 5);
-            }
-
-            async function renderGuestNearby(centerLat, centerLng) {
-                const wrap = document.getElementById('guestNearbyWrap');
-                const list = document.getElementById('guestNearbyList');
-                if (!wrap || !list) {
-                    return;
-                }
-
-                const offsets = [[0, 0], [0.002, 0], [0, 0.002]];
-                const suggestions = [];
-                for (const [dLat, dLng] of offsets) {
-                    try {
-                        const lat = centerLat + dLat;
-                        const lng = centerLng + dLng;
-                        const address = await guestReverseGeocode(lat, lng);
-                        if (address) {
-                            suggestions.push({lat, lng, address});
+                        if (inlineError) {
+                            inlineError.textContent = "";
+                            inlineError.classList.add("hidden");
                         }
-                    } catch (e) {
-                    }
-                }
+                    });
 
-                list.innerHTML = '';
-                if (suggestions.length === 0) {
-                    wrap.classList.add('hidden');
-                    return;
-                }
+                    otpInput.addEventListener("paste", function (e) {
+                        e.preventDefault();
+                        const pasted = (e.clipboardData || window.clipboardData).getData("text");
+                        this.value = pasted.replace(/\D/g, "").slice(0, 6);
 
-                suggestions.forEach((item) => {
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'px-3 py-1.5 text-xs rounded-full border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100';
-                    btn.textContent = item.address.length > 45 ? item.address.substring(0, 45) + '...' : item.address;
-                    btn.title = item.address;
-                    btn.addEventListener('click', () => setGuestLocation(item.lat, item.lng, item.address, true));
-                    list.appendChild(btn);
-                });
-
-                wrap.classList.remove('hidden');
-            }
-
-            async function runGuestSearch() {
-                const input = document.getElementById('guestMapSearchInput');
-                const hint = document.getElementById('guestMapHint');
-                if (!input || !input.value.trim()) {
-                    return;
-                }
-
-                try {
-                    const results = await guestSearchAddress(input.value.trim());
-                    if (!results || results.length === 0) {
-                        if (hint) {
-                            hint.textContent = 'Không tìm thấy địa chỉ phù hợp.';
-                        }
-                        return;
-                    }
-
-                    const first = results[0];
-                    const lat = parseFloat(first.lat);
-                    const lng = parseFloat(first.lng);
-                    setGuestLocation(lat, lng, first.display_name || input.value.trim(), true);
-                    renderGuestNearby(lat, lng);
-                    if (hint) {
-                        hint.textContent = 'Đã cập nhật địa chỉ từ kết quả tìm kiếm.';
-                    }
-                } catch (e) {
-                    if (hint) {
-                        hint.textContent = ClickEatMap4D.messageFromError(e, 'Tìm kiếm tạm lỗi, vui lòng thử lại.');
-                    }
-                }
-            }
-
-            function initGuestMap() {
-                const mapEl = document.getElementById('guestLeafletMap');
-                if (!mapEl || typeof L === 'undefined') {
-                    return;
-                }
-
-                const latInput = document.getElementById('guestShippingLat');
-                const lngInput = document.getElementById('guestShippingLng');
-                const initialLat = latInput && latInput.value ? parseFloat(latInput.value) : 10.7769;
-                const initialLng = lngInput && lngInput.value ? parseFloat(lngInput.value) : 106.7009;
-
-                guestMap = L.map(mapEl).setView([initialLat, initialLng], 14);
-                ClickEatMap4D.addBaseTileLayer(guestMap, {
-                    attribution: '&copy; Map4D',
-                    fallbackAttribution: '&copy; OpenStreetMap',
-                    fallbackMaxZoom: 19
-                });
-
-                guestMarker = L.marker([initialLat, initialLng], {draggable: true}).addTo(guestMap);
-
-                guestMap.on('click', async function (event) {
-                    const lat = event.latlng.lat;
-                    const lng = event.latlng.lng;
-                    let address = '';
-                    try {
-                        address = await guestReverseGeocode(lat, lng);
-                    } catch (e) {
-                    }
-                    setGuestLocation(lat, lng, address, false);
-                });
-
-                guestMarker.on('dragend', async function () {
-                    const point = guestMarker.getLatLng();
-                    let address = '';
-                    try {
-                        address = await guestReverseGeocode(point.lat, point.lng);
-                    } catch (e) {
-                    }
-                    setGuestLocation(point.lat, point.lng, address, false);
-                });
-
-                const searchBtn = document.getElementById('guestMapSearchBtn');
-                const searchInput = document.getElementById('guestMapSearchInput');
-                if (searchBtn) {
-                    searchBtn.addEventListener('click', runGuestSearch);
-                }
-                if (searchInput) {
-                    searchInput.addEventListener('keydown', function (e) {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            runGuestSearch();
+                        if (inlineError) {
+                            inlineError.textContent = "";
+                            inlineError.classList.add("hidden");
                         }
                     });
                 }
 
-                const addressArea = document.getElementById('guestAddressLine');
-                if (addressArea) {
-                    addressArea.addEventListener('input', syncGuestOtpHidden);
-                }
+                if (verifyForm) {
+                    verifyForm.addEventListener("submit", async function (e) {
+                        e.preventDefault();
 
-                if (!(latInput && latInput.value && lngInput && lngInput.value) && navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(async function (position) {
-                        const lat = position.coords.latitude;
-                        const lng = position.coords.longitude;
-                        let address = '';
+                        if (inlineError) {
+                            inlineError.textContent = "";
+                            inlineError.classList.add("hidden");
+                        }
+
+                        const otpValue = otpInput ? otpInput.value.trim() : "";
+
+                        if (!otpValue) {
+                            showInlineError("Vui lòng nhập mã OTP.");
+                            return;
+                        }
+
+                        if (!/^\d{6}$/.test(otpValue)) {
+                            showInlineError("Mã OTP phải gồm đúng 6 chữ số.");
+                            return;
+                        }
+
+                        if (verifyBtn) {
+                            verifyBtn.disabled = true;
+                        }
+
                         try {
-                            address = await guestReverseGeocode(lat, lng);
-                        } catch (e) {
+                            const formData = new FormData(verifyForm);
+
+                            const response = await fetch(verifyForm.action, {
+                                method: "POST",
+                                body: formData,
+                                headers: {
+                                    "X-Requested-With": "XMLHttpRequest"
+                                }
+                            });
+
+                            const data = await response.json();
+
+                            if (data.success) {
+                                window.location.href = data.redirect;
+                                return;
+                            }
+
+                            if (data.message) {
+                                showInlineError(data.message);
+                            }
+
+                            if (data.expired) {
+                                if (otpInput) {
+                                    otpInput.disabled = true;
+                                    otpInput.value = "";
+                                    otpInput.placeholder = "000000";
+                                    otpInput.classList.add("opacity-60", "cursor-not-allowed");
+                                }
+
+                                if (verifyBtn) {
+                                    verifyBtn.disabled = true;
+                                }
+
+                                if (sendBtn) {
+                                    sendBtn.disabled = false;
+                                    sendBtn.textContent = "Gửi lại mã OTP";
+                                    sendBtn.classList.remove("opacity-60", "cursor-not-allowed");
+                                }
+                            }
+                        } catch (err) {
+                            showInlineError("Có lỗi xảy ra khi xác thực OTP. Vui lòng thử lại.");
+                        } finally {
+                            if (verifyBtn && !(otpInput && otpInput.disabled)) {
+                                verifyBtn.disabled = false;
+                            }
                         }
-                        setGuestLocation(lat, lng, address, true);
-                        renderGuestNearby(lat, lng);
                     });
-                } else {
-                    renderGuestNearby(initialLat, initialLng);
                 }
 
-                syncGuestOtpHidden();
-            }
+                if (window.otpExpiresAt && countdownEl) {
+                    const timer = setInterval(() => {
+                        const remain = window.otpExpiresAt - Date.now();
 
-            document.addEventListener('DOMContentLoaded', initGuestMap);
+                        if (remain <= 0) {
+                            clearInterval(timer);
+                            countdownEl.textContent = "00:00";
+
+                            if (otpInput) {
+                                otpInput.disabled = true;
+                                otpInput.value = "";
+                                otpInput.placeholder = "000000";
+                                otpInput.classList.add("opacity-60", "cursor-not-allowed");
+                            }
+
+                            if (verifyBtn) {
+                                verifyBtn.disabled = true;
+                            }
+
+                            if (sendBtn) {
+                                sendBtn.disabled = false;
+                                sendBtn.textContent = "Gửi lại mã OTP";
+                                sendBtn.classList.remove("opacity-60", "cursor-not-allowed");
+                            }
+
+                            if (inlineError) {
+                                inlineError.textContent = "Mã xác minh đã hết hạn. Vui lòng bấm Gửi lại mã OTP.";
+                                inlineError.classList.remove("hidden");
+                            }
+                            return;
+                        }
+
+                        const totalSeconds = Math.floor(remain / 1000);
+                        const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
+                        const seconds = String(totalSeconds % 60).padStart(2, "0");
+                        countdownEl.textContent = minutes + ":" + seconds;
+                    }, 1000);
+                }
+
+                function showInlineError(message) {
+                    if (inlineError) {
+                        inlineError.textContent = message;
+                        inlineError.classList.remove("hidden");
+                    }
+                }
+            });
         </script>
     </body>
 </html>

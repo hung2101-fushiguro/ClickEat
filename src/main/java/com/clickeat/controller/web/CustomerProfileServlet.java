@@ -6,6 +6,8 @@ import com.clickeat.dal.impl.UserDAO;
 import com.clickeat.model.Address;
 import com.clickeat.model.CustomerProfile;
 import com.clickeat.model.User;
+import com.clickeat.util.GeoPoint;
+import com.clickeat.util.MapRoutingUtil;
 import java.io.IOException;
 import java.util.regex.Pattern;
 import jakarta.servlet.ServletException;
@@ -212,6 +214,17 @@ public class CustomerProfileServlet extends HttpServlet {
 
         boolean updatedAddress = false;
         if (hasAnyAddressField) {
+            String fullAddress = buildFullAddress(addressLine, wardName, districtName, provinceName);
+            GeoPoint geo = MapRoutingUtil.geocodeAddress(fullAddress);
+
+            double latitude = 0;
+            double longitude = 0;
+
+            if (geo != null && geo.isValid()) {
+                latitude = geo.getLatitude();
+                longitude = geo.getLongitude();
+            }
+
             if (defaultAddress == null) {
                 Address newAddress = new Address();
                 newAddress.setUserId(account.getId());
@@ -224,6 +237,8 @@ public class CustomerProfileServlet extends HttpServlet {
                 newAddress.setDistrictName(districtName);
                 newAddress.setWardCode("");
                 newAddress.setWardName(wardName);
+                newAddress.setLatitude(latitude);
+                newAddress.setLongitude(longitude);
                 newAddress.setIsDefault(true);
                 newAddress.setNote(addressNote);
 
@@ -240,6 +255,8 @@ public class CustomerProfileServlet extends HttpServlet {
                 defaultAddress.setProvinceName(provinceName);
                 defaultAddress.setDistrictName(districtName);
                 defaultAddress.setWardName(wardName);
+                defaultAddress.setLatitude(latitude);
+                defaultAddress.setLongitude(longitude);
                 defaultAddress.setNote(addressNote);
 
                 updatedAddress = addressDAO.updateAddress(defaultAddress);
@@ -257,5 +274,33 @@ public class CustomerProfileServlet extends HttpServlet {
         }
 
         response.sendRedirect(request.getContextPath() + "/customer/profile");
+    }
+
+    private String buildFullAddress(String addressLine, String wardName, String districtName, String provinceName) {
+        StringBuilder sb = new StringBuilder();
+
+        if (!isBlank(addressLine)) {
+            sb.append(addressLine.trim());
+        }
+        if (!isBlank(wardName)) {
+            if (sb.length() > 0) {
+                sb.append(", ");
+            }
+            sb.append(wardName.trim());
+        }
+        if (!isBlank(districtName)) {
+            if (sb.length() > 0) {
+                sb.append(", ");
+            }
+            sb.append(districtName.trim());
+        }
+        if (!isBlank(provinceName)) {
+            if (sb.length() > 0) {
+                sb.append(", ");
+            }
+            sb.append(provinceName.trim());
+        }
+
+        return sb.toString();
     }
 }

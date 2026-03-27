@@ -3,17 +3,17 @@ package com.clickeat.config;
 import java.io.InputStream;
 import java.util.Properties;
 
-public class TwilioVerifyConfig {
+public class VonageVerifyConfig {
 
     private static final Properties APP_PROPS = loadAppProperties();
 
-    public static final String ACCOUNT_SID = readConfig("TWILIO_ACCOUNT_SID");
-    public static final String AUTH_TOKEN = readConfig("TWILIO_AUTH_TOKEN");
-    public static final String VERIFY_SERVICE_SID = readConfig("TWILIO_VERIFY_SERVICE_SID");
+    public static final String API_KEY = readConfig("VONAGE_API_KEY");
+    public static final String API_SECRET = readConfig("VONAGE_API_SECRET");
+    public static final String BRAND = readConfigWithDefault("VONAGE_BRAND", "ClickEat");
     public static final String OTP_MODE = readConfig("OTP_MODE");
     public static final String OTP_MOCK_CODE = readConfig("OTP_MOCK_CODE");
 
-    private TwilioVerifyConfig() {
+    private VonageVerifyConfig() {
     }
 
     private static String readConfig(String key) {
@@ -31,9 +31,14 @@ public class TwilioVerifyConfig {
         return fromEnv == null ? "" : fromEnv.trim();
     }
 
+    private static String readConfigWithDefault(String key, String defaultValue) {
+        String value = readConfig(key);
+        return value == null || value.isBlank() ? defaultValue : value;
+    }
+
     private static Properties loadAppProperties() {
         Properties props = new Properties();
-        try (InputStream in = TwilioVerifyConfig.class.getClassLoader().getResourceAsStream("application.properties")) {
+        try (InputStream in = VonageVerifyConfig.class.getClassLoader().getResourceAsStream("application.properties")) {
             if (in != null) {
                 props.load(in);
             }

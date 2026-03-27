@@ -19,7 +19,7 @@
                     <div class="flex items-center justify-between px-6 h-16 border-b">
                         <div class="flex items-center gap-3">
                             <h3 class="text-2xl font-extrabold text-gray-900">Giỏ hàng của bạn</h3>
-                            <span id="cartPopupCountBadge" class="bg-orange-50 text-orange-500 font-extrabold text-sm px-3 py-1 rounded-full">
+                            <span class="bg-orange-50 text-orange-500 font-extrabold text-sm px-3 py-1 rounded-full">
                                 <c:out value="${cartCount != null ? cartCount : 0}" /> món
                             </span>
                         </div>
@@ -46,7 +46,7 @@
                                     <input type="hidden" name="action" value="update" />
                                     <input type="hidden" name="removeId" id="removeId" value="" />
 
-                                    <div class="space-y-5" id="popupCartItemsList">
+                                    <div class="space-y-5">
                                         <c:forEach var="it" items="${cartItems}">
                                             <c:set var="itemId" value="${it.cartItemId}" />
 
@@ -69,9 +69,6 @@
                                                     <div class="flex items-start justify-between gap-3">
                                                         <div>
                                                             <div class="text-lg font-extrabold text-gray-900">${it.name}</div>
-                                                            <c:if test="${not empty it.optionSummary}">
-                                                                <div class="text-xs text-[#9d7d68] mt-0.5">${it.optionSummary}</div>
-                                                            </c:if>
                                                             <div class="text-orange-500 font-extrabold text-lg">
                                                                 <fmt:formatNumber value="${it.unitPrice}" type="number" />đ
                                                             </div>
@@ -128,7 +125,7 @@
                     <div class="px-6 py-5 border-t bg-white">
                         <div class="flex items-center justify-between mb-4">
                             <span class="text-gray-700 font-semibold">Tổng</span>
-                            <span id="cartPopupTotalText" class="text-gray-900 font-extrabold text-lg">
+                            <span class="text-gray-900 font-extrabold text-lg">
                                 <fmt:formatNumber value="${cartTotal}" type="number" />đ
                             </span>
                         </div>
@@ -249,84 +246,6 @@
                     updateForm.submit();
                 }
 
-                function fmtPriceVnd(n) {
-                    const value = Number(n || 0);
-                    return new Intl.NumberFormat('vi-VN').format(Math.round(value)) + 'đ';
-                }
-
-                function escHtml(s) {
-                    return String(s == null ? '' : s)
-                            .replace(/&/g, '&amp;')
-                            .replace(/</g, '&lt;')
-                            .replace(/>/g, '&gt;')
-                            .replace(/"/g, '&quot;');
-                }
-
-                function syncPopupCartFromPayload(payload) {
-                    if (!payload) {
-                        return;
-                    }
-
-                    const cartCount = Number(payload.cartCount || 0);
-                    const cartTotal = Number(payload.cartTotal || 0);
-                    const items = Array.isArray(payload.items) ? payload.items : [];
-
-                    const headerBadges = document.querySelectorAll('#cartBtn span');
-                    headerBadges.forEach(function (badge) {
-                        badge.textContent = cartCount;
-                    });
-
-                    const popupCount = document.getElementById('cartPopupCountBadge');
-                    if (popupCount) {
-                        popupCount.textContent = cartCount + ' món';
-                    }
-
-                    const popupTotal = document.getElementById('cartPopupTotalText');
-                    if (popupTotal) {
-                        popupTotal.textContent = fmtPriceVnd(cartTotal);
-                    }
-
-                    const popupList = document.getElementById('popupCartItemsList');
-                    if (!popupList) {
-                        return;
-                    }
-
-                    if (!items.length) {
-                        popupList.innerHTML = '<div class="min-h-[180px] flex items-center justify-center text-center px-6">'
-                                + '<p class="text-gray-600 font-semibold">Giỏ hàng đang trống, bạn hãy tiếp tục mua sắm</p>'
-                                + '</div>';
-                        return;
-                    }
-
-                    popupList.innerHTML = items.map(function (it) {
-                        const itemId = Number(it.id || 0);
-                        const quantity = Number(it.quantity || 0);
-                        const lineTotal = Number(it.lineTotal || 0);
-                        return '<div class="flex gap-4 border-b pb-5">'
-                                + '<div class="w-20 h-20 rounded-full bg-gray-100 shadow"></div>'
-                                + '<div class="flex-1">'
-                                + '<div class="flex items-start justify-between gap-3">'
-                                + '<div>'
-                                + '<div class="text-lg font-extrabold text-gray-900">' + escHtml(it.name) + '</div>'
-                                + (it.optionSummary ? '<div class="text-xs text-[#9d7d68] mt-0.5">' + escHtml(it.optionSummary) + '</div>' : '')
-                                + '<div class="text-orange-500 font-extrabold text-lg">' + fmtPriceVnd(lineTotal) + '</div>'
-                                + '</div>'
-                                + '<button type="button" class="text-gray-500 hover:text-red-500" onclick="removeItem(' + itemId + ')" aria-label="Xóa">'
-                                + '<i class="fa-regular fa-trash-can text-xl"></i>'
-                                + '</button>'
-                                + '</div>'
-                                + '<div class="mt-3 text-sm font-semibold text-gray-500">Số lượng: <span class="font-extrabold text-gray-900">' + quantity + '</span></div>'
-                                + '</div>'
-                                + '</div>';
-                    }).join('');
-
-                    if (btnUpdate) {
-                        btnUpdate.disabled = true;
-                        btnUpdate.classList.add('bg-gray-300', 'cursor-not-allowed');
-                        btnUpdate.classList.remove('bg-orange-500', 'hover:bg-orange-600');
-                    }
-                }
-
                 function removeItem(cartItemId) {
                     if (!updateForm)
                         return;
@@ -351,11 +270,6 @@
                 window.removeItem = removeItem;
                 window.markDirty = markDirty;
                 window.closeCart = closeCart;
-
-                window.addEventListener('ce-cart-updated', function (event) {
-                    const detail = event && event.detail ? event.detail : null;
-                    syncPopupCartFromPayload(detail);
-                });
             })();
         </script>
     </c:when>
@@ -365,8 +279,6 @@
         <html lang="vi">
             <head>
                 <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/responsive-global.css">
                 <title>Giỏ hàng của bạn - ClickEat</title>
                 <script src="https://cdn.tailwindcss.com"></script>
                 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -412,9 +324,6 @@
 
                                             <div class="flex-grow">
                                                 <h3 class="text-lg font-bold text-gray-900">${item.name}</h3>
-                                                <c:if test="${not empty item.optionSummary}">
-                                                    <p class="text-xs text-[#9d7d68] mt-0.5">${item.optionSummary}</p>
-                                                </c:if>
                                                 <p class="text-orange-500 font-bold">
                                                     <fmt:formatNumber value="${item.unitPrice}" type="number" />đ
                                                 </p>
