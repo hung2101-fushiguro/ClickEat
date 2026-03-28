@@ -1,0 +1,109 @@
+@startuml ClickEat_UseCase_Diagram
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle hollow
+
+actor "Guest" as Guest
+actor "Customer" as Customer
+actor "Merchant" as Merchant
+actor "Shipper" as Shipper
+actor "Admin" as Admin
+
+Customer -|> Guest : extends
+
+rectangle "ClickEat System" {
+  
+  usecase "Login / Register" as UC_Auth
+  usecase "Login with Google" as UC_GoogleAuth
+  usecase "Forgot Password" as UC_ForgotPassword
+  usecase "Register Role (Merchant/Shipper)" as UC_RegisterRole
+  
+  usecase "Browse/Search Stores & Menus" as UC_Browse
+  usecase "Chat with AI Assistant" as UC_AIChat
+  usecase "Filter & Recommend Stores" as UC_Recommend
+  usecase "Manage Cart" as UC_Cart
+  usecase "Guest Checkout" as UC_GuestCheckout
+  usecase "Customer Checkout" as UC_Checkout
+  usecase "Apply Voucher" as UC_ApplyVoucher
+  usecase "Online Payment (VNPay)" as UC_Payment
+  usecase "Track Order Status" as UC_TrackOrder
+  usecase "View Order History" as UC_OrderHistory
+  usecase "Manage Delivery Locations" as UC_DeliveryLoc
+  usecase "Manage Profile & Avatar" as UC_Profile
+
+  usecase "View Merchant Dashboard & Analytics" as UC_MDashboard
+  usecase "Manage Food Catalog (Menu/Dishes)" as UC_MCatalog
+  usecase "Manage Orders (Accept/Reject/Prepare)" as UC_MOrders
+  usecase "Manage Promotions/Vouchers" as UC_MPromotions
+  usecase "Manage Store Settings & Status" as UC_MSettings
+  usecase "Manage Wallet & Withdrawals" as UC_MWallet
+  usecase "View Customer Reviews" as UC_MReviews
+  usecase "Process Refunds" as UC_MRefunds
+  usecase "Chat with Customers/Shippers" as UC_MChat
+
+  usecase "View Shipper Dashboard & Earnings" as UC_SDashboard
+  usecase "Check & Accept New Orders" as UC_SNewOrders
+  usecase "Update Delivery Status" as UC_SStatus
+  usecase "Update Realtime Location" as UC_SLocation
+  usecase "Upload Proof of Delivery" as UC_SProof
+  usecase "Manage Wallet & Withdraw" as UC_SWallet
+  usecase "Report Delivery Issues" as UC_SReport
+
+  usecase "View System Dashboard" as UC_ADashboard
+  usecase "Manage Users (Ban/Unban/View)" as UC_AManageUsers
+  usecase "Export AI Training Data" as UC_AExportAI
+
+  ' KẾT NỐI TÀNG HÌNH KHÓA TRỤC NGANG
+  ' Khóa nhóm Use Case trái với Use Case phải để tránh vỡ biểu đồ thành 2 tầng trên/dưới do rời rạc
+  UC_Auth -[hidden]-> UC_MDashboard
+  UC_Browse -[hidden]-> UC_MCatalog
+  UC_Cart -[hidden]-> UC_MOrders
+  UC_Payment -[hidden]-> UC_MWallet
+  UC_DeliveryLoc -[hidden]-> UC_SLocation
+  UC_Profile -[hidden]-> UC_ADashboard
+}
+
+Guest -- UC_Auth
+Guest -- UC_GoogleAuth
+Guest -- UC_ForgotPassword
+Guest -- UC_Browse
+Guest -- UC_Recommend
+Guest -- UC_Cart
+Guest -- UC_GuestCheckout
+Guest -- UC_AIChat
+
+Customer -- UC_RegisterRole
+Customer -- UC_Checkout
+Customer -- UC_ApplyVoucher
+Customer -- UC_Payment
+Customer -- UC_TrackOrder
+Customer -- UC_OrderHistory
+Customer -- UC_DeliveryLoc
+Customer -- UC_Profile
+
+UC_Checkout ..> UC_ApplyVoucher : <<include>>
+UC_Checkout ..> UC_Payment : <<include>>
+
+UC_MDashboard -- Merchant
+UC_MCatalog -- Merchant
+UC_MOrders -- Merchant
+UC_MPromotions -- Merchant
+UC_MSettings -- Merchant
+UC_MWallet -- Merchant
+UC_MReviews -- Merchant
+UC_MRefunds -- Merchant
+UC_MChat -- Merchant
+
+UC_SDashboard -- Shipper
+UC_SNewOrders -- Shipper
+UC_SStatus -- Shipper
+UC_SLocation -- Shipper
+UC_SProof -- Shipper
+UC_SWallet -- Shipper
+UC_SReport -- Shipper
+
+UC_ADashboard -- Admin
+UC_AManageUsers -- Admin
+UC_AExportAI -- Admin
+
+@enduml

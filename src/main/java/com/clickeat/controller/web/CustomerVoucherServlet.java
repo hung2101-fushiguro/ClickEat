@@ -17,6 +17,43 @@ import jakarta.servlet.http.HttpSession;
 @WebServlet(name = "CustomerVoucherServlet", urlPatterns = {"/customer/vouchers"})
 public class CustomerVoucherServlet extends HttpServlet {
 
+    private boolean isAjaxRequest(HttpServletRequest request) {
+        String requestedWith = request.getHeader("X-Requested-With");
+        if (requestedWith != null && "XMLHttpRequest".equalsIgnoreCase(requestedWith.trim())) {
+            return true;
+        }
+
+        String accept = request.getHeader("Accept");
+        return accept != null && accept.toLowerCase().contains("application/json");
+    }
+
+    private String jsonEscape(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        return raw
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r");
+    }
+
+    private void respondSaveResult(HttpServletRequest request, HttpServletResponse response,
+            String returnUrl, HttpSession session, boolean success, String message) throws IOException {
+        if (isAjaxRequest(request)) {
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write("{\"success\":" + success + ",\"message\":\"" + jsonEscape(message) + "\"}");
+            return;
+        }
+
+        if (success) {
+            session.setAttribute("toastMsg", message);
+        } else {
+            session.setAttribute("toastError", message);
+        }
+        response.sendRedirect(request.getContextPath() + returnUrl);
+    }
+
     private User getLoggedCustomer(HttpServletRequest request, HttpServletResponse response) throws IOException {
         HttpSession session = request.getSession(false);
         if (session == null) {
@@ -82,14 +119,15 @@ public class CustomerVoucherServlet extends HttpServlet {
             return;
         }
 
+        HttpSession session = request.getSession();
         String voucherIdRaw = request.getParameter("voucherId");
         if (voucherIdRaw != null) {
             voucherIdRaw = voucherIdRaw.trim();
         }
 
         if (voucherIdRaw == null || voucherIdRaw.isBlank()) {
-            request.getSession().setAttribute("toastError", "Không tìm thấy voucher để lưu.");
-            response.sendRedirect(request.getContextPath() + returnUrl);
+            respondSaveResult(request, response, returnUrl, session, false,
+                    "Không tìm thấy voucher để lưu.");
             return;
         }
 
@@ -97,8 +135,8 @@ public class CustomerVoucherServlet extends HttpServlet {
         try {
             voucherId = Integer.parseInt(voucherIdRaw);
         } catch (NumberFormatException e) {
-            request.getSession().setAttribute("toastError", "Voucher không hợp lệ.");
-            response.sendRedirect(request.getContextPath() + returnUrl);
+            respondSaveResult(request, response, returnUrl, session, false,
+                    "Voucher không hợp lệ.");
             return;
         }
 
@@ -107,31 +145,31 @@ public class CustomerVoucherServlet extends HttpServlet {
 
         Voucher voucher = voucherDAO.findPublicActiveById(voucherId);
         if (voucher == null) {
-            request.getSession().setAttribute("toastError", "Voucher không tồn tại hoặc đã hết hạn.");
-            response.sendRedirect(request.getContextPath() + returnUrl);
+            respondSaveResult(request, response, returnUrl, session, false,
+                    "Voucher không tồn tại hoặc đã hết hạn.");
             return;
         }
 
         if (voucher.getCode() == null || voucher.getCode().isBlank()) {
-            request.getSession().setAttribute("toastError", "Voucher chưa có mã hợp lệ.");
-            response.sendRedirect(request.getContextPath() + returnUrl);
+            respondSaveResult(request, response, returnUrl, session, false,
+                    "Voucher chưa có mã hợp lệ.");
             return;
         }
 
         boolean alreadySaved = customerVoucherDAO.isSaved(account.getId(), voucherId);
         if (alreadySaved) {
-            request.getSession().setAttribute("toastMsg", "Voucher này đã có trong kho của bạn.");
-            response.sendRedirect(request.getContextPath() + returnUrl);
+            respondSaveResult(request, response, returnUrl, session, true,
+                    "Voucher này đã có trong kho của bạn.");
             return;
         }
 
         boolean ok = customerVoucherDAO.saveVoucher(account.getId(), voucherId, voucher.getCode().trim());
         if (ok) {
-            request.getSession().setAttribute("toastMsg", "Đã lưu voucher vào kho của bạn.");
+            respondSaveResult(request, response, returnUrl, session, true,
+                    "Đã lưu voucher vào kho của bạn.");
         } else {
-            request.getSession().setAttribute("toastError", "Không thể lưu voucher lúc này.");
+            respondSaveResult(request, response, returnUrl, session, false,
+                    "Không thể lưu voucher lúc này.");
         }
-
-        response.sendRedirect(request.getContextPath() + returnUrl);
     }
 }

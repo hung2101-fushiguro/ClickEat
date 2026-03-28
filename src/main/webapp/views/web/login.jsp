@@ -1,4 +1,4 @@
-<%@page contentType="text/html" pageEncoding="UTF-8"%>
+﻿<%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@taglib prefix="c" uri="jakarta.tags.core" %>
 <!DOCTYPE html>
 <html lang="vi">
@@ -441,9 +441,13 @@
                             Tiếp tục với Google
                         </button>
 
+                        <button class="btn google" type="button" onclick="location.href = '${pageContext.request.contextPath}/home'">
+                            Back to Home
+                        </button>
+
                         <div class="footer">
                             Chưa có tài khoản? <a class="link" href="${pageContext.request.contextPath}/register">Đăng ký</a><br/>
-                            <span class="small">Bạn là đối tác? <a class="link" href="${pageContext.request.contextPath}/merchant-login">Đăng nhập Merchant</a> · <a class="link" href="${pageContext.request.contextPath}/merchant-register">Đi tới Merchant</a></span>
+                            <span class="small">Bạn là đối tác? <a class="link" href="${pageContext.request.contextPath}/merchant-register">Đăng ký nhà hàng</a> · <a class="link" href="${pageContext.request.contextPath}/shipper/register">Đăng ký shipper</a></span>
                         </div>
                     </form>
                 </section>

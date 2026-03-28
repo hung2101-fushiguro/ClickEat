@@ -198,4 +198,62 @@ public class RatingDAO extends AbstractDAO<Rating> {
     public Rating findById(int id) {
         throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
     }
+
+    public boolean hasRatingForOrderAndTarget(long orderId, String targetType) {
+        String sql = "SELECT COUNT(*) FROM Ratings WHERE order_id = ? AND target_type = ?";
+        try (java.sql.Connection conn = getConnection(); java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, orderId);
+            ps.setString(2, targetType);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public boolean insertCustomerRating(Rating r) {
+        String sql = """
+        INSERT INTO Ratings (
+            order_id, rater_customer_id, rater_guest_id,
+            target_type, target_user_id, stars, comment
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """;
+        return update(sql,
+                r.getOrderId(),
+                r.getRaterCustomerId(),
+                r.getRaterGuestId(),
+                r.getTargetType(),
+                r.getTargetUserId(),
+                r.getStars(),
+                r.getComment()
+        ) > 0;
+    }
+
+    public List<Rating> getRatingsByOrderId(long orderId) {
+        String sql = """
+        SELECT r.*, u.full_name, o.order_code
+        FROM Ratings r
+        LEFT JOIN Users u ON r.rater_customer_id = u.id
+        LEFT JOIN Orders o ON r.order_id = o.id
+        WHERE r.order_id = ?
+        ORDER BY r.created_at ASC
+    """;
+        return query(sql, orderId);
+    }
+
+    public Rating getRatingByOrderAndTarget(long orderId, String targetType) {
+        String sql = """
+        SELECT r.*, u.full_name, o.order_code
+        FROM Ratings r
+        LEFT JOIN Users u ON r.rater_customer_id = u.id
+        LEFT JOIN Orders o ON r.order_id = o.id
+        WHERE r.order_id = ? AND r.target_type = ?
+    """;
+        return queryOne(sql, orderId, targetType);
+    }
 }

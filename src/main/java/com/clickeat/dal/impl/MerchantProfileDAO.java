@@ -846,4 +846,8 @@ public class MerchantProfileDAO extends AbstractDAO<MerchantProfile> {
         return update(fallbackSql, minOrderAmount, userId) > 0;
     }
 
+    public MerchantProfile findByMerchantUserId(int merchantUserId) {
+        String sql = "SELECT * FROM MerchantProfiles WHERE user_id = ?";
+        return queryOne(sql, merchantUserId);
+    }
 }

@@ -72,10 +72,10 @@ public class AuthFilter implements Filter {
         } // Customer-only paths
         else if (CUSTOMER_PROTECTED.contains(path)) {
             if (account == null || !"CUSTOMER".equalsIgnoreCase(account.getRole())) {
-                boolean isGuestCheckoutAllowed = path.equals("/checkout") 
-                        && session != null 
-                        && Boolean.TRUE.equals(session.getAttribute("guest_verified"));
-                
+                boolean isGuestCheckoutAllowed = path.equals("/checkout")
+                        && session != null
+                        && Boolean.TRUE.equals(session.getAttribute("guestVerified"));
+
                 if (!isGuestCheckoutAllowed) {
                     response.sendRedirect(request.getContextPath() + "/login");
                     return;

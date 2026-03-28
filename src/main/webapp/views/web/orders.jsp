@@ -1,4 +1,4 @@
-<%@page contentType="text/html" pageEncoding="UTF-8"%>
+﻿<%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@taglib prefix="c" uri="jakarta.tags.core" %>
 <%@taglib prefix="fmt" uri="jakarta.tags.fmt" %>
 
@@ -33,102 +33,331 @@
                     <jsp:param name="menu" value="orders" />
                 </jsp:include>
 
-                <section class="min-w-0 space-y-5">
-                    <c:choose>
-                        <c:when test="${empty orders}">
-                            <div class="bg-white border border-gray-200 rounded-[32px] p-10 text-center shadow-[0_10px_30px_rgba(15,23,42,.06)]">
-                                <div class="w-20 h-20 mx-auto rounded-full bg-orange-100 text-orange-500 flex items-center justify-center text-3xl">
-                                    <i class="fa-solid fa-bag-shopping"></i>
-                                </div>
-                                <h2 class="mt-5 text-2xl font-black">Bạn chưa có đơn hàng nào</h2>
-                                <p class="mt-2 text-gray-500">Hãy khám phá cửa hàng và đặt món đầu tiên của bạn.</p>
-                                <a href="${pageContext.request.contextPath}/store"
-                                   class="inline-flex mt-6 h-12 px-6 items-center justify-center rounded-full bg-orange-500 text-white font-extrabold hover:bg-orange-600 transition">
-                                    Đi tới cửa hàng
-                                </a>
+                <section class="min-w-0 space-y-8">
+
+                    <c:if test="${empty activeOrders and empty historyOrders}">
+                        <div class="bg-white border border-gray-200 rounded-[32px] p-10 text-center shadow-[0_10px_30px_rgba(15,23,42,.06)]">
+                            <div class="w-20 h-20 mx-auto rounded-full bg-orange-100 text-orange-500 flex items-center justify-center text-3xl">
+                                <i class="fa-solid fa-bag-shopping"></i>
                             </div>
-                        </c:when>
+                            <h2 class="mt-5 text-2xl font-black">Bạn chưa có đơn hàng nào</h2>
+                            <p class="mt-2 text-gray-500">Hãy khám phá cửa hàng và đặt món đầu tiên của bạn.</p>
+                            <a href="${pageContext.request.contextPath}/store"
+                               class="inline-flex mt-6 h-12 px-6 items-center justify-center rounded-full bg-orange-500 text-white font-extrabold hover:bg-orange-600 transition">
+                                Đi tới cửa hàng
+                            </a>
+                        </div>
+                    </c:if>
 
-                        <c:otherwise>
-                            <c:forEach var="o" items="${orders}">
-                                <div class="bg-white border border-gray-200 rounded-[28px] p-6 shadow-[0_10px_30px_rgba(15,23,42,.06)]">
-                                    <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
-                                        <div class="min-w-0">
-                                            <div class="flex items-center flex-wrap gap-3">
-                                                <h3 class="text-xl font-black text-gray-900 break-all">
-                                                    Đơn #<c:out value="${empty o.orderCode ? o.id : o.orderCode}" />
-                                                </h3>
+                    <c:if test="${not empty activeOrders}">
+                        <div>
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-11 h-11 rounded-2xl bg-orange-100 text-orange-500 flex items-center justify-center">
+                                    <i class="fa-solid fa-truck-fast"></i>
+                                </div>
+                                <div>
+                                    <h2 class="text-2xl font-black">Đơn đang xử lý</h2>
+                                    <p class="text-gray-500">Những đơn mới đặt hoặc đang giao sẽ hiển thị ở đây.</p>
+                                </div>
+                            </div>
 
-                                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold
-                                                      ${o.orderStatus == 'DELIVERED' ? 'bg-green-100 text-green-700' :
-                                                        o.orderStatus == 'CANCELLED' ? 'bg-red-100 text-red-600' :
-                                                        'bg-orange-100 text-orange-600'}">
-                                                      <c:out value="${empty o.orderStatus ? 'PENDING' : o.orderStatus}" />
-                                                </span>
-                                            </div>
+                            <div class="space-y-5">
+                                <c:forEach var="o" items="${activeOrders}">
+                                    <div class="bg-white border border-gray-200 rounded-[28px] p-6 shadow-[0_10px_30px_rgba(15,23,42,.06)]">
+                                        <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
+                                            <div class="min-w-0">
+                                                <div class="flex items-center flex-wrap gap-3">
+                                                    <h3 class="text-xl font-black text-gray-900 break-all">
+                                                        Đơn #<c:out value="${empty o.orderCode ? o.id : o.orderCode}" />
+                                                    </h3>
 
-                                            <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600">
-                                                <div>
-                                                    <span class="font-bold text-gray-800">Người nhận:</span>
-                                                    <c:out value="${empty o.receiverName ? 'Chưa có' : o.receiverName}" />
+                                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold bg-orange-100 text-orange-600">
+                                                        <c:out value="${empty o.orderStatus ? 'PENDING' : o.orderStatus}" />
+                                                    </span>
                                                 </div>
-                                                <div>
-                                                    <span class="font-bold text-gray-800">SĐT nhận:</span>
-                                                    <c:out value="${empty o.receiverPhone ? 'Chưa có' : o.receiverPhone}" />
-                                                </div>
-                                                <div>
-                                                    <span class="font-bold text-gray-800">Thanh toán:</span>
-                                                    <c:out value="${empty o.paymentMethod ? 'Chưa có' : o.paymentMethod}" />
-                                                </div>
-                                                <div>
-                                                    <span class="font-bold text-gray-800">Trạng thái TT:</span>
-                                                    <c:out value="${empty o.paymentStatus ? 'Chưa có' : o.paymentStatus}" />
-                                                </div>
-                                            </div>
 
-                                            <div class="mt-3 text-sm text-gray-600 leading-6">
-                                                <span class="font-bold text-gray-800">Địa chỉ giao:</span>
-                                                <c:out value="${empty o.deliveryAddressLine ? 'Chưa có địa chỉ' : o.deliveryAddressLine}" />
-                                                <c:if test="${not empty o.wardName}">, <c:out value="${o.wardName}" /></c:if>
-                                                <c:if test="${not empty o.districtName}">, <c:out value="${o.districtName}" /></c:if>
-                                                <c:if test="${not empty o.provinceName}">, <c:out value="${o.provinceName}" /></c:if>
+                                                <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600">
+                                                    <div>
+                                                        <span class="font-bold text-gray-800">Người nhận:</span>
+                                                        <c:out value="${empty o.receiverName ? 'Chưa có' : o.receiverName}" />
+                                                    </div>
+                                                    <div>
+                                                        <span class="font-bold text-gray-800">SĐT nhận:</span>
+                                                        <c:out value="${empty o.receiverPhone ? 'Chưa có' : o.receiverPhone}" />
+                                                    </div>
+                                                    <div>
+                                                        <span class="font-bold text-gray-800">Thanh toán:</span>
+                                                        <c:out value="${empty o.paymentMethod ? 'Chưa có' : o.paymentMethod}" />
+                                                    </div>
+                                                    <div>
+                                                        <span class="font-bold text-gray-800">Trạng thái TT:</span>
+                                                        <c:out value="${empty o.paymentStatus ? 'Chưa có' : o.paymentStatus}" />
+                                                    </div>
+                                                </div>
+
+                                                <div class="mt-3 text-sm text-gray-600 leading-6">
+                                                    <span class="font-bold text-gray-800">Địa chỉ giao:</span>
+                                                    <c:out value="${empty o.deliveryAddressLine ? 'Chưa có địa chỉ' : o.deliveryAddressLine}" />
+                                                    <c:if test="${not empty o.wardName}">, <c:out value="${o.wardName}" /></c:if>
+                                                    <c:if test="${not empty o.districtName}">, <c:out value="${o.districtName}" /></c:if>
+                                                    <c:if test="${not empty o.provinceName}">, <c:out value="${o.provinceName}" /></c:if>
                                                 </div>
 
                                                 <div class="mt-2 text-sm text-gray-500">
                                                     <span class="font-bold text-gray-800">Ghi chú:</span>
-                                                <c:out value="${empty o.deliveryNote ? 'Không có' : o.deliveryNote}" />
-                                            </div>
-                                        </div>
-
-                                        <div class="lg:text-right shrink-0">
-                                            <div class="text-sm text-gray-500">Ngày đặt</div>
-                                            <div class="font-bold text-gray-900">
-                                                <c:choose>
-                                                    <c:when test="${not empty o.createdAt}">
-                                                        <fmt:formatDate value="${o.createdAt}" pattern="dd/MM/yyyy HH:mm"/>
-                                                    </c:when>
-                                                    <c:otherwise>Chưa có</c:otherwise>
-                                                </c:choose>
+                                                    <c:out value="${empty o.deliveryNote ? 'Không có' : o.deliveryNote}" />
+                                                </div>
                                             </div>
 
-                                            <div class="mt-5 text-sm text-gray-500">Tổng tiền</div>
-                                            <div class="text-2xl font-black text-orange-500">
-                                                <c:choose>
-                                                    <c:when test="${not empty o.totalAmount}">
-                                                        <fmt:formatNumber value="${o.totalAmount}" type="number" groupingUsed="true"/>đ
-                                                    </c:when>
-                                                    <c:otherwise>0đ</c:otherwise>
-                                                </c:choose>
+                                            <div class="lg:text-right shrink-0">
+                                                <div class="text-sm text-gray-500">Ngày đặt</div>
+                                                <div class="font-bold text-gray-900">
+                                                    <c:choose>
+                                                        <c:when test="${not empty o.createdAt}">
+                                                            <fmt:formatDate value="${o.createdAt}" pattern="dd/MM/yyyy HH:mm"/>
+                                                        </c:when>
+                                                        <c:otherwise>Chưa có</c:otherwise>
+                                                    </c:choose>
+                                                </div>
+
+                                                <div class="mt-5 text-sm text-gray-500">Tổng tiền</div>
+                                                <div class="text-2xl font-black text-orange-500">
+                                                    <c:choose>
+                                                        <c:when test="${not empty o.totalAmount}">
+                                                            <fmt:formatNumber value="${o.totalAmount}" type="number" groupingUsed="true"/>đ
+                                                        </c:when>
+                                                        <c:otherwise>0đ</c:otherwise>
+                                                    </c:choose>
+                                                </div>
+
+                                                <a href="${pageContext.request.contextPath}/customer/order-tracking?orderId=${o.id}"
+                                                   class="inline-flex mt-5 h-11 px-5 items-center justify-center rounded-full bg-blue-600 text-white font-extrabold hover:bg-blue-700 transition">
+                                                    <i class="fa-solid fa-location-crosshairs mr-2"></i>
+                                                    Theo dõi đơn
+                                                </a>
                                             </div>
                                         </div>
                                     </div>
+                                </c:forEach>
+                            </div>
+                        </div>
+                    </c:if>
+
+                    <c:if test="${not empty historyOrders}">
+                        <div>
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-11 h-11 rounded-2xl bg-green-100 text-green-600 flex items-center justify-center">
+                                    <i class="fa-solid fa-clock-rotate-left"></i>
                                 </div>
-                            </c:forEach>
-                        </c:otherwise>
-                    </c:choose>
+                                <div>
+                                    <h2 class="text-2xl font-black">Lịch sử giao hàng</h2>
+                                    <p class="text-gray-500">Những đơn đã hoàn tất hoặc đã kết thúc sẽ hiển thị ở đây.</p>
+                                </div>
+                            </div>
+
+                            <div class="space-y-5">
+                                <c:forEach var="o" items="${historyOrders}">
+                                    <div class="bg-white border border-gray-200 rounded-[28px] p-6 shadow-[0_10px_30px_rgba(15,23,42,.06)]">
+                                        <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
+                                            <div class="min-w-0">
+                                                <div class="flex items-center flex-wrap gap-3">
+                                                    <h3 class="text-xl font-black text-gray-900 break-all">
+                                                        Đơn #<c:out value="${empty o.orderCode ? o.id : o.orderCode}" />
+                                                    </h3>
+
+                                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold
+                                                          ${o.orderStatus == 'DELIVERED' ? 'bg-green-100 text-green-700' :
+                                                            o.orderStatus == 'CANCELLED' ? 'bg-red-100 text-red-600' :
+                                                            'bg-gray-100 text-gray-600'}">
+                                                        <c:out value="${empty o.orderStatus ? 'UNKNOWN' : o.orderStatus}" />
+                                                    </span>
+                                                </div>
+
+                                                <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600">
+                                                    <div>
+                                                        <span class="font-bold text-gray-800">Người nhận:</span>
+                                                        <c:out value="${empty o.receiverName ? 'Chưa có' : o.receiverName}" />
+                                                    </div>
+                                                    <div>
+                                                        <span class="font-bold text-gray-800">SĐT nhận:</span>
+                                                        <c:out value="${empty o.receiverPhone ? 'Chưa có' : o.receiverPhone}" />
+                                                    </div>
+                                                    <div>
+                                                        <span class="font-bold text-gray-800">Thanh toán:</span>
+                                                        <c:out value="${empty o.paymentMethod ? 'Chưa có' : o.paymentMethod}" />
+                                                    </div>
+                                                    <div>
+                                                        <span class="font-bold text-gray-800">Trạng thái TT:</span>
+                                                        <c:out value="${empty o.paymentStatus ? 'Chưa có' : o.paymentStatus}" />
+                                                    </div>
+                                                </div>
+
+                                                <div class="mt-3 text-sm text-gray-600 leading-6">
+                                                    <span class="font-bold text-gray-800">Địa chỉ giao:</span>
+                                                    <c:out value="${empty o.deliveryAddressLine ? 'Chưa có địa chỉ' : o.deliveryAddressLine}" />
+                                                    <c:if test="${not empty o.wardName}">, <c:out value="${o.wardName}" /></c:if>
+                                                    <c:if test="${not empty o.districtName}">, <c:out value="${o.districtName}" /></c:if>
+                                                    <c:if test="${not empty o.provinceName}">, <c:out value="${o.provinceName}" /></c:if>
+                                                </div>
+
+                                                <div class="mt-2 text-sm text-gray-500">
+                                                    <span class="font-bold text-gray-800">Ghi chú:</span>
+                                                    <c:out value="${empty o.deliveryNote ? 'Không có' : o.deliveryNote}" />
+                                                </div>
+                                            </div>
+
+                                            <div class="lg:text-right shrink-0">
+                                                <div class="text-sm text-gray-500">Ngày đặt</div>
+                                                <div class="font-bold text-gray-900">
+                                                    <c:choose>
+                                                        <c:when test="${not empty o.createdAt}">
+                                                            <fmt:formatDate value="${o.createdAt}" pattern="dd/MM/yyyy HH:mm"/>
+                                                        </c:when>
+                                                        <c:otherwise>Chưa có</c:otherwise>
+                                                    </c:choose>
+                                                </div>
+
+                                                <div class="mt-5 text-sm text-gray-500">Tổng tiền</div>
+                                                <div class="text-2xl font-black text-orange-500">
+                                                    <c:choose>
+                                                        <c:when test="${not empty o.totalAmount}">
+                                                            <fmt:formatNumber value="${o.totalAmount}" type="number" groupingUsed="true"/>đ
+                                                        </c:when>
+                                                        <c:otherwise>0đ</c:otherwise>
+                                                    </c:choose>
+                                                </div>
+
+                                                <c:if test="${o.orderStatus == 'DELIVERED'}">
+                                                    <c:choose>
+                                                        <c:when test="${requestScope['fullyRated_'.concat(o.id)]}">
+                                                            <button type="button"
+                                                                    class="inline-flex mt-5 h-11 px-5 items-center justify-center rounded-full bg-gray-900 text-white font-extrabold hover:bg-black transition"
+                                                                    onclick="openReviewPopup('${o.id}')">
+                                                                <i class="fa-solid fa-eye mr-2"></i>
+                                                                Xem đánh giá
+                                                            </button>
+                                                        </c:when>
+                                                        <c:otherwise>
+                                                            <a href="${pageContext.request.contextPath}/customer/order-tracking?orderId=${o.id}"
+                                                               class="inline-flex mt-5 h-11 px-5 items-center justify-center rounded-full bg-green-600 text-white font-extrabold hover:bg-green-700 transition">
+                                                                <i class="fa-solid fa-star mr-2"></i>
+                                                                Đánh giá
+                                                            </a>
+                                                        </c:otherwise>
+                                                    </c:choose>
+                                                </c:if>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </c:forEach>
+                            </div>
+                        </div>
+                    </c:if>
+
                 </section>
             </div>
         </main>
+
+                <div id="reviewPopup" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50 p-4">
+            <div class="bg-white w-full max-w-2xl rounded-[28px] p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-2xl font-black">Đánh giá đơn hàng</h3>
+                    <button type="button" class="w-10 h-10 rounded-full hover:bg-gray-100" onclick="closeReviewPopup()">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div id="reviewPopupOrderCode" class="mt-2 text-sm text-gray-500 font-semibold"></div>
+
+                <div id="reviewPopupContent" class="mt-5 space-y-4 text-gray-700">
+                    Đang tải...
+                </div>
+
+                <div class="mt-6 flex justify-end">
+                    <button type="button"
+                            class="h-11 px-5 rounded-full bg-gray-900 text-white font-bold"
+                            onclick="closeReviewPopup()">
+                        Đóng
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            function escapeHtml(text) {
+                return String(text || '')
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/\"/g, '&quot;')
+                        .replace(/'/g, '&#039;');
+            }
+
+            async function openReviewPopup(orderId) {
+                const content = document.getElementById('reviewPopupContent');
+                const orderCode = document.getElementById('reviewPopupOrderCode');
+
+                orderCode.textContent = 'Đơn #' + orderId;
+                content.innerHTML = '<div class="text-gray-500">Đang tải...</div>';
+
+                document.getElementById('reviewPopup').classList.remove('hidden');
+                document.getElementById('reviewPopup').classList.add('flex');
+
+                try {
+                    const url = '${pageContext.request.contextPath}/api/customer-review?orderId=' + encodeURIComponent(orderId);
+                    const res = await fetch(url);
+                    const data = await res.json();
+
+                    if (!data.success) {
+                        content.innerHTML = '<div class="text-red-500 font-bold">'
+                                + escapeHtml(data.message || 'Không tải được đánh giá.')
+                                + '</div>';
+                        return;
+                    }
+
+                    if (!data.reviews || data.reviews.length === 0) {
+                        content.innerHTML = '<div class="text-gray-500">Chưa có đánh giá nào cho đơn này.</div>';
+                        return;
+                    }
+
+                    let html = '';
+                    data.reviews.forEach(function (item) {
+                        const stars = '★'.repeat(item.stars || 0) + '☆'.repeat(5 - (item.stars || 0));
+                        const targetLabel = item.targetType === 'MERCHANT' ? 'Cửa hàng' : 'Shipper';
+                        const targetColor = item.targetType === 'MERCHANT' ? 'text-blue-500' : 'text-green-500';
+                        const targetName = escapeHtml(item.targetName || '---');
+                        const comment = escapeHtml(item.comment || 'Không có nhận xét.');
+                        const replyComment = item.replyComment ? escapeHtml(item.replyComment) : '';
+
+                        const replyBlock = replyComment
+                                ? '<div class="mt-3 p-3 rounded-xl bg-gray-50 border border-gray-200">'
+                                + '<div class="font-bold text-sm mb-1">Phản hồi:</div>'
+                                + '<div class="whitespace-pre-line">' + replyComment + '</div>'
+                                + '</div>'
+                                : '';
+
+                        html += ''
+                                + '<div class="rounded-2xl border border-gray-200 p-4">'
+                                + '<div class="text-sm font-bold uppercase tracking-wide ' + targetColor + '">' + targetLabel + '</div>'
+                                + '<div class="text-xl font-black mt-2">' + targetName + '</div>'
+                                + '<div class="mt-2 text-yellow-500 text-lg">' + stars + '</div>'
+                                + '<div class="mt-3 text-gray-700 whitespace-pre-line">' + comment + '</div>'
+                                + replyBlock
+                                + '</div>';
+                    });
+
+                    content.innerHTML = html;
+                } catch (e) {
+                    content.innerHTML = '<div class="text-red-500 font-bold">Không thể tải dữ liệu đánh giá.</div>';
+                }
+            }
+
+            function closeReviewPopup() {
+                document.getElementById('reviewPopup').classList.add('hidden');
+                document.getElementById('reviewPopup').classList.remove('flex');
+            }
+        </script>
+
         <jsp:include page="footer.jsp" />
     </body>
 </html>

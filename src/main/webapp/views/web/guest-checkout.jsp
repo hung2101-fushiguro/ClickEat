@@ -122,10 +122,10 @@
                             <form action="${pageContext.request.contextPath}/guest-verify-otp" method="post"
                                   id="verifyOtpForm"
                                   class="mt-6 space-y-4">
-                                <input type="hidden" name="fullName" value="${not empty fullName ? fullName : guestFullName}">
-                                <input type="hidden" name="email" value="${not empty email ? email : guestEmail}">
-                                <input type="hidden" name="phone" value="${not empty phone ? phone : guestPhone}">
-                                <input type="hidden" name="addressLine" value="${not empty addressLine ? addressLine : guestAddress}">
+                                <input type="hidden" name="fullName" value="${not empty fullName ? fullName : sessionScope.guestFullName}">
+                                <input type="hidden" name="email" value="${not empty email ? email : sessionScope.guestEmail}">
+                                <input type="hidden" name="phone" value="${not empty phone ? phone : sessionScope.guestPhone}">
+                                <input type="hidden" name="addressLine" value="${not empty addressLine ? addressLine : sessionScope.guestAddress}">
 
                                 <div>
                                     <label class="block text-base md:text-lg font-black text-[#1f2937] mb-3">Mã xác minh 6 số</label>
@@ -173,163 +173,178 @@
         </c:if>
 
         <script>
-            document.addEventListener("DOMContentLoaded", function () {
-                const sendBtn = document.getElementById("sendOtpBtn");
-                const verifyBtn = document.getElementById("verifyOtpBtn");
-                const otpInput = document.getElementById("otpCode");
-                const countdownEl = document.getElementById("otpCountdown");
-                const inlineError = document.getElementById("otpInlineError");
-                const verifyForm = document.getElementById("verifyOtpForm");
+    document.addEventListener("DOMContentLoaded", function () {
+        const sendBtn = document.getElementById("sendOtpBtn");
+        const verifyBtn = document.getElementById("verifyOtpBtn");
+        const otpInput = document.getElementById("otpCode");
+        const countdownEl = document.getElementById("otpCountdown");
+        const inlineError = document.getElementById("otpInlineError");
+        const verifyForm = document.getElementById("verifyOtpForm");
 
-            <c:if test="${otpSent}">
-                if (sendBtn) {
-                    sendBtn.disabled = true;
+        <c:if test="${otpSent}">
+        if (sendBtn) {
+            sendBtn.disabled = true;
+        }
+        </c:if>
+
+        if (otpInput) {
+            otpInput.addEventListener("input", function () {
+                this.value = this.value.replace(/\D/g, "").slice(0, 6);
+
+                if (inlineError) {
+                    inlineError.textContent = "";
+                    inlineError.classList.add("hidden");
                 }
-            </c:if>
+            });
+
+            otpInput.addEventListener("paste", function (e) {
+                e.preventDefault();
+                const pasted = (e.clipboardData || window.clipboardData).getData("text");
+                this.value = pasted.replace(/\D/g, "").slice(0, 6);
+
+                if (inlineError) {
+                    inlineError.textContent = "";
+                    inlineError.classList.add("hidden");
+                }
+            });
+        }
+
+        if (verifyForm) {
+            verifyForm.addEventListener("submit", async function (e) {
+                e.preventDefault();
+
+                if (inlineError) {
+                    inlineError.textContent = "";
+                    inlineError.classList.add("hidden");
+                }
+
+                const otpValue = otpInput ? otpInput.value.replace(/\D/g, "").slice(0, 6) : "";
 
                 if (otpInput) {
-                    otpInput.addEventListener("input", function () {
-                        this.value = this.value.replace(/\D/g, "").slice(0, 6);
-
-                        if (inlineError) {
-                            inlineError.textContent = "";
-                            inlineError.classList.add("hidden");
-                        }
-                    });
-
-                    otpInput.addEventListener("paste", function (e) {
-                        e.preventDefault();
-                        const pasted = (e.clipboardData || window.clipboardData).getData("text");
-                        this.value = pasted.replace(/\D/g, "").slice(0, 6);
-
-                        if (inlineError) {
-                            inlineError.textContent = "";
-                            inlineError.classList.add("hidden");
-                        }
-                    });
+                    otpInput.value = otpValue;
                 }
 
-                if (verifyForm) {
-                    verifyForm.addEventListener("submit", async function (e) {
-                        e.preventDefault();
+                if (!otpValue) {
+                    showInlineError("Vui lòng nhập mã OTP.");
+                    return;
+                }
 
-                        if (inlineError) {
-                            inlineError.textContent = "";
-                            inlineError.classList.add("hidden");
-                        }
+                if (!/^\d{6}$/.test(otpValue)) {
+                    showInlineError("Mã OTP phải gồm đúng 6 chữ số.");
+                    return;
+                }
 
-                        const otpValue = otpInput ? otpInput.value.trim() : "";
+                if (verifyBtn) {
+                    verifyBtn.disabled = true;
+                }
 
-                        if (!otpValue) {
-                            showInlineError("Vui lòng nhập mã OTP.");
-                            return;
-                        }
+                const fullNameInput = verifyForm.querySelector('input[name="fullName"]');
+                const emailInput = verifyForm.querySelector('input[name="email"]');
+                const phoneInput = verifyForm.querySelector('input[name="phone"]');
+                const addressInput = verifyForm.querySelector('input[name="addressLine"]');
 
-                        if (!/^\d{6}$/.test(otpValue)) {
-                            showInlineError("Mã OTP phải gồm đúng 6 chữ số.");
-                            return;
+                const payload = new URLSearchParams();
+                payload.append("fullName", fullNameInput ? fullNameInput.value : "");
+                payload.append("email", emailInput ? emailInput.value : "");
+                payload.append("phone", phoneInput ? phoneInput.value : "");
+                payload.append("addressLine", addressInput ? addressInput.value : "");
+                payload.append("otpCode", otpValue);
+
+                try {
+                    const response = await fetch(verifyForm.action, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                            "X-Requested-With": "XMLHttpRequest"
+                        },
+                        body: payload.toString()
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        window.location.href = data.redirect;
+                        return;
+                    }
+
+                    if (data.message) {
+                        showInlineError(data.message);
+                    }
+
+                    if (data.expired) {
+                        if (otpInput) {
+                            otpInput.disabled = true;
+                            otpInput.value = "";
+                            otpInput.placeholder = "000000";
+                            otpInput.classList.add("opacity-60", "cursor-not-allowed");
                         }
 
                         if (verifyBtn) {
                             verifyBtn.disabled = true;
                         }
 
-                        try {
-                            const formData = new FormData(verifyForm);
-
-                            const response = await fetch(verifyForm.action, {
-                                method: "POST",
-                                body: formData,
-                                headers: {
-                                    "X-Requested-With": "XMLHttpRequest"
-                                }
-                            });
-
-                            const data = await response.json();
-
-                            if (data.success) {
-                                window.location.href = data.redirect;
-                                return;
-                            }
-
-                            if (data.message) {
-                                showInlineError(data.message);
-                            }
-
-                            if (data.expired) {
-                                if (otpInput) {
-                                    otpInput.disabled = true;
-                                    otpInput.value = "";
-                                    otpInput.placeholder = "000000";
-                                    otpInput.classList.add("opacity-60", "cursor-not-allowed");
-                                }
-
-                                if (verifyBtn) {
-                                    verifyBtn.disabled = true;
-                                }
-
-                                if (sendBtn) {
-                                    sendBtn.disabled = false;
-                                    sendBtn.textContent = "Gửi lại mã OTP";
-                                    sendBtn.classList.remove("opacity-60", "cursor-not-allowed");
-                                }
-                            }
-                        } catch (err) {
-                            showInlineError("Có lỗi xảy ra khi xác thực OTP. Vui lòng thử lại.");
-                        } finally {
-                            if (verifyBtn && !(otpInput && otpInput.disabled)) {
-                                verifyBtn.disabled = false;
-                            }
+                        if (sendBtn) {
+                            sendBtn.disabled = false;
+                            sendBtn.textContent = "Gửi lại mã OTP";
+                            sendBtn.classList.remove("opacity-60", "cursor-not-allowed");
                         }
-                    });
-                }
-
-                if (window.otpExpiresAt && countdownEl) {
-                    const timer = setInterval(() => {
-                        const remain = window.otpExpiresAt - Date.now();
-
-                        if (remain <= 0) {
-                            clearInterval(timer);
-                            countdownEl.textContent = "00:00";
-
-                            if (otpInput) {
-                                otpInput.disabled = true;
-                                otpInput.value = "";
-                                otpInput.placeholder = "000000";
-                                otpInput.classList.add("opacity-60", "cursor-not-allowed");
-                            }
-
-                            if (verifyBtn) {
-                                verifyBtn.disabled = true;
-                            }
-
-                            if (sendBtn) {
-                                sendBtn.disabled = false;
-                                sendBtn.textContent = "Gửi lại mã OTP";
-                                sendBtn.classList.remove("opacity-60", "cursor-not-allowed");
-                            }
-
-                            if (inlineError) {
-                                inlineError.textContent = "Mã xác minh đã hết hạn. Vui lòng bấm Gửi lại mã OTP.";
-                                inlineError.classList.remove("hidden");
-                            }
-                            return;
-                        }
-
-                        const totalSeconds = Math.floor(remain / 1000);
-                        const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
-                        const seconds = String(totalSeconds % 60).padStart(2, "0");
-                        countdownEl.textContent = minutes + ":" + seconds;
-                    }, 1000);
-                }
-
-                function showInlineError(message) {
-                    if (inlineError) {
-                        inlineError.textContent = message;
-                        inlineError.classList.remove("hidden");
+                    }
+                } catch (err) {
+                    showInlineError("Có lỗi xảy ra khi xác thực OTP. Vui lòng thử lại.");
+                } finally {
+                    if (verifyBtn && !(otpInput && otpInput.disabled)) {
+                        verifyBtn.disabled = false;
                     }
                 }
             });
-        </script>
+        }
+
+        if (window.otpExpiresAt && countdownEl) {
+            const timer = setInterval(() => {
+                const remain = window.otpExpiresAt - Date.now();
+
+                if (remain <= 0) {
+                    clearInterval(timer);
+                    countdownEl.textContent = "00:00";
+
+                    if (otpInput) {
+                        otpInput.disabled = true;
+                        otpInput.value = "";
+                        otpInput.placeholder = "000000";
+                        otpInput.classList.add("opacity-60", "cursor-not-allowed");
+                    }
+
+                    if (verifyBtn) {
+                        verifyBtn.disabled = true;
+                    }
+
+                    if (sendBtn) {
+                        sendBtn.disabled = false;
+                        sendBtn.textContent = "Gửi lại mã OTP";
+                        sendBtn.classList.remove("opacity-60", "cursor-not-allowed");
+                    }
+
+                    if (inlineError) {
+                        inlineError.textContent = "Mã xác minh đã hết hạn. Vui lòng bấm Gửi lại mã OTP.";
+                        inlineError.classList.remove("hidden");
+                    }
+                    return;
+                }
+
+                const totalSeconds = Math.floor(remain / 1000);
+                const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
+                const seconds = String(totalSeconds % 60).padStart(2, "0");
+                countdownEl.textContent = minutes + ":" + seconds;
+            }, 1000);
+        }
+
+        function showInlineError(message) {
+            if (inlineError) {
+                inlineError.textContent = message;
+                inlineError.classList.remove("hidden");
+            }
+        }
+    });
+</script>
     </body>
 </html>

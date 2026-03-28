@@ -157,7 +157,15 @@
                 const customerLat = ${not empty order.latitude && order.latitude != 0.0 ? order.latitude : 10.7926};
                 const customerLng = ${not empty order.longitude && order.longitude != 0.0 ? order.longitude : 106.6853};
                 
-                const map = L.map('map').setView([shopLat, shopLng], 14);
+                // Lấy vị trí hiện tại của shipper (nếu có)
+                const shipperLat = ${not empty shipperAvailability && shipperAvailability.currentLatitude != 0.0 ? shipperAvailability.currentLatitude : 'null'};
+                const shipperLng = ${not empty shipperAvailability && shipperAvailability.currentLongitude != 0.0 ? shipperAvailability.currentLongitude : 'null'};
+                
+                // Xác định điểm bắt đầu - nếu có vị trí shipper thì bắt đầu từ shipper, nếu không thì từ quán
+                const startLat = (shipperLat !== null && shipperLng !== null) ? shipperLat : shopLat;
+                const startLng = (shipperLat !== null && shipperLng !== null) ? shipperLng : shopLng;
+                
+                const map = L.map('map').setView([startLat, startLng], 14);
                 
                 ClickEatMap4D.addBaseTileLayer(map, {
                     attribution: '&copy; Map4D',
@@ -175,8 +183,17 @@
                     className: '', iconSize: [24, 24], iconAnchor: [12, 12]
                 });
                 
-                L.marker([shopLat, shopLng], {icon: shopIcon}).addTo(map);
-                L.marker([customerLat, customerLng], {icon: customerIcon}).addTo(map);
+                // Thêm marker cho vị trí hiện tại của shipper (nếu có)
+                if (shipperLat !== null && shipperLng !== null) {
+                    const shipperIcon = L.divIcon({
+                        html: '<div class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center border-2 border-white shadow-md"><i class="fa-solid fa-motorcycle text-sm"></i></div>',
+                        className: '', iconSize: [32, 32], iconAnchor: [16, 16]
+                    });
+                    L.marker([shipperLat, shipperLng], {icon: shipperIcon}).addTo(map).bindPopup("<b>Vị trí hiện tại của bạn</b>");
+                }
+                
+                L.marker([shopLat, shopLng], {icon: shopIcon}).addTo(map).bindPopup("<b>Lấy hàng tại đây</b>");
+                L.marker([customerLat, customerLng], {icon: customerIcon}).addTo(map).bindPopup("<b>Giao hàng đến đây</b>");
                 
                 ClickEatMap4D.route(shopLat, shopLng, customerLat, customerLng)
                 .then(route => {

@@ -6,7 +6,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import com.clickeat.model.AITrainingEvent;
 
@@ -140,12 +142,12 @@ public class AITrainingEventDAO extends AbstractDAO<AITrainingEvent> {
     }
 
     /**
-     * Lấy các ví dụ được đánh giá tốt (feedback_score = 1) để dùng làm few-shot examples.
-     * Ưu tiên các ví dụ có cùng health_goal với user hiện tại.
-     * Dùng để inject vào system prompt thay cho fine-tuning.
+     * LÃƒÂ¡Ã‚ÂºÃ‚Â¥y cÃƒÆ’Ã‚Â¡c vÃƒÆ’Ã‚Â­ dÃƒÂ¡Ã‚Â»Ã‚Â¥ Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â°ÃƒÂ¡Ã‚Â»Ã‚Â£c Ãƒâ€žÃ¢â‚¬ËœÃƒÆ’Ã‚Â¡nh giÃƒÆ’Ã‚Â¡ tÃƒÂ¡Ã‚Â»Ã¢â‚¬Ëœt (feedback_score = 1) Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã†â€™ dÃƒÆ’Ã‚Â¹ng lÃƒÆ’Ã‚Â m few-shot examples.
+     * Ãƒâ€ Ã‚Â¯u tiÃƒÆ’Ã‚Âªn cÃƒÆ’Ã‚Â¡c vÃƒÆ’Ã‚Â­ dÃƒÂ¡Ã‚Â»Ã‚Â¥ cÃƒÆ’Ã‚Â³ cÃƒÆ’Ã‚Â¹ng health_goal vÃƒÂ¡Ã‚Â»Ã¢â‚¬Âºi user hiÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¡n tÃƒÂ¡Ã‚ÂºÃ‚Â¡i.
+     * DÃƒÆ’Ã‚Â¹ng Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã†â€™ inject vÃƒÆ’Ã‚Â o system prompt thay cho fine-tuning.
      *
-     * @param limit       số ví dụ tối đa (khuyên dùng 3–6)
-     * @param healthGoal  mục tiêu sức khỏe của user hiện tại (nullable, dùng để ưu tiên)
+     * @param limit       sÃƒÂ¡Ã‚Â»Ã¢â‚¬Ëœ vÃƒÆ’Ã‚Â­ dÃƒÂ¡Ã‚Â»Ã‚Â¥ tÃƒÂ¡Ã‚Â»Ã¢â‚¬Ëœi Ãƒâ€žÃ¢â‚¬Ëœa (khuyÃƒÆ’Ã‚Âªn dÃƒÆ’Ã‚Â¹ng 3ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“6)
+     * @param healthGoal  mÃƒÂ¡Ã‚Â»Ã‚Â¥c tiÃƒÆ’Ã‚Âªu sÃƒÂ¡Ã‚Â»Ã‚Â©c khÃƒÂ¡Ã‚Â»Ã‚Âe cÃƒÂ¡Ã‚Â»Ã‚Â§a user hiÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¡n tÃƒÂ¡Ã‚ÂºÃ‚Â¡i (nullable, dÃƒÆ’Ã‚Â¹ng Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã†â€™ Ãƒâ€ Ã‚Â°u tiÃƒÆ’Ã‚Âªn)
      */
     public List<AITrainingEvent> findTopRatedExamples(int limit, String healthGoal) {
         if (!tableExists(TABLE_NAME) || !columnExists(TABLE_NAME, "feedback_score")) {
@@ -154,13 +156,13 @@ public class AITrainingEventDAO extends AbstractDAO<AITrainingEvent> {
 
         int safeLimit = Math.max(1, Math.min(limit, 20));
 
-        // Ưu tiên: cùng health_goal + score=1 trước, sau đó lấy thêm các ví dụ tốt khác
-        // Dùng 2 lần query rồi merge để tránh SQL phức tạp
-        List<AITrainingEvent> result = new java.util.ArrayList<>();
+        // Ãƒâ€ Ã‚Â¯u tiÃƒÆ’Ã‚Âªn: cÃƒÆ’Ã‚Â¹ng health_goal + score=1 trÃƒâ€ Ã‚Â°ÃƒÂ¡Ã‚Â»Ã¢â‚¬Âºc, sau Ãƒâ€žÃ¢â‚¬ËœÃƒÆ’Ã‚Â³ lÃƒÂ¡Ã‚ÂºÃ‚Â¥y thÃƒÆ’Ã‚Âªm cÃƒÆ’Ã‚Â¡c vÃƒÆ’Ã‚Â­ dÃƒÂ¡Ã‚Â»Ã‚Â¥ tÃƒÂ¡Ã‚Â»Ã¢â‚¬Ëœt khÃƒÆ’Ã‚Â¡c
+        // DÃƒÆ’Ã‚Â¹ng 2 lÃƒÂ¡Ã‚ÂºÃ‚Â§n query rÃƒÂ¡Ã‚Â»Ã¢â‚¬Å“i merge Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã†â€™ trÃƒÆ’Ã‚Â¡nh SQL phÃƒÂ¡Ã‚Â»Ã‚Â©c tÃƒÂ¡Ã‚ÂºÃ‚Â¡p
+        List<AITrainingEvent> result = new ArrayList<>();
 
-        // Query 1: cùng health_goal (nếu có)
+        // Query 1: cÃƒÆ’Ã‚Â¹ng health_goal (nÃƒÂ¡Ã‚ÂºÃ‚Â¿u cÃƒÆ’Ã‚Â³)
         if (healthGoal != null && !healthGoal.isBlank()) {
-            String sql1 = "SELECT TOP (?) user_message, ai_reply, health_goal FROM AITrainingEvents "
+            String sql1 = "SELECT TOP (?) * FROM AITrainingEvents "
                     + "WHERE feedback_score = 1 "
                     + "AND user_message IS NOT NULL AND LEN(user_message) >= 5 "
                     + "AND ai_reply IS NOT NULL AND LEN(ai_reply) >= 20 "
@@ -170,20 +172,20 @@ public class AITrainingEventDAO extends AbstractDAO<AITrainingEvent> {
             result.addAll(matched);
         }
 
-        // Query 2: bất kỳ ví dụ tốt nào, tránh trùng id
+        // Query 2: bÃƒÂ¡Ã‚ÂºÃ‚Â¥t kÃƒÂ¡Ã‚Â»Ã‚Â³ vÃƒÆ’Ã‚Â­ dÃƒÂ¡Ã‚Â»Ã‚Â¥ tÃƒÂ¡Ã‚Â»Ã¢â‚¬Ëœt nÃƒÆ’Ã‚Â o, trÃƒÆ’Ã‚Â¡nh trÃƒÆ’Ã‚Â¹ng id
         if (result.size() < safeLimit) {
             int remaining = safeLimit - result.size();
             StringBuilder sql2 = new StringBuilder(
-                    "SELECT TOP (?) user_message, ai_reply, health_goal FROM AITrainingEvents "
+                    "SELECT TOP (?) * FROM AITrainingEvents "
                     + "WHERE feedback_score = 1 "
                     + "AND user_message IS NOT NULL AND LEN(user_message) >= 5 "
                     + "AND ai_reply IS NOT NULL AND LEN(ai_reply) >= 20 ");
 
-            java.util.List<Object> params2 = new java.util.ArrayList<>();
+            List<Object> params2 = new ArrayList<>();
             params2.add(remaining);
 
             if (!result.isEmpty()) {
-                // Loại bỏ các id đã có (tránh trùng lặp)
+                // LoÃƒÂ¡Ã‚ÂºÃ‚Â¡i bÃƒÂ¡Ã‚Â»Ã‚Â cÃƒÆ’Ã‚Â¡c id Ãƒâ€žÃ¢â‚¬ËœÃƒÆ’Ã‚Â£ cÃƒÆ’Ã‚Â³ (trÃƒÆ’Ã‚Â¡nh trÃƒÆ’Ã‚Â¹ng lÃƒÂ¡Ã‚ÂºÃ‚Â·p)
                 sql2.append("AND id NOT IN (");
                 for (int i = 0; i < result.size(); i++) {
                     if (i > 0) sql2.append(",");
@@ -198,7 +200,40 @@ public class AITrainingEventDAO extends AbstractDAO<AITrainingEvent> {
             result.addAll(others);
         }
 
-        return result;
+        return dedupeExamples(result, safeLimit);
+    }
+
+
+    private List<AITrainingEvent> dedupeExamples(List<AITrainingEvent> examples, int limit) {
+        if (examples == null || examples.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        int safeLimit = Math.max(1, Math.min(limit, 20));
+        List<AITrainingEvent> deduped = new ArrayList<>();
+        Set<String> seen = new LinkedHashSet<>();
+
+        for (AITrainingEvent e : examples) {
+            if (e == null) {
+                continue;
+            }
+
+            String key = trim(e.getPromptHash(), 64);
+            if (key == null || key.isBlank()) {
+                key = sha256Hex(normalizePrompt(e.getUserMessage()));
+            }
+            if (key == null || key.isBlank() || seen.contains(key)) {
+                continue;
+            }
+
+            seen.add(key);
+            deduped.add(e);
+            if (deduped.size() >= safeLimit) {
+                break;
+            }
+        }
+
+        return deduped;
     }
 
     public List<AITrainingEvent> findForExport(int limit, boolean onlyLabeled, Integer maxAgeDays) {

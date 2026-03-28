@@ -9,8 +9,10 @@ import java.io.IOException;
 import com.clickeat.dal.impl.MerchantProfileDAO;
 import com.clickeat.dal.impl.NotificationDAO;
 import com.clickeat.dal.impl.OrderDAO;
+import com.clickeat.dal.impl.ShipperAvailabilityDAO;
 import com.clickeat.model.MerchantProfile;
 import com.clickeat.model.Order;
+import com.clickeat.model.ShipperAvailability;
 import com.clickeat.model.User;
 
 import jakarta.servlet.ServletException;
@@ -48,8 +50,13 @@ public class ShipperOrderDetailServlet extends HttpServlet {
             MerchantProfileDAO merchantDAO = new MerchantProfileDAO();
             MerchantProfile merchant = merchantDAO.findById(order.getMerchantId());
 
+            // Load vị trí hiện tại của shipper
+            ShipperAvailabilityDAO saDAO = new ShipperAvailabilityDAO();
+            ShipperAvailability shipperAvailability = saDAO.findByShipperUserId(account.getId());
+
             request.setAttribute("order", order);
             request.setAttribute("merchant", merchant);
+            request.setAttribute("shipperAvailability", shipperAvailability);
             request.getRequestDispatcher("/views/shipper/order-detail.jsp").forward(request, response);
         } else {
             response.sendRedirect(request.getContextPath() + "/shipper/dashboard");

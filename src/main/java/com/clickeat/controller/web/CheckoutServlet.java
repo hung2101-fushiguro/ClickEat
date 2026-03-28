@@ -621,6 +621,11 @@ public class CheckoutServlet extends HttpServlet {
             cartDAO.clearActiveCartByCustomerId(account.getId());
         } else {
             cartDAO.clearActiveCartByGuestId(guestId);
+
+            // Ghi nhớ đơn gần nhất của guest để header luôn hiện nút theo dõi
+            session.setAttribute("guestLastOrderId", orderId);
+            session.setAttribute("guestLastOrderCode", order.getOrderCode());
+            session.setAttribute("guestHasTrackableOrder", true);
         }
 
         session.setAttribute("toastMsg", "Đặt hàng thành công.");

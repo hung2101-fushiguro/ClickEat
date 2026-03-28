@@ -1,6 +1,7 @@
 package com.clickeat.controller.web;
 
 import com.clickeat.dal.impl.AddressDAO;
+import com.clickeat.dal.impl.CategoryDAO;
 import com.clickeat.dal.impl.CartDAO;
 import com.clickeat.dal.impl.CartItemDAO;
 import com.clickeat.dal.impl.CustomerVoucherDAO;
@@ -8,6 +9,7 @@ import com.clickeat.dal.impl.FoodItemDAO;
 import com.clickeat.dal.impl.MerchantProfileDAO;
 import com.clickeat.dal.impl.VoucherDAO;
 import com.clickeat.model.Address;
+import com.clickeat.model.Category;
 import com.clickeat.model.Cart;
 import com.clickeat.model.CartItem;
 import com.clickeat.model.CustomerVoucher;
@@ -31,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -43,6 +46,7 @@ public class HomeServlet extends HttpServlet {
     private static final double LOCATION_MISMATCH_ALERT_KM = 1.5;
 
     private final FoodItemDAO foodItemDAO = new FoodItemDAO();
+    private final CategoryDAO categoryDAO = new CategoryDAO();
     private final VoucherDAO voucherDAO = new VoucherDAO();
     private final MerchantProfileDAO merchantProfileDAO = new MerchantProfileDAO();
     private final CustomerVoucherDAO customerVoucherDAO = new CustomerVoucherDAO();
@@ -172,6 +176,8 @@ public class HomeServlet extends HttpServlet {
             merchants = new ArrayList<>();
         }
 
+        List<String> popularCategories = buildPopularCategoryNames(foods, 6);
+
         Double defaultLat = null;
         Double defaultLng = null;
         String defaultAddressText = null;
@@ -195,6 +201,7 @@ public class HomeServlet extends HttpServlet {
         request.setAttribute("foods", foods);
         request.setAttribute("vouchers", vouchers);
         request.setAttribute("merchants", merchants);
+        request.setAttribute("popularCategories", popularCategories);
 
         request.setAttribute("deliveryAddress", deliveryLocation.getAddress());
         request.setAttribute("deliverySource", deliveryLocation.getSource());
@@ -566,6 +573,98 @@ public class HomeServlet extends HttpServlet {
         return sb.toString();
     }
 
+
+    private List<String> buildPopularCategoryNames(List<FoodItem> foods, int limit) {
+        LinkedHashMap<String, String> selected = new LinkedHashMap<>();
+
+        if (foods != null) {
+            for (FoodItem food : foods) {
+                if (food == null) {
+                    continue;
+                }
+
+                String categoryName = food.getCategoryName();
+                if (categoryName == null || categoryName.isBlank()) {
+                    continue;
+                }
+
+                String key = normalizeCategoryKey(categoryName);
+                if (key.isBlank() || selected.containsKey(key)) {
+                    continue;
+                }
+
+                selected.put(key, categoryName.trim());
+                if (selected.size() >= limit) {
+                    return new ArrayList<>(selected.values());
+                }
+            }
+        }
+
+        Map<String, Integer> frequency = new HashMap<>();
+        Map<String, String> displayName = new HashMap<>();
+
+        try {
+            List<Category> allCategories = categoryDAO.findAll();
+            if (allCategories != null) {
+                for (Category category : allCategories) {
+                    if (category == null || !category.isActive()) {
+                        continue;
+                    }
+
+                    String rawName = category.getName();
+                    if (rawName == null || rawName.isBlank()) {
+                        continue;
+                    }
+
+                    String key = normalizeCategoryKey(rawName);
+                    if (key.isBlank()) {
+                        continue;
+                    }
+
+                    frequency.put(key, frequency.getOrDefault(key, 0) + 1);
+                    displayName.putIfAbsent(key, rawName.trim());
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        List<Map.Entry<String, Integer>> ranked = new ArrayList<>(frequency.entrySet());
+        ranked.sort((a, b) -> {
+            int byCount = Integer.compare(b.getValue(), a.getValue());
+            if (byCount != 0) {
+                return byCount;
+            }
+            return displayName.getOrDefault(a.getKey(), "")
+                    .compareToIgnoreCase(displayName.getOrDefault(b.getKey(), ""));
+        });
+
+        for (Map.Entry<String, Integer> entry : ranked) {
+            if (selected.size() >= limit) {
+                break;
+            }
+
+            String key = entry.getKey();
+            if (selected.containsKey(key)) {
+                continue;
+            }
+
+            selected.put(key, displayName.getOrDefault(key, key));
+        }
+
+        return new ArrayList<>(selected.values());
+    }
+
+    private String normalizeCategoryKey(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        return value.trim()
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("\\s+", " ");
+    }
+
     private boolean containsVoucher(List<Voucher> list, int voucherId) {
         if (list == null || list.isEmpty()) {
             return false;
@@ -579,3 +678,5 @@ public class HomeServlet extends HttpServlet {
         return false;
     }
 }
+
+

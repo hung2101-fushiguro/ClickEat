@@ -19,6 +19,41 @@ import jakarta.servlet.http.HttpSession;
 
 @WebServlet(name = "CartServlet", urlPatterns = {"/cart"})
 public class CartServlet extends HttpServlet {
+    private boolean isAjaxRequest(HttpServletRequest request) {
+        String requestedWith = request.getHeader("X-Requested-With");
+        if (requestedWith != null && "XMLHttpRequest".equalsIgnoreCase(requestedWith.trim())) {
+            return true;
+        }
+        String accept = request.getHeader("Accept");
+        return accept != null && accept.toLowerCase().contains("application/json");
+    }
+
+    private String jsonEscape(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        return raw
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r");
+    }
+
+    private void respondAddResult(HttpServletRequest request, HttpServletResponse response,
+            HttpSession session, boolean success, String message, String fallbackPath) throws IOException {
+        if (isAjaxRequest(request)) {
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write("{\"success\":" + success + ",\"message\":\"" + jsonEscape(message) + "\"}");
+            return;
+        }
+
+        if (success) {
+            session.setAttribute("toastMsg", message);
+        } else {
+            session.setAttribute("toastError", message);
+        }
+        response.sendRedirect(backOrDefault(request, fallbackPath));
+    }
 
     private String backOrDefault(HttpServletRequest request, String fallback) {
         String ref = request.getHeader("Referer");
@@ -104,12 +139,12 @@ public class CartServlet extends HttpServlet {
         FoodItemDAO foodDAO = new FoodItemDAO();
         GuestSessionDAO guestSessionDAO = new GuestSessionDAO();
 
-        if ("add".equals(action)) {
+                if ("add".equals(action)) {
             try {
                 String foodIdRaw = request.getParameter("id");
                 if (foodIdRaw == null || foodIdRaw.isBlank()) {
-                    session.setAttribute("toastError", "Không xác định được món ăn cần thêm.");
-                    response.sendRedirect(backOrDefault(request, "/home"));
+                    respondAddResult(request, response, session, false,
+                            "Không xác định được món ăn cần thêm.", "/home");
                     return;
                 }
 
@@ -117,22 +152,22 @@ public class CartServlet extends HttpServlet {
                 FoodItem food = foodDAO.findById(foodId);
 
                 if (food == null) {
-                    session.setAttribute("toastError", "Món ăn không tồn tại.");
-                    response.sendRedirect(backOrDefault(request, "/home"));
+                    respondAddResult(request, response, session, false,
+                            "Món ăn không tồn tại.", "/home");
                     return;
                 }
 
                 if (!food.isAvailable()) {
-                    session.setAttribute("toastError", "Món ăn hiện đang tạm ngừng bán.");
-                    response.sendRedirect(backOrDefault(request, "/home"));
+                    respondAddResult(request, response, session, false,
+                            "Món ăn hiện đang tạm ngừng bán.", "/home");
                     return;
                 }
 
                 Cart cart = getOrCreateActiveCart(session, account, cartDAO, guestSessionDAO);
 
                 if (cart == null) {
-                    session.setAttribute("toastError", "Không thể khởi tạo giỏ hàng.");
-                    response.sendRedirect(backOrDefault(request, "/home"));
+                    respondAddResult(request, response, session, false,
+                            "Không thể khởi tạo giỏ hàng.", "/home");
                     return;
                 }
 
@@ -154,9 +189,8 @@ public class CartServlet extends HttpServlet {
                     FoodItem firstFoodInCart = foodDAO.findById(currentItems.get(0).getFoodItemId());
                     if (firstFoodInCart != null
                             && firstFoodInCart.getMerchantUserId() != food.getMerchantUserId()) {
-                        session.setAttribute("toastError",
-                                "Giỏ hàng chỉ được chứa món từ 1 nhà hàng. Vui lòng xóa giỏ cũ trước.");
-                        response.sendRedirect(backOrDefault(request, "/home"));
+                        respondAddResult(request, response, session, false,
+                                "Giỏ hàng chỉ được chứa món từ 1 nhà hàng. Vui lòng xóa giỏ cũ trước.", "/home");
                         return;
                     }
                 }
@@ -178,21 +212,25 @@ public class CartServlet extends HttpServlet {
                 }
 
                 if (isSuccess) {
-                    session.setAttribute("toastMsg", "Đã thêm món vào giỏ hàng!");
+                    respondAddResult(request, response, session, true,
+                            "Đã thêm món vào giỏ hàng!", "/home");
                 } else {
-                    session.setAttribute("toastError", "Không thể thêm món vào giỏ hàng.");
+                    respondAddResult(request, response, session, false,
+                            "Không thể thêm món vào giỏ hàng.", "/home");
                 }
+                return;
 
             } catch (NumberFormatException e) {
-                session.setAttribute("toastError", "Mã món ăn không hợp lệ.");
+                respondAddResult(request, response, session, false,
+                        "Mã món ăn không hợp lệ.", "/home");
+                return;
             } catch (Exception e) {
                 System.out.println("Lỗi thêm vào giỏ: " + e.getMessage());
                 e.printStackTrace();
-                session.setAttribute("toastError", "Không thể thêm món vào giỏ.");
+                respondAddResult(request, response, session, false,
+                        "Không thể thêm món vào giỏ.", "/home");
+                return;
             }
-
-            response.sendRedirect(backOrDefault(request, "/home"));
-            return;
         }
 
         if ("delete".equals(action)) {
@@ -347,3 +385,4 @@ public class CartServlet extends HttpServlet {
         response.sendRedirect(backOrDefault(request, "/home"));
     }
 }
+

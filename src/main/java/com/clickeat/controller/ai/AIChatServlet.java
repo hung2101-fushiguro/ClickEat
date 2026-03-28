@@ -125,11 +125,13 @@ public class AIChatServlet extends HttpServlet {
         String suggestedFoodContext = buildSuggestedFoodsContext(suggestedFoods);
         String dataSourcingGuideline = buildDataSourcingGuideline(userLocation);
         String learnedPreferenceContext = buildLearnedPreferenceContext(request, account.getId());
+        String sqlSchemaTrustContext = buildSqlSchemaTrustContext();
+        String recommendationRubricContext = buildRecommendationRubricContext();
 
         // 3. Xây dựng System Instruction dạng structured output để chạy production ổn định
         String systemInstruction
                 = "Bạn là ClickEat Smart Nutrition & Ordering Assistant.\n"
-                + "Mục tiêu ưu tiên: trải nghiệm tự nhiên, cá nhân hóa, tăng tỷ lệ chốt đơn, và an toàn sức khỏe.\n"
+                + "Mục tiêu ưu tiên: trải nghiệm tự nhiên, cá nhân hóa, tăng tỉ lệ chốt đơn, và an toàn sức khỏe.\n"
                 + "Bạn chỉ cung cấp khuyến nghị dinh dưỡng tổng quát theo tinh thần WHO, không chẩn đoán y khoa.\n\n"
                 + "=== HỒ SƠ CÁ NHÂN HÓA CỦA KHÁCH ===\n"
                 + profileContext + "\n\n"
@@ -149,6 +151,10 @@ public class AIChatServlet extends HttpServlet {
                 + suggestedFoodContext + "\n\n"
                 + "=== CÁCH LẤY DỮ LIỆU (BẮT BUỘC) ===\n"
                 + dataSourcingGuideline + "\n\n"
+                + "=== SQL SCHEMA TRUST MAP (SOURCE PRIORITY) ===\n"
+                + sqlSchemaTrustContext + "\n\n"
+                + "=== DISH SCORING RUBRIC (MUST APPLY) ===\n"
+                + recommendationRubricContext + "\n\n"
                 + fewShotBlock
                 + "=== QUY TẮC BẮT BUỘC ===\n"
                 + "1. CHỈ chọn món trong danh sách thực đơn hệ thống.\n"
@@ -162,6 +168,7 @@ public class AIChatServlet extends HttpServlet {
                 + "=== OUTPUT CONTRACT (BẮT BUỘC JSON THUẦN, KHÔNG markdown, KHÔNG văn bản ngoài JSON) ===\n"
                 + "{\n"
                 + "  \"intent\": \"string\",\n"
+                + "  \"response_tone\": \"friendly|consultative|concise\",\n"
                 + "  \"needs_clarification\": true/false,\n"
                 + "  \"clarification_questions\": [\"...\",\"...\"],\n"
                 + "  \"natural_response\": \"string\",\n"
@@ -169,7 +176,9 @@ public class AIChatServlet extends HttpServlet {
                 + "    {\n"
                 + "      \"dish_name\": \"string\",\n"
                 + "      \"reason\": \"string\",\n"
+                + "      \"reason_evidence\": [\"profile\"|\"history\"|\"menu\"|\"realtime\"],\n"
                 + "      \"health_score\": 1-10,\n"
+                + "      \"confidence\": 0.0-1.0,\n"
                 + "      \"estimated_calories\": number|null,\n"
                 + "      \"price_level\": \"low|medium|high|unknown\",\n"
                 + "      \"tags\": [\"...\"],\n"
@@ -330,7 +339,7 @@ public class AIChatServlet extends HttpServlet {
 
         return "Chào " + safeName + "! Mình thấy gần đây bạn hay mua " + topFoods.get(0)
                 + " và " + topFoods.get(1)
-                + ". Hôm nay mình gợi ý vài món gần gu và giao được tới chỗ bạn nhé?";
+                + ". Hôm nay mình gợi ý vài món gần gũi và giao được tới chỗ bạn nhé?";
     }
 
     private String buildRecentConversationContext(List<ChatTurn> historyTurns, int maxTurns) {
@@ -386,13 +395,30 @@ public class AIChatServlet extends HttpServlet {
         boolean hasLocation = userLocation != null
                 && userLocation.latitude != null
                 && userLocation.longitude != null;
-        return "1) Món và giá: ưu tiên từ block ứng viên món đã lọc; nếu thiếu mới dò danh sách menu hệ thống.\n"
+        return "1) Món và giá: ưu tiên từ block ứng viên món đã lọc; nếu thiếu mới từ danh sách menu hệ thống.\n"
                 + "2) Sức khỏe và dị ứng: bắt buộc theo hồ sơ cá nhân hóa và chính sách an toàn.\n"
                 + "3) Sở thích và cách nói chuyện: dùng lịch sử ăn uống + ngữ cảnh hội thoại gần nhất + trí nhớ thói quen chat.\n"
                 + "4) Vị trí hiện tại: "
                 + (hasLocation
                         ? "đã có tọa độ, chỉ chọn món trong phạm vi có thể giao."
                         : "chưa có tọa độ realtime, ưu tiên món an toàn và có thể hỏi khách bật vị trí khi cần.");
+    }
+
+    private String buildSqlSchemaTrustContext() {
+        return "- merchants.is_open + merchant_addresses.latitude/longitude: only use open merchants that can deliver to the user.\n"
+                + "- food_items.price + food_items.name + categories.name: source of truth for dish name, price, and category.\n"
+                + "- vouchers.code/discount_type/discount_value/start_date/end_date/usage_limit: only mention currently valid vouchers.\n"
+                + "- customer_profile.food_preferences/allergies/health_goal/daily_calorie_target: source of truth for personalization and safety.\n"
+                + "- orders + order_items: use for preference inference only, never invent off-system menu items.";
+    }
+
+    private String buildRecommendationRubricContext() {
+        return "- Score each dish by rubric: health_fit(40%) + preference_fit(25%) + context_fit(20%) + conversion_potential(15%).\n"
+                + "- health_fit: align with health goal, avoid allergens, and keep calories reasonable.\n"
+                + "- preference_fit: align with taste profile and recent purchase history.\n"
+                + "- context_fit: fit current time, delivery feasibility, and budget.\n"
+                + "- conversion_potential: maximize order likelihood (familiar option + healthy alternative).\n"
+                + "- Sort recommendations by total score descending before returning.";
     }
 
     private String buildLearnedPreferenceContext(HttpServletRequest request, int userId) {
@@ -874,10 +900,25 @@ public class AIChatServlet extends HttpServlet {
             response.parsedJson = false;
             response.parseFailureReason = "invalid_json";
             response.usedFallbackRecommendations = true;
-            response.recommendations = buildFallbackRecommendations(fallbackFoods);
+            response.recommendations = buildFallbackRecommendations(fallbackFoods, userMessage);
             ensureHealthyAlternative(response.recommendations);
-            response.nutritionNote = "Nếu bạn muốn mình cá nhân hóa kỹ hơn, cho mình biết mục tiêu sức khỏe và ngân sách nhé.";
-            response.cta = "Bạn thích món đậm vị hay nhẹ bụng hơn?";
+            if (isWeightLossIntent(userMessage)) {
+                response.naturalResponse = "Mình hiểu bạn đang ưu tiên giảm cân, mình lọc nhanh món nhẹ và ít dầu mỡ hơn.";
+                response.nutritionNote = "Mẹo nhanh: ưu tiên món luộc/hấp và kiểm soát tinh bột vào buổi tối.";
+                response.cta = "Bạn muốn mình lọc thêm theo ngân sách không?";
+            } else if (isRiceIntent(userMessage)) {
+                response.naturalResponse = "Có nhé, mình ưu tiên gợi ý nhóm món cơm cho bạn.";
+                response.nutritionNote = "Nếu muốn nhẹ hơn, mình có thể ưu tiên cơm + rau + đạm nạc.";
+                response.cta = "Bạn muốn cơm gà, cơm sườn hay cơm phần healthy?";
+            } else if (isNoodleQuangIntent(userMessage)) {
+                response.naturalResponse = "Mình thấy bạn muốn ăn Mỳ Quảng, mình ưu tiên món gần nhu cầu này trước.";
+                response.nutritionNote = "Nếu muốn nhẹ bụng hơn, mình có thể ưu tiên phiên bản ít dầu và thêm rau.";
+                response.cta = "Bạn muốn bản đậm vị hay thanh nhẹ?";
+            } else {
+                response.naturalResponse = "Mình gợi ý nhanh vài món đang có trong hệ thống để bạn tham khảo.";
+                response.nutritionNote = "Nếu bạn muốn mình cá nhân hóa kỹ hơn, cho mình biết mục tiêu sức khỏe và ngân sách nhé.";
+                response.cta = "Bạn thích món đậm vị hay nhẹ bụng hơn?";
+            }
             return response;
         }
 
@@ -929,7 +970,7 @@ public class AIChatServlet extends HttpServlet {
 
         if (response.recommendations.size() < 2) {
             response.usedFallbackRecommendations = true;
-            response.recommendations = buildFallbackRecommendations(fallbackFoods);
+            response.recommendations = buildFallbackRecommendations(fallbackFoods, userMessage);
         }
         ensureHealthyAlternative(response.recommendations);
 
@@ -1003,7 +1044,10 @@ public class AIChatServlet extends HttpServlet {
         }
     }
 
-    private List<Recommendation> buildFallbackRecommendations(List<FoodItem> foods) {
+    private List<Recommendation> buildFallbackRecommendations(List<FoodItem> foods, String userMessage) {
+        boolean weightLossIntent = isWeightLossIntent(userMessage);
+        boolean riceIntent = isRiceIntent(userMessage);
+        boolean noodleQuangIntent = isNoodleQuangIntent(userMessage);
         List<Recommendation> recs = new ArrayList<>();
         if (foods != null) {
             for (FoodItem food : foods) {
@@ -1012,9 +1056,19 @@ public class AIChatServlet extends HttpServlet {
                 }
                 Recommendation rec = new Recommendation();
                 rec.dishName = safe(food.getName(), "Món gợi ý");
-                rec.reason = "Món đang sẵn và phù hợp ngữ cảnh hiện tại của bạn.";
-                rec.healthScore = food.isFried() ? 6 : 8;
-                rec.isHealthyAlternative = !food.isFried();
+                if (weightLossIntent) {
+                    rec.reason = food.isFried()
+                            ? "Đang có sẵn, nhưng nên dùng khẩu phần nhỏ để hỗ trợ giảm cân."
+                            : "Ít dầu mỡ hơn và phù hợp định hướng giảm cân.";
+                } else if (riceIntent) {
+                    rec.reason = "Đang có sẵn và đúng nhóm món cơm bạn đang hỏi.";
+                } else if (noodleQuangIntent && normalize(safe(food.getName(), "")).contains("mi quang")) {
+                    rec.reason = "Đang có sẵn và sát đúng món bạn đang muốn ăn.";
+                } else {
+                    rec.reason = "Món đang có sẵn trong hệ thống.";
+                }
+                rec.healthScore = weightLossIntent ? (food.isFried() ? 6 : 9) : (food.isFried() ? 6 : 8);
+                rec.isHealthyAlternative = !food.isFried() || weightLossIntent;
                 recs.add(rec);
                 if (recs.size() >= 3) {
                     break;
@@ -1025,12 +1079,36 @@ public class AIChatServlet extends HttpServlet {
         while (recs.size() < 2) {
             Recommendation rec = new Recommendation();
             rec.dishName = recs.isEmpty() ? "Cơm gà nướng rau" : "Bún cá rau nhiều";
-            rec.reason = "Lựa chọn cân bằng, dễ ăn và phù hợp nhiều nhu cầu.";
-            rec.healthScore = 8;
+            rec.reason = weightLossIntent
+                    ? "Ưu tiên món nhẹ bụng, nhiều rau và kiểm soát dầu mỡ."
+                    : "Lựa chọn cân bằng, dễ ăn và phù hợp nhiều nhu cầu.";
+            rec.healthScore = weightLossIntent ? 9 : 8;
             rec.isHealthyAlternative = true;
             recs.add(rec);
         }
         return recs;
+    }
+
+    private boolean isWeightLossIntent(String userMessage) {
+        String normalized = normalize(userMessage);
+        return normalized.contains("giam can")
+                || normalized.contains("eat clean")
+                || normalized.contains("healthy")
+                || normalized.contains("it dau")
+                || normalized.contains("an kieng");
+    }
+
+    private boolean isNoodleQuangIntent(String userMessage) {
+        String normalized = normalize(userMessage);
+        return normalized.contains("mi quang") || normalized.contains("my quang");
+    }
+
+    private boolean isRiceIntent(String userMessage) {
+        String normalized = normalize(userMessage);
+        return normalized.contains("co com")
+                || normalized.contains("mon com")
+                || normalized.equals("com")
+                || normalized.contains("com");
     }
 
     private List<Map<String, Object>> buildRecommendationCards(StructuredAiResponse response, List<FoodItem> suggestedFoods) {

@@ -29,7 +29,10 @@ public class VerifyOtpServlet extends HttpServlet {
         String addressLine = trim(request.getParameter("addressLine"));
         String otpCode = trim(request.getParameter("otpCode"));
 
-        // fallback từ session nếu hidden input bị rỗng
+        if (otpCode != null) {
+            otpCode = otpCode.replaceAll("\\D", "");
+        }
+
         if (isBlank(fullName)) {
             fullName = stringSession(session, "guestFullName");
         }
@@ -42,6 +45,10 @@ public class VerifyOtpServlet extends HttpServlet {
         if (isBlank(addressLine)) {
             addressLine = stringSession(session, "guestAddress");
         }
+
+        System.out.println("=== VERIFY OTP DEBUG ===");
+        System.out.println("otp raw = [" + request.getParameter("otpCode") + "]");
+        System.out.println("otp cleaned = [" + otpCode + "]");
 
         if (isBlank(fullName) || isBlank(email) || isBlank(phone) || isBlank(addressLine)) {
             out.print("{\"success\":false,\"message\":\"Thông tin giao hàng không hợp lệ. Vui lòng nhập lại.\"}");
@@ -84,6 +91,9 @@ public class VerifyOtpServlet extends HttpServlet {
         }
 
         boolean approved = VonageVerifyUtil.verifyOtp(requestId, otpCode);
+
+        System.out.println("approved = [" + approved + "]");
+        System.out.println("vonage last error = [" + VonageVerifyUtil.getLastError() + "]");
 
         if (!approved) {
             out.print("{\"success\":false,\"message\":\"Mã OTP không chính xác hoặc không hợp lệ.\"}");

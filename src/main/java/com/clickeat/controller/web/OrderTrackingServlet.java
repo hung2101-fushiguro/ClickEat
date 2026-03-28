@@ -13,6 +13,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 @WebServlet(name = "OrderTrackingServlet", urlPatterns = {"/guest-order-tracking"})
 public class OrderTrackingServlet extends HttpServlet {
@@ -20,18 +21,27 @@ public class OrderTrackingServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
+
+        HttpSession session = request.getSession(false);
+
         String orderCode = request.getParameter("code");
-        
+        if (orderCode == null || orderCode.trim().isEmpty()) {
+            if (session != null) {
+                Object lastCode = session.getAttribute("guestLastOrderCode");
+                if (lastCode != null) {
+                    orderCode = lastCode.toString();
+                }
+            }
+        }
+
         if (orderCode != null && !orderCode.trim().isEmpty()) {
             OrderDAO orderDAO = new OrderDAO();
             Order order = orderDAO.getOrderByCode(orderCode.trim());
-            
+
             if (order != null) {
-                // Fetch order items to display
                 OrderItemDAO orderItemDAO = new OrderItemDAO();
                 List<OrderItem> orderItems = orderItemDAO.getItemsByOrderId(order.getId());
-                
+
                 request.setAttribute("order", order);
                 request.setAttribute("orderItems", orderItems);
                 request.setAttribute("searched", true);
@@ -39,9 +49,14 @@ public class OrderTrackingServlet extends HttpServlet {
                 request.setAttribute("error", "Không tìm thấy đơn hàng với mã này. Ký tự phân biệt chữ hoa/thường.");
                 request.setAttribute("searched", true);
             }
+
             request.setAttribute("code", orderCode.trim());
         }
-        
+
+        if (session != null) {
+            request.setAttribute("guestLastOrderCode", session.getAttribute("guestLastOrderCode"));
+        }
+
         request.getRequestDispatcher("/views/web/guest-order-tracking.jsp").forward(request, response);
     }
 }

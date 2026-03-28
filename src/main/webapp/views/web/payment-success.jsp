@@ -91,11 +91,31 @@
             </div>
 
             <div class="mt-10 text-center">
-                <a href="${pageContext.request.contextPath}/home"
-                   class="inline-flex items-center gap-2 h-14 px-10 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-black shadow">
-                    <i class="fa-solid fa-house"></i>
-                    Về trang chủ
-                </a>
+                <div class="flex flex-wrap justify-center gap-4">
+
+                    <c:choose>
+                        <c:when test="${not empty sessionScope.account}">
+                            <a href="${pageContext.request.contextPath}/customer/order-tracking?orderId=${order.id}"
+                               class="inline-flex items-center gap-2 h-14 px-10 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-black shadow">
+                                <i class="fa-solid fa-map-location-dot"></i>
+                                Theo dõi đơn hàng
+                            </a>
+                        </c:when>
+                        <c:otherwise>
+                            <a href="${pageContext.request.contextPath}/guest-order-tracking?code=${order.orderCode}"
+                               class="inline-flex items-center gap-2 h-14 px-10 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-black shadow">
+                                <i class="fa-solid fa-truck-fast"></i>
+                                Theo dõi đơn hàng
+                            </a>
+                        </c:otherwise>
+                    </c:choose>
+
+                    <a href="${pageContext.request.contextPath}/home"
+                       class="inline-flex items-center gap-2 h-14 px-10 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-black shadow">
+                        <i class="fa-solid fa-house"></i>
+                        Về trang chủ
+                    </a>
+                </div>
             </div>
         </main>
     </body>

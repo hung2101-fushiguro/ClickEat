@@ -123,8 +123,7 @@
                 content:"";
                 position:absolute;
                 inset:0;
-                background:
-                    linear-gradient(90deg, rgba(0,0,0,.58) 0%, rgba(0,0,0,.36) 38%, rgba(0,0,0,.12) 100%);
+                background:linear-gradient(90deg, rgba(0,0,0,.58) 0%, rgba(0,0,0,.36) 38%, rgba(0,0,0,.12) 100%);
             }
 
             .hero-content{
@@ -332,17 +331,14 @@
                 background:#dff3f0;
                 color:#0f766e;
             }
-
             .voucher-style-2 .voucher-top{
                 background:#f7e6f2;
                 color:#c02674;
             }
-
             .voucher-style-3 .voucher-top{
                 background:#f4eed6;
                 color:#b45309;
             }
-
             .voucher-style-4 .voucher-top{
                 background:#e6eefc;
                 color:#2563eb;
@@ -438,7 +434,6 @@
                 font-size:13px;
                 line-height:1.42;
                 font-weight:500;
-                min-height:0;
             }
 
             .voucher-expire{
@@ -491,12 +486,10 @@
                 background:#fff1e8;
                 color:var(--primary);
             }
-
             .pill-green{
                 background:#e9f8ee;
                 color:#16a34a;
             }
-
             .pill-red{
                 background:#fee2e2;
                 color:#dc2626;
@@ -750,35 +743,14 @@
                     </div>
                 </div>
             </section>
-            <section class="pt-4">
-                <div class="container-click">
-                    <div id="gpsMismatchAlert"
-                         class="hidden rounded-[22px] border border-amber-200 bg-amber-50 px-5 py-4">
-                        <div class="flex items-start gap-3">
-                            <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
-                                <i class="fa-solid fa-triangle-exclamation"></i>
-                            </div>
-                            <div>
-                                <div class="text-[15px] font-black text-amber-700">
-                                    Bạn đang ở xa địa chỉ mặc định
-                                </div>
-                                <div id="gpsMismatchAlertText" class="mt-1 text-[15px] leading-7 text-amber-800">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
 
-            <!-- HERO -->
             <section class="pt-7">
                 <div class="container-click">
                     <div class="hero-wrap">
                         <div class="hero-main">
                             <img
                                 src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1600&auto=format&fit=crop"
-                                alt="Hero banner"
-                                >
+                                alt="Hero banner">
 
                             <div class="hero-content">
                                 <div class="hero-badge">MỚI NHẤT</div>
@@ -870,7 +842,6 @@
                 </div>
             </section>
 
-            <!-- VOUCHERS -->
             <section id="voucher-list" class="pt-24">
                 <div class="container-click">
                     <div class="flex flex-wrap items-center justify-between gap-4 mb-10">
@@ -1006,7 +977,7 @@
                     </c:if>
                 </div>
             </section>
-            <!-- DANH MỤC -->
+
             <section class="pt-24">
                 <div class="container-click">
                     <h2 class="section-title text-center md:text-left mb-12">DANH MỤC PHỔ BIẾN</h2>
@@ -1057,7 +1028,6 @@
                 </div>
             </section>
 
-            <!-- DEAL HOT / FOODS -->
             <section id="deal-hot" class="pt-24">
                 <div class="container-click">
                     <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
@@ -1137,11 +1107,10 @@
                                 </div>
                             </c:forEach>
                         </div>
-                    </c:if>  
+                    </c:if>
                 </div>
             </section>
 
-            <!-- NHÀ HÀNG NỔI BẬT -->
             <section class="pt-24">
                 <div class="container-click">
                     <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
@@ -1209,7 +1178,6 @@
                 </div>
             </section>
 
-            <!-- AI BANNER -->
             <section class="pt-24">
                 <div class="container-click">
                     <div class="rounded-[40px] bg-orange-500 min-h-[420px] overflow-hidden shadow-soft px-8 md:px-14 py-12 md:py-16 grid grid-cols-1 lg:grid-cols-[1fr_.9fr] gap-10 items-center">
@@ -1233,68 +1201,57 @@
                                 <img
                                     src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=1400&auto=format&fit=crop"
                                     alt="AI food suggestion"
-                                    class="w-full h-[290px] md:h-[320px] object-cover"
-                                    >
+                                    class="w-full h-[290px] md:h-[320px] object-cover">
                             </div>
                         </div>
                     </div>
                 </div>
             </section>
-            <!-- Loading Overlay -->
-            <div id="locationLoadingOverlay" class="hidden fixed inset-0 z-[9999] bg-black/45 backdrop-blur-[2px]">
-                <div class="absolute inset-0 flex items-center justify-center px-4">
-                    <div class="w-full max-w-md bg-white rounded-[28px] shadow-2xl p-8 text-center">
-                        <div class="w-20 h-20 mx-auto rounded-full bg-orange-50 text-orange-500 flex items-center justify-center text-3xl">
-                            <i class="fa-solid fa-location-crosshairs fa-spin"></i>
+
+            <div id="autoLocationModal" class="fixed inset-0 hidden items-center justify-center bg-black/45 z-[9999] p-4">
+                <div class="bg-white rounded-[28px] shadow-2xl w-full max-w-lg p-6">
+                    <div class="flex items-start gap-4">
+                        <div class="w-14 h-14 rounded-2xl bg-orange-100 text-orange-500 flex items-center justify-center shrink-0 text-2xl">
+                            <i class="fa-solid fa-location-crosshairs"></i>
                         </div>
 
-                        <h3 class="mt-5 text-[26px] font-black text-gray-900">Đang xác định vị trí</h3>
-                        <p class="mt-3 text-gray-500 text-[16px] leading-7">
-                            ClickEat đang lấy GPS và cập nhật địa chỉ giao hàng của bạn...
-                        </p>
-                    </div>
-                </div>
-            </div>
+                        <div class="min-w-0 flex-1">
+                            <h3 id="autoLocationModalTitle" class="text-2xl font-black text-gray-900">
+                                Đang kiểm tra vị trí của bạn
+                            </h3>
 
-            <!-- Confirm Modal -->
-            <div id="locationConfirmModal" class="hidden fixed inset-0 z-[10000] bg-black/45 backdrop-blur-[2px]">
-                <div class="absolute inset-0 flex items-center justify-center px-4">
-                    <div class="w-full max-w-xl bg-white rounded-[30px] shadow-2xl p-8">
-                        <div class="flex items-start gap-4">
-                            <div class="w-16 h-16 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center text-2xl shrink-0">
-                                <i class="fa-solid fa-circle-check"></i>
+                            <p id="autoLocationModalMessage" class="mt-3 text-gray-600 leading-7">
+                                Hệ thống đang đối chiếu vị trí hiện tại với địa chỉ mặc định.
+                            </p>
+
+                            <div id="autoLocationLoading" class="mt-5 flex items-center gap-3 text-orange-500 font-bold">
+                                <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor"
+                                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                                </svg>
+                                Đang cập nhật vị trí...
                             </div>
 
-                            <div class="min-w-0 flex-1">
-                                <h3 class="text-[28px] font-black text-gray-900 leading-tight">
-                                    Đã tìm thấy vị trí giao hàng
-                                </h3>
-
-                                <p class="mt-3 text-gray-500 text-[16px] leading-7">
-                                    Hệ thống sẽ dùng vị trí này để lọc các quán gần bạn và trong phạm vi giao hàng.
-                                </p>
-
-                                <div class="mt-5 rounded-2xl bg-orange-50 border border-orange-100 px-5 py-4">
-                                    <div class="text-[13px] uppercase tracking-[.08em] font-black text-orange-500">
-                                        Địa chỉ hiện tại
-                                    </div>
-                                    <div id="confirmedLocationText" class="mt-2 text-[18px] font-bold text-gray-900 leading-7">
-                                    </div>
+                            <div id="autoLocationSuccess" class="mt-5 hidden">
+                                <div class="rounded-2xl bg-green-50 border border-green-200 p-4">
+                                    <div class="font-black text-green-700">Đã cập nhật vị trí mới</div>
+                                    <div id="autoLocationNewAddress" class="mt-2 text-green-700 leading-6"></div>
                                 </div>
+                            </div>
 
-                                <div class="mt-7 flex flex-col sm:flex-row gap-3 sm:justify-end">
-                                    <button type="button"
-                                            id="cancelLocationConfirmBtn"
-                                            class="h-[52px] px-6 rounded-full bg-gray-100 text-gray-700 font-black hover:bg-gray-200 transition">
-                                        Đóng
-                                    </button>
-
-                                    <button type="button"
-                                            id="confirmLocationBtn"
-                                            class="h-[52px] px-7 rounded-full bg-orange-500 text-white font-black hover:bg-orange-600 transition">
-                                        Xác nhận và tải quán gần đây
-                                    </button>
+                            <div id="autoLocationError" class="mt-5 hidden">
+                                <div class="rounded-2xl bg-red-50 border border-red-200 p-4 text-red-700">
+                                    Không thể cập nhật vị trí mới. Bạn có thể bấm “Cập nhật vị trí” để thử lại.
                                 </div>
+                            </div>
+
+                            <div class="mt-6 flex justify-end gap-3">
+                                <button id="autoLocationCloseBtn"
+                                        type="button"
+                                        class="hidden h-[48px] px-6 rounded-full bg-orange-500 text-white font-black hover:bg-orange-600 transition">
+                                    Xác nhận
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1302,215 +1259,183 @@
             </div>
 
         </main>
+
         <jsp:include page="footer.jsp" />
+
         <script>
-            function haversineKm(lat1, lon1, lat2, lon2) {
-                const toRad = deg => deg * Math.PI / 180;
-                const R = 6371;
-
-                const dLat = toRad(lat2 - lat1);
-                const dLon = toRad(lon2 - lon1);
-
-                const a =
-                        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-                        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-
-                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                return R * c;
-            }
-
-            document.addEventListener('DOMContentLoaded', function () {
-                const detectBtn = document.getElementById('detectLocationBtn');
-                const loadingOverlay = document.getElementById('locationLoadingOverlay');
-                const confirmModal = document.getElementById('locationConfirmModal');
-                const confirmedLocationText = document.getElementById('confirmedLocationText');
-                const confirmLocationBtn = document.getElementById('confirmLocationBtn');
-                const cancelLocationConfirmBtn = document.getElementById('cancelLocationConfirmBtn');
-
-                const alertBox = document.getElementById('gpsMismatchAlert');
-                const alertText = document.getElementById('gpsMismatchAlertText');
-
-                const isLoggedIn = ${not empty sessionScope.account ? 'true' : 'false'};
+            (function () {
+                const contextPath = '${pageContext.request.contextPath}';
                 const deliverySource = '${empty deliverySource ? "" : deliverySource}';
                 const defaultLat = ${empty defaultAddressLat ? 'null' : defaultAddressLat};
                 const defaultLng = ${empty defaultAddressLng ? 'null' : defaultAddressLng};
                 const mismatchThresholdKm = ${empty locationMismatchAlertKm ? '1.5' : locationMismatchAlertKm};
+                const isLoggedIn = ${not empty sessionScope.account ? 'true' : 'false'};
 
-                function showLoading() {
-                    if (loadingOverlay) {
-                        loadingOverlay.classList.remove('hidden');
-                    }
+                const AUTO_KEY = 'clickeat_auto_location_checked';
+
+                const modal = document.getElementById('autoLocationModal');
+                const modalTitle = document.getElementById('autoLocationModalTitle');
+                const modalMessage = document.getElementById('autoLocationModalMessage');
+                const loadingBox = document.getElementById('autoLocationLoading');
+                const successBox = document.getElementById('autoLocationSuccess');
+                const errorBox = document.getElementById('autoLocationError');
+                const newAddressEl = document.getElementById('autoLocationNewAddress');
+                const detectBtn = document.getElementById('detectLocationBtn');
+                const confirmBtn = document.getElementById('autoLocationCloseBtn');
+
+                function haversineKm(lat1, lon1, lat2, lon2) {
+                    const toRad = function (deg) {
+                        return deg * Math.PI / 180;
+                    };
+                    const R = 6371;
+                    const dLat = toRad(lat2 - lat1);
+                    const dLon = toRad(lon2 - lon1);
+
+                    const a =
+                            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                    return R * c;
                 }
 
-                function hideLoading() {
-                    if (loadingOverlay) {
-                        loadingOverlay.classList.add('hidden');
-                    }
-                }
-
-                function showConfirm(addressText) {
-                    if (confirmedLocationText) {
-                        confirmedLocationText.textContent = addressText || 'Vị trí hiện tại';
-                    }
-                    if (confirmModal) {
-                        confirmModal.classList.remove('hidden');
-                    }
-                }
-
-                function hideConfirm() {
-                    if (confirmModal) {
-                        confirmModal.classList.add('hidden');
-                    }
-                }
-
-                function hideMismatchAlert() {
-                    if (alertBox) {
-                        alertBox.classList.add('hidden');
-                    }
-                }
-
-                function showMismatchAlert(distanceKm) {
-                    if (!alertBox || !alertText) {
+                function showModal(title, message) {
+                    if (!modal)
                         return;
-                    }
+                    modal.classList.remove('hidden');
+                    modal.classList.add('flex');
 
-                    const distanceText = distanceKm.toFixed(2).replace('.', ',');
+                    if (modalTitle)
+                        modalTitle.textContent = title;
+                    if (modalMessage)
+                        modalMessage.textContent = message;
 
-                    alertText.textContent =
-                            `Vị trí hiện tại của bạn đang cách địa chỉ mặc định khoảng ${distanceText} km. ` +
-                            `Nếu bạn muốn xem quán gần vị trí hiện tại, hãy bấm "Cập nhật vị trí".`;
-
-                    alertBox.classList.remove('hidden');
+                    if (loadingBox)
+                        loadingBox.classList.remove('hidden');
+                    if (successBox)
+                        successBox.classList.add('hidden');
+                    if (errorBox)
+                        errorBox.classList.add('hidden');
+                    if (confirmBtn)
+                        confirmBtn.classList.add('hidden');
                 }
 
-                function runPassiveMismatchCheck() {
-                    // Chỉ check khi:
-                    // 1) user đã login
-                    // 2) có địa chỉ mặc định
-                    // 3) hệ thống hiện vẫn đang dùng DEFAULT_ADDRESS
-                    if (!isLoggedIn || defaultLat === null || defaultLng === null) {
-                        hideMismatchAlert();
-                        return;
-                    }
+                function showSuccess(addressText) {
+                    if (loadingBox)
+                        loadingBox.classList.add('hidden');
+                    if (successBox)
+                        successBox.classList.remove('hidden');
+                    if (newAddressEl)
+                        newAddressEl.textContent = addressText || 'Vị trí hiện tại';
+                    if (confirmBtn)
+                        confirmBtn.classList.remove('hidden');
+                }
 
-                    if (deliverySource !== 'DEFAULT_ADDRESS') {
-                        hideMismatchAlert();
-                        return;
-                    }
+                function showError() {
+                    if (loadingBox)
+                        loadingBox.classList.add('hidden');
+                    if (errorBox)
+                        errorBox.classList.remove('hidden');
+                    if (confirmBtn)
+                        confirmBtn.classList.remove('hidden');
+                }
 
+                function updateLocationOnServer(lat, lng) {
+                    const body = 'latitude=' + encodeURIComponent(lat) + '&longitude=' + encodeURIComponent(lng);
+
+                    return fetch(contextPath + '/update-delivery-location', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                        },
+                        body: body
+                    }).then(function (res) {
+                        return res.json();
+                    });
+                }
+
+                function runLocationUpdateFlow() {
                     if (!navigator.geolocation) {
-                        hideMismatchAlert();
+                        alert('Trình duyệt không hỗ trợ định vị.');
                         return;
                     }
 
-                    navigator.geolocation.getCurrentPosition(
-                            function (position) {
-                                const currentLat = position.coords.latitude;
-                                const currentLng = position.coords.longitude;
+                    showModal(
+                            'Phát hiện vị trí của bạn bị lệch',
+                            'Hệ thống đang tải lại vị trí hiện tại và cập nhật địa chỉ mới cho bạn.'
+                            );
 
-                                const distanceKm = haversineKm(defaultLat, defaultLng, currentLat, currentLng);
+                    navigator.geolocation.getCurrentPosition(function (position) {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
 
-                                if (distanceKm >= mismatchThresholdKm) {
-                                    showMismatchAlert(distanceKm);
-                                } else {
-                                    hideMismatchAlert();
-                                }
-                            },
-                            function () {
-                                hideMismatchAlert();
-                            },
-                            {
-                                enableHighAccuracy: true,
-                                timeout: 8000,
-                                maximumAge: 300000
-                            }
-                    );
-                }
-
-                if (cancelLocationConfirmBtn) {
-                    cancelLocationConfirmBtn.addEventListener('click', function () {
-                        hideConfirm();
-                    });
-                }
-
-                if (confirmLocationBtn) {
-                    confirmLocationBtn.addEventListener('click', function () {
-                        window.location.href = '${ctx}/home';
-                    });
-                }
-
-                if (detectBtn) {
-                    detectBtn.addEventListener('click', function () {
-                        if (!navigator.geolocation) {
-                            alert('Trình duyệt không hỗ trợ định vị GPS.');
-                            return;
-                        }
-
-                        showLoading();
-
-                        navigator.geolocation.getCurrentPosition(
-                                function (position) {
-                                    const latitude = position.coords.latitude;
-                                    const longitude = position.coords.longitude;
-
-                                    const formData = new URLSearchParams();
-                                    formData.append('latitude', latitude);
-                                    formData.append('longitude', longitude);
-
-                                    fetch('${ctx}/update-delivery-location', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-                                        },
-                                        body: formData.toString()
-                                    })
-                                            .then(res => res.json())
-                                            .then(data => {
-                                                hideLoading();
-
-                                                if (data.success) {
-                                                    // vì user đã chủ động cập nhật vị trí rồi
-                                                    // nên ẩn cảnh báo mismatch cũ ngay
-                                                    hideMismatchAlert();
-                                                    showConfirm(data.address || 'Vị trí hiện tại');
-                                                } else {
-                                                    alert(data.message || 'Không thể cập nhật vị trí.');
-                                                }
-                                            })
-                                            .catch(() => {
-                                                hideLoading();
-                                                alert('Đã xảy ra lỗi khi cập nhật vị trí.');
-                                            });
-                                },
-                                function (error) {
-                                    hideLoading();
-
-                                    switch (error.code) {
-                                        case error.PERMISSION_DENIED:
-                                            alert('Bạn đã từ chối quyền truy cập vị trí.');
-                                            break;
-                                        case error.POSITION_UNAVAILABLE:
-                                            alert('Không thể xác định vị trí hiện tại.');
-                                            break;
-                                        case error.TIMEOUT:
-                                            alert('Hết thời gian chờ lấy vị trí.');
-                                            break;
-                                        default:
-                                            alert('Không thể lấy vị trí GPS.');
+                        updateLocationOnServer(lat, lng)
+                                .then(function (data) {
+                                    if (data && data.success) {
+                                        sessionStorage.setItem(AUTO_KEY, '1');
+                                        showSuccess(data.address || 'Vị trí hiện tại');
+                                    } else {
+                                        showError();
                                     }
-                                },
-                                {
-                                    enableHighAccuracy: true,
-                                    timeout: 10000,
-                                    maximumAge: 0
-                                }
-                        );
+                                })
+                                .catch(function () {
+                                    showError();
+                                });
+                    }, function () {
+                        showError();
+                    }, {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
                     });
                 }
 
-                runPassiveMismatchCheck();
-            });
+                function autoCheckMismatchAndUpdate() {
+                    if (!isLoggedIn)
+                        return;
+                    if (deliverySource !== 'DEFAULT_ADDRESS')
+                        return;
+                    if (defaultLat === null || defaultLng === null)
+                        return;
+                    if (!navigator.geolocation)
+                        return;
+                    if (sessionStorage.getItem(AUTO_KEY) === '1')
+                        return;
+
+                    navigator.geolocation.getCurrentPosition(function (position) {
+                        const currentLat = position.coords.latitude;
+                        const currentLng = position.coords.longitude;
+                        const distanceKm = haversineKm(defaultLat, defaultLng, currentLat, currentLng);
+
+                        if (distanceKm >= mismatchThresholdKm) {
+                            runLocationUpdateFlow();
+                        }
+                    }, function () {
+                    }, {
+                        enableHighAccuracy: true,
+                        timeout: 8000,
+                        maximumAge: 300000
+                    });
+                }
+
+                document.addEventListener('DOMContentLoaded', function () {
+                    if (detectBtn) {
+                        detectBtn.addEventListener('click', function () {
+                            sessionStorage.removeItem(AUTO_KEY);
+                            runLocationUpdateFlow();
+                        });
+                    }
+
+                    if (confirmBtn) {
+                        confirmBtn.addEventListener('click', function () {
+                            window.location.reload();
+                        });
+                    }
+
+                    autoCheckMismatchAndUpdate();
+                });
+            })();
         </script>
     </body>
 </html>

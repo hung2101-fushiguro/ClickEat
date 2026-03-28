@@ -4,7 +4,9 @@ import com.clickeat.config.VnpayConfig;
 import com.clickeat.dal.impl.CartDAO;
 import com.clickeat.dal.impl.OrderDAO;
 import com.clickeat.dal.impl.PaymentTransactionDAO;
+import com.clickeat.dal.impl.UserDAO;
 import com.clickeat.model.Order;
+import com.clickeat.model.User;
 import com.clickeat.util.VnpayUtil;
 import java.io.IOException;
 import java.util.HashMap;
@@ -14,6 +16,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 @WebServlet(name = "VnpayReturnServlet", urlPatterns = {"/vnpay-return"})
 public class VnpayReturnServlet extends HttpServlet {
@@ -40,6 +43,7 @@ public class VnpayReturnServlet extends HttpServlet {
         PaymentTransactionDAO paymentDAO = new PaymentTransactionDAO();
         OrderDAO orderDAO = new OrderDAO();
         CartDAO cartDAO = new CartDAO();
+        UserDAO userDAO = new UserDAO();
 
         int orderId = 0;
         if (vnpTxnRef != null && vnpTxnRef.startsWith("VNP_")) {
@@ -75,6 +79,18 @@ public class VnpayReturnServlet extends HttpServlet {
 
                 if (order.getCustomerUserId() > 0) {
                     cartDAO.clearActiveCartByCustomerId(order.getCustomerUserId());
+                }
+
+                if (order.getCustomerUserId() > 0) {
+                    HttpSession session = request.getSession(true);
+                    User account = (User) session.getAttribute("account");
+
+                    if (account == null || account.getId() != order.getCustomerUserId()) {
+                        User customer = userDAO.findById(order.getCustomerUserId());
+                        if (customer != null && "ACTIVE".equalsIgnoreCase(customer.getStatus())) {
+                            session.setAttribute("account", customer);
+                        }
+                    }
                 }
             }
 

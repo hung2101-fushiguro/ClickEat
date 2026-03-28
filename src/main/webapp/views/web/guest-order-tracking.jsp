@@ -20,6 +20,19 @@
                 <h1 class="text-3xl font-black mb-2">Tra cứu đơn hàng</h1>
                 <p class="text-gray-500">Dành cho khách hàng đặt đơn không cần tài khoản</p>
             </div>
+            <c:if test="${empty param.code and not empty guestLastOrderCode}">
+                <div class="max-w-2xl mx-auto mb-6">
+                    <div class="rounded-2xl border border-orange-100 bg-orange-50 px-5 py-4 text-orange-700 flex items-start gap-3">
+                        <i class="fa-solid fa-truck-fast mt-1"></i>
+                        <div>
+                            <div class="font-bold">Đang mở đơn hàng gần nhất của bạn</div>
+                            <div class="text-sm">
+                                Mã đơn gần nhất: <span class="font-extrabold">${guestLastOrderCode}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </c:if>
 
             <!-- Form tìm kiếm -->
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 max-w-2xl mx-auto mb-10">
@@ -58,103 +71,103 @@
                             </div>
                             <div class="text-right">
                                 <span class="inline-block px-4 py-2 rounded-full text-sm font-extrabold
-                                    ${order.orderStatus == 'PENDING_PAYMENT' ? 'bg-orange-100 text-orange-600' :
-                                      order.orderStatus == 'CREATED' ? 'bg-blue-100 text-blue-600' :
-                                      (order.orderStatus == 'DELIVERED' || order.orderStatus == 'COMPLETED') ? 'bg-green-100 text-green-600' :
-                                      order.orderStatus == 'CANCELLED' ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-700'}">
-                                    ${order.orderStatus}
-                                </span>
+                                      ${order.orderStatus == 'PENDING_PAYMENT' ? 'bg-orange-100 text-orange-600' :
+                                        order.orderStatus == 'CREATED' ? 'bg-blue-100 text-blue-600' :
+                                        (order.orderStatus == 'DELIVERED' || order.orderStatus == 'COMPLETED') ? 'bg-green-100 text-green-600' :
+                                        order.orderStatus == 'CANCELLED' ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-700'}">
+                                          ${order.orderStatus}
+                                      </span>
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="space-y-4">
-                            <h3 class="font-bold text-gray-800">Món đã đặt</h3>
-                            <c:forEach var="item" items="${orderItems}">
-                                <div class="flex items-center justify-between pb-3 border-b border-dashed border-gray-100 last:border-0">
-                                    <div class="flex-grow pr-4">
-                                        <div class="font-bold">${empty item.itemNameSnapshot ? 'Món ăn' : item.itemNameSnapshot}</div>
-                                        <div class="text-sm text-gray-500">
-                                            ${item.quantity} x <fmt:formatNumber value="${item.unitPriceSnapshot}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ
+                            <div class="space-y-4">
+                                <h3 class="font-bold text-gray-800">Món đã đặt</h3>
+                                <c:forEach var="item" items="${orderItems}">
+                                    <div class="flex items-center justify-between pb-3 border-b border-dashed border-gray-100 last:border-0">
+                                        <div class="flex-grow pr-4">
+                                            <div class="font-bold">${empty item.itemNameSnapshot ? 'Món ăn' : item.itemNameSnapshot}</div>
+                                            <div class="text-sm text-gray-500">
+                                                ${item.quantity} x <fmt:formatNumber value="${item.unitPriceSnapshot}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ
+                                            </div>
+                                            <c:if test="${not empty item.selectedSize}">
+                                                <div class="text-xs text-gray-500 mt-0.5">Size: ${item.selectedSize}</div>
+                                            </c:if>
+                                            <c:if test="${not empty item.selectedToppings}">
+                                                <div class="text-xs text-gray-500 mt-0.5">Topping: ${item.selectedToppings}</div>
+                                            </c:if>
                                         </div>
-                                        <c:if test="${not empty item.selectedSize}">
-                                            <div class="text-xs text-gray-500 mt-0.5">Size: ${item.selectedSize}</div>
-                                        </c:if>
-                                        <c:if test="${not empty item.selectedToppings}">
-                                            <div class="text-xs text-gray-500 mt-0.5">Topping: ${item.selectedToppings}</div>
-                                        </c:if>
+                                        <div class="font-black text-lg">
+                                            <fmt:formatNumber value="${item.unitPriceSnapshot * item.quantity}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ
+                                        </div>
                                     </div>
-                                    <div class="font-black text-lg">
-                                        <fmt:formatNumber value="${item.unitPriceSnapshot * item.quantity}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ
-                                    </div>
-                                </div>
-                            </c:forEach>
-                        </div>
+                                </c:forEach>
+                            </div>
 
-                        <div class="mt-6 pt-5 border-t border-gray-100 space-y-3">
-                            <div class="flex justify-between text-sm">
-                                <span class="text-gray-500">Tạm tính</span>
-                                <span class="font-bold text-gray-800"><fmt:formatNumber value="${order.subtotalAmount}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ</span>
-                            </div>
-                            <div class="flex justify-between text-sm">
-                                <span class="text-gray-500">Phí giao hàng</span>
-                                <span class="font-bold text-gray-800"><fmt:formatNumber value="${order.deliveryFee}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ</span>
-                            </div>
-                            <c:if test="${order.discountAmount > 0}">
-                                <div class="flex justify-between text-sm text-green-600">
-                                    <span>Khuyến mãi</span>
-                                    <span class="font-bold">-<fmt:formatNumber value="${order.discountAmount}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ</span>
+                            <div class="mt-6 pt-5 border-t border-gray-100 space-y-3">
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-500">Tạm tính</span>
+                                    <span class="font-bold text-gray-800"><fmt:formatNumber value="${order.subtotalAmount}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ</span>
                                 </div>
-                            </c:if>
-                            <div class="flex justify-between items-center pt-3 border-t border-gray-100 mt-3">
-                                <span class="text-lg font-black text-gray-900">Tổng cộng</span>
-                                <span class="text-2xl font-black text-orange-500"><fmt:formatNumber value="${order.totalAmount}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Thông tin giao hàng -->
-                    <div class="space-y-6">
-                        <div class="bg-white rounded-3xl border border-gray-200 p-6">
-                            <h3 class="font-black mb-4 flex items-center gap-2">
-                                <i class="fa-regular fa-credit-card text-orange-500"></i> Thanh toán
-                            </h3>
-                            <div class="text-sm space-y-2">
-                                <div class="flex justify-between">
-                                    <span class="text-gray-500">Phương thức</span>
-                                    <span class="font-bold text-gray-800">${order.paymentMethod}</span>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-500">Phí giao hàng</span>
+                                    <span class="font-bold text-gray-800"><fmt:formatNumber value="${order.deliveryFee}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ</span>
                                 </div>
-                                <div class="flex justify-between">
-                                    <span class="text-gray-500">Trạng thái</span>
-                                    <span class="font-bold ${order.paymentStatus == 'PAID' ? 'text-green-600' : 'text-orange-600'}">
-                                        ${order.paymentStatus == 'PAID' ? 'Đã thanh toán' : (order.paymentStatus == 'PENDING' ? 'Đang xử lý' : order.paymentStatus)}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="bg-white rounded-3xl border border-gray-200 p-6">
-                            <h3 class="font-black mb-4 flex items-center gap-2">
-                                <i class="fa-solid fa-location-dot text-orange-500"></i> Giao đến
-                            </h3>
-                            <div class="text-sm space-y-2 text-gray-700">
-                                <div class="font-bold">${order.receiverName}</div>
-                                <div>${order.receiverPhone}</div>
-                                <div class="leading-relaxed">
-                                    ${order.deliveryAddressLine}<br>
-                                    ${order.wardName}, ${order.districtName}, ${order.provinceName}
-                                </div>
-                                <c:if test="${not empty order.deliveryNote}">
-                                    <div class="pt-2 mt-2 border-t border-gray-100 text-gray-500 italic">
-                                        " ${order.deliveryNote} "
+                                <c:if test="${order.discountAmount > 0}">
+                                    <div class="flex justify-between text-sm text-green-600">
+                                        <span>Khuyến mãi</span>
+                                        <span class="font-bold">-<fmt:formatNumber value="${order.discountAmount}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ</span>
                                     </div>
                                 </c:if>
+                                <div class="flex justify-between items-center pt-3 border-t border-gray-100 mt-3">
+                                    <span class="text-lg font-black text-gray-900">Tổng cộng</span>
+                                    <span class="text-2xl font-black text-orange-500"><fmt:formatNumber value="${order.totalAmount}" type="number" groupingUsed="true" maxFractionDigits="0"/>đ</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Thông tin giao hàng -->
+                        <div class="space-y-6">
+                            <div class="bg-white rounded-3xl border border-gray-200 p-6">
+                                <h3 class="font-black mb-4 flex items-center gap-2">
+                                    <i class="fa-regular fa-credit-card text-orange-500"></i> Thanh toán
+                                </h3>
+                                <div class="text-sm space-y-2">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-500">Phương thức</span>
+                                        <span class="font-bold text-gray-800">${order.paymentMethod}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-500">Trạng thái</span>
+                                        <span class="font-bold ${order.paymentStatus == 'PAID' ? 'text-green-600' : 'text-orange-600'}">
+                                            ${order.paymentStatus == 'PAID' ? 'Đã thanh toán' : (order.paymentStatus == 'PENDING' ? 'Đang xử lý' : order.paymentStatus)}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-3xl border border-gray-200 p-6">
+                                <h3 class="font-black mb-4 flex items-center gap-2">
+                                    <i class="fa-solid fa-location-dot text-orange-500"></i> Giao đến
+                                </h3>
+                                <div class="text-sm space-y-2 text-gray-700">
+                                    <div class="font-bold">${order.receiverName}</div>
+                                    <div>${order.receiverPhone}</div>
+                                    <div class="leading-relaxed">
+                                        ${order.deliveryAddressLine}<br>
+                                        ${order.wardName}, ${order.districtName}, ${order.provinceName}
+                                    </div>
+                                    <c:if test="${not empty order.deliveryNote}">
+                                        <div class="pt-2 mt-2 border-t border-gray-100 text-gray-500 italic">
+                                            " ${order.deliveryNote} "
+                                        </div>
+                                    </c:if>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </c:if>
-        </main>
-        
-        <jsp:include page="/views/web/footer.jsp" />
-    </body>
-</html>
+                </c:if>
+            </main>
+
+            <jsp:include page="/views/web/footer.jsp" />
+        </body>
+    </html>

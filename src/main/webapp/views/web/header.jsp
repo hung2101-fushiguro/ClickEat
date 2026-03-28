@@ -79,6 +79,18 @@
                     </c:otherwise>
                 </c:choose>
 
+                <c:if test="${empty sessionScope.account and not empty sessionScope.guestLastOrderCode}">
+                    <a href="${ctx}/guest-order-tracking?code=${sessionScope.guestLastOrderCode}"
+                       class="relative w-10 h-10 rounded-full hover:bg-orange-50 flex items-center justify-center transition border border-orange-100 text-orange-500"
+                       aria-label="Theo dõi đơn hàng guest"
+                       title="Theo dõi đơn hàng gần nhất">
+                        <i class="fa-solid fa-truck-fast text-lg"></i>
+                        <span class="absolute -top-1 -right-1 bg-orange-500 text-white text-[10px] font-extrabold rounded-full h-5 min-w-[20px] px-1 flex items-center justify-center shadow">
+                            1
+                        </span>
+                    </a>
+                </c:if>
+
                 <c:choose>
                     <c:when test="${not empty sessionScope.account}">
                         <div class="relative" id="userDropdownWrap">

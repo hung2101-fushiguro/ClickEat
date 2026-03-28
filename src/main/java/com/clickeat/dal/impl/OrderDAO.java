@@ -1776,11 +1776,10 @@ public class OrderDAO extends AbstractDAO<Order> implements IOrderDAO {
     }
 
     public List<Order> getAvailableOrdersForShipper(int shipperId) {
-        // 1) Lấy vị trí hiện tại của shipper
+        // 1. Lấy vị trí hiện tại của shipper từ bảng ShipperAvailability
         Double shipperLat = null;
         Double shipperLng = null;
         String sqlShipper = "SELECT current_latitude, current_longitude FROM ShipperAvailability WHERE shipper_user_id = ?";
-
         try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(sqlShipper)) {
             ps.setInt(1, shipperId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -1791,30 +1790,32 @@ public class OrderDAO extends AbstractDAO<Order> implements IOrderDAO {
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            return new ArrayList<>();
         }
 
-        // Nếu chưa có tọa độ shipper thì không hiển thị đơn (theo ràng buộc bán kính)
-        if (!isValidCoord(shipperLat, shipperLng) || (shipperLat == 0d && shipperLng == 0d)) {
-            return new ArrayList<>();
+        // Nếu không có vị trí shipper, không hiển thị đơn hàng nào (theo ràng buộc bán kính)
+        if (shipperLat == null || shipperLng == null || (shipperLat == 0 && shipperLng == 0)) {
+            return new java.util.ArrayList<>();
         }
 
-        // 2) Lấy danh sách đơn chờ + tọa độ quán để lọc theo khoảng cách
+        // 2. Lấy danh sách đơn hàng đang chờ kèm tọa độ của quán (Merchant)
+        // Lưu ý: Chỉ lấy các đơn chưa có shipper và ở trạng thái hợp lệ
+        List<Order> filteredOrders = new java.util.ArrayList<>();
         String sqlOrders = "SELECT o.*, mp.latitude AS shop_lat, mp.longitude AS shop_lng "
                 + "FROM Orders o "
                 + "JOIN MerchantProfiles mp ON o.merchant_user_id = mp.user_id "
                 + "WHERE o.shipper_user_id IS NULL "
-                + "AND o.order_status IN ('MERCHANT_ACCEPTED', 'PREPARING', 'READY_FOR_PICKUP') "
-                + "ORDER BY o.created_at ASC";
+                + "AND o.order_status IN ('MERCHANT_ACCEPTED', 'PREPARING', 'READY_FOR_PICKUP')";
 
-        List<Order> filteredOrders = new ArrayList<>();
         try (Connection conn = getConnection(); PreparedStatement ps = conn.prepareStatement(sqlOrders); ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {
                 Double shopLat = rs.getObject("shop_lat") != null ? rs.getDouble("shop_lat") : null;
                 Double shopLng = rs.getObject("shop_lng") != null ? rs.getDouble("shop_lng") : null;
 
-                Double distKm = distanceKm(shipperLat, shipperLng, shopLat, shopLng);
-                if (distKm != null && distKm <= 4.0) {
+                // Tính khoảng cách giữa Shipper và Quán
+                Double dist = distanceKm(shipperLat, shipperLng, shopLat, shopLng);
+
+                // Ràng buộc bán kính 4km
+                if (dist != null && dist <= 4.0) {
                     filteredOrders.add(mapRow(rs));
                 }
             }
@@ -1857,4 +1858,18 @@ public class OrderDAO extends AbstractDAO<Order> implements IOrderDAO {
             params.add(java.sql.Timestamp.valueOf(toDateTime.trim().replace("T", " ") + ":59"));
         }
     }
+    public List<Order> getCustomerOrdersForDisplay(int customerId) {
+    String sql = """
+        SELECT * FROM Orders
+        WHERE customer_user_id = ?
+        ORDER BY
+            CASE
+                WHEN order_status IN ('CREATED','PAID','MERCHANT_ACCEPTED','PREPARING','READY_FOR_PICKUP','DELIVERING','PICKED_UP') THEN 0
+                WHEN order_status = 'DELIVERED' THEN 1
+                ELSE 2
+            END,
+            created_at DESC
+    """;
+    return query(sql, customerId);
+}
 }

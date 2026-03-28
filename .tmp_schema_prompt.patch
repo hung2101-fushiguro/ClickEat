@@ -1,0 +1,55 @@
+diff --git a/src/main/java/com/clickeat/controller/ai/AIChatServlet.java b/src/main/java/com/clickeat/controller/ai/AIChatServlet.java
+--- a/src/main/java/com/clickeat/controller/ai/AIChatServlet.java
++++ b/src/main/java/com/clickeat/controller/ai/AIChatServlet.java
+@@ -124,6 +124,8 @@
+         String suggestedFoodContext = buildSuggestedFoodsContext(suggestedFoods);
+         String dataSourcingGuideline = buildDataSourcingGuideline(userLocation);
+         String learnedPreferenceContext = buildLearnedPreferenceContext(request, account.getId());
++        String sqlSchemaTrustContext = buildSqlSchemaTrustContext();
++        String recommendationRubricContext = buildRecommendationRubricContext();
+ 
+         // 3. Xây dựng System Instruction dạng structured output để chạy production ổn định
+         String systemInstruction
+@@ -150,6 +152,10 @@
+                 + "=== CÁCH LẤY DỮ LIỆU (BẮT BUỘC) ===\n"
+                 + dataSourcingGuideline + "\n\n"
++                + "=== SQL SCHEMA TRUST MAP (SOURCE PRIORITY) ===\n"
++                + sqlSchemaTrustContext + "\n\n"
++                + "=== DISH SCORING RUBRIC (MUST APPLY) ===\n"
++                + recommendationRubricContext + "\n\n"
+                 + fewShotBlock
+                 + "=== QUY TẮC BẮT BUỘC ===\n"
+                 + "1. CHỈ chọn món trong danh sách thực đơn hệ thống.\n"
+@@ -158,7 +164,9 @@
+                 + "5. Nếu người dùng mơ hồ, vẫn đưa 2 gợi ý tạm an toàn trước.\n"
+                 + "6. Nếu người dùng chọn món kém lành mạnh liên tục, phản hồi đồng hành, không phán xét.\n"
+                 + "7. Ưu tiên thứ tự: dị ứng/an toàn -> mục tiêu sức khỏe -> khẩu vị/lịch sử -> thời điểm realtime.\n"
+-                + "8. Giữ giọng điệu thân thiện, tự nhiên, không giáo điều.\n\n"
++                + "8. Voucher must be mentioned only when valid by system data.\n"
++                + "9. Every recommendation reason must include at least one evidence source (profile/history/menu/realtime).\n"
++                + "10. Giữ giọng điệu thân thiện, tự nhiên, không giáo điều.\n\n"
+                 + "=== OUTPUT CONTRACT (BẮT BUỘC JSON THUẦN, KHÔNG markdown, KHÔNG văn bản ngoài JSON) ===\n"
+                 + "{\n"
+                 + "  \"intent\": \"string\",\n"
+@@ -394,6 +402,21 @@
+                         ? "đã có tọa độ, chỉ chọn món trong phạm vi có thể giao."
+                         : "chưa có tọa độ realtime, ưu tiên món an toàn và có thể hỏi khách bật vị trí khi cần.");
+     }
++
++    private String buildSqlSchemaTrustContext() {
++        return "1) CustomerProfiles: foodPreferences, allergies, healthGoal, dailyCalorieTarget.\n"
++                + "2) FoodItems: name, price, isAvailable, isActive, isFried, calories, proteins, carbs, fats, dietaryTag.\n"
++                + "3) Orders/OrderItems/Ratings/UserBehaviorEvents: purchase history, frequency, feedback, latest actions.\n"
++                + "4) Vouchers: valid only when active and condition-qualified by system data.\n"
++                + "5) AITrainingEvents/AIUserPreferenceSignals: supplementary signal only, never override safety rules.";
++    }
++
++    private String buildRecommendationRubricContext() {
++        return "Score each dish 0-100: Safety 35, GoalFit 25, PreferenceHistoryFit 20, AvailabilityDeliveryFit 10, PriceFit 10.\n"
++                + "Reject dishes violating allergy/safety constraints or unavailable menu scope.\n"
++                + "Choose top 2-3 with diversity and enforce >=1 healthy alternative.\n"
++                + "Reasons should vary and be grounded in at least one evidence source.";
++    }
+ 
+     private String buildLearnedPreferenceContext(HttpServletRequest request, int userId) {
+         Map<String, Integer> merged = new LinkedHashMap<>();

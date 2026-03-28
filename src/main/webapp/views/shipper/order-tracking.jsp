@@ -171,8 +171,16 @@ Author     : DELL
                     const customerLat = ${not empty order.latitude && order.latitude != 0.0 ? order.latitude : 10.7926};
                     const customerLng = ${not empty order.longitude && order.longitude != 0.0 ? order.longitude : 106.6853};
                     
+                    // Lấy vị trí hiện tại của shipper nếu có
+                    const shipperLat = ${not empty shipperAvailability && shipperAvailability.currentLatitude != 0.0 ? shipperAvailability.currentLatitude : 'null'};
+                    const shipperLng = ${not empty shipperAvailability && shipperAvailability.currentLongitude != 0.0 ? shipperAvailability.currentLongitude : 'null'};
+                    
+                    // Xác định điểm bắt đầu - nếu có vị trí shipper thì bắt đầu từ shipper, nếu không thì từ quán
+                    const startLat = (shipperLat !== null && shipperLng !== null) ? shipperLat : shopLat;
+                    const startLng = (shipperLat !== null && shipperLng !== null) ? shipperLng : shopLng;
+                    
                     // 2. Khởi tạo bản đồ
-                    map = L.map('map').setView([shopLat, shopLng], 14);
+                    map = L.map('map').setView([startLat, startLng], 14);
                     
                     // 3. Load lớp bản đồ nền (Map4D nếu cấu hình, fallback OpenStreetMap)
                     ClickEatMap4D.addBaseTileLayer(map, {
@@ -191,11 +199,20 @@ Author     : DELL
                         className: '', iconSize: [32, 32], iconAnchor: [16, 16]
                     });
                     
+                    // Thêm marker cho vị trí hiện tại của shipper (nếu có)
+                    if (shipperLat !== null && shipperLng !== null) {
+                        const shipperIcon = L.divIcon({
+                            html: '<div class="w-10 h-10 bg-green-500 text-white rounded-full flex items-center justify-center border-2 border-white shadow-lg text-lg"><i class="fa-solid fa-motorcycle"></i></div>',
+                            className: '', iconSize: [40, 40], iconAnchor: [20, 40]
+                        });
+                        shipperMarker = L.marker([shipperLat, shipperLng], {icon: shipperIcon}).addTo(map).bindPopup("<b>Vị trí hiện tại của bạn</b>");
+                    }
+                    
                     // Gắn Marker
                     L.marker([shopLat, shopLng], {icon: shopIcon}).addTo(map).bindPopup("<b>Lấy hàng tại đây</b>");
                     L.marker([customerLat, customerLng], {icon: customerIcon}).addTo(map).bindPopup("<b>Giao hàng đến đây</b>");
                     
-                    ClickEatMap4D.route(shopLat, shopLng, customerLat, customerLng)
+                    ClickEatMap4D.route(startLat, startLng, customerLat, customerLng)
                     .then(route => {
                         const distanceKm = (route.distance / 1000).toFixed(1);
                         const durationMin = Math.max(1, Math.round(route.duration / 60));
@@ -459,62 +476,110 @@ Author     : DELL
                             );
                         }
                         
-                        // Hàm 2: Lấy tọa độ từ địa chỉ gõ tay
-                        function searchAddress() {
-                            const address = document.getElementById('custom-address').value.trim();
-                            if (!address)
-                            return alert("Vui lòng nhập địa chỉ!");
+                        async function geocodeWithFallback(address) {
+                            const queries = [
+                            address,
+                            address + ', Da Nang',
+                            address + ', Đà Nẵng',
+                            address + ', Viet Nam',
+                            address + ', Vietnam'
+                            ];
                             
-                            document.getElementById('distance-text').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tìm...';
-                            
-                            ClickEatMap4D.geocode(address + ', Vietnam', 1)
-                            .then(data => {
-                                if (data.length > 0) {
-                                    updateShipperLocation(data[0].lat, data[0].lng);
-                                    } else {
-                                        alert('Không tìm thấy địa chỉ này!');
-                                        document.getElementById('distance-text').innerHTML = 'Không tìm thấy';
+                            for (const q of queries) {
+                                try {
+                                    const map4dRes = await ClickEatMap4D.geocode(q, 1);
+                                    if (Array.isArray(map4dRes) && map4dRes.length > 0) {
+                                        return {lat: map4dRes[0].lat, lng: map4dRes[0].lng};
                                     }
-                                }).catch((err) => alert(ClickEatMap4D.messageFromError(err, 'Lỗi mạng!')));
-                            }
-                            
-                            // Hàm 3: Cập nhật vị trí Shipper và Vẽ lại đường đi
-                            function updateShipperLocation(lat, lng, forceRouteRefresh) {
-                                lat = Number(lat);
-                                lng = Number(lng);
-                                
-                                if (Number.isNaN(lat) || Number.isNaN(lng)) {
-                                    return;
+                                    } catch (e) {
+                                    }
                                 }
                                 
-                                syncLocationToServer(lat, lng, false);
-                                setDistanceStatus('<i class="fa-solid fa-route text-blue-500"></i> Đang cập nhật lộ trình...');
-                                
-                                // Cập nhật Marker Shipper
-                                if (shipperMarker) {
-                                    animateMarkerTo(shipperMarker, lat, lng, 700);
-                                    } else {
-                                        const shipperIcon = L.divIcon({
-                                            html: `<div class="w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center border-2 border-white shadow-lg text-lg"><i class="fa-solid fa-motorcycle"></i></div>`,
-                                            className: '', iconSize: [40, 40], iconAnchor: [20, 40]
+                                for (const q of queries) {
+                                    try {
+                                        const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(q);
+                                        const res = await fetch(url, {
+                                            headers: {
+                                                'Accept': 'application/json'
+                                            }
                                         });
-                                        shipperMarker = L.marker([lat, lng], {icon: shipperIcon}).addTo(map).bindPopup("<b>Vị trí của bạn</b>");
+                                        if (!res.ok) {
+                                            continue;
+                                        }
+                                        const data = await res.json();
+                                        if (Array.isArray(data) && data.length > 0) {
+                                            const lat = Number(data[0].lat);
+                                            const lng = Number(data[0].lon);
+                                            if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+                                                return {lat: lat, lng: lng};
+                                            }
+                                        }
+                                        } catch (e) {
+                                        }
                                     }
                                     
-                                    drawRouteFromShipper(lat, lng, !!forceRouteRefresh);
+                                    return null;
                                 }
                                 
-                                window.addEventListener('beforeunload', function () {
-                                    if (locationWatchId !== null && navigator.geolocation) {
-                                        navigator.geolocation.clearWatch(locationWatchId);
-                                        locationWatchId = null;
-                                    }
-                                    if (trackingTickerId !== null) {
-                                        clearInterval(trackingTickerId);
-                                        trackingTickerId = null;
-                                    }
-                                });
-                            </script>
+                                // Hàm 2: Lấy tọa độ từ địa chỉ gõ tay
+                                async function searchAddress() {
+                                    const address = document.getElementById('custom-address').value.trim();
+                                    if (!address)
+                                    return alert("Vui lòng nhập địa chỉ!");
+                                    
+                                    document.getElementById('distance-text').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tìm...';
+                                    
+                                    try {
+                                        const point = await geocodeWithFallback(address);
+                                        if (point) {
+                                            updateShipperLocation(point.lat, point.lng, true);
+                                            } else {
+                                                alert('Không tìm thấy địa chỉ này! Hãy thử nhập chi tiết hơn, ví dụ: "Hải Châu, Đà Nẵng".');
+                                                document.getElementById('distance-text').innerHTML = 'Không tìm thấy';
+                                            }
+                                            } catch (err) {
+                                                alert(ClickEatMap4D.messageFromError(err, 'Lỗi mạng!'));
+                                                document.getElementById('distance-text').innerHTML = 'Lỗi tìm địa chỉ';
+                                            }
+                                        }
+                                        
+                                        // Hàm 3: Cập nhật vị trí Shipper và Vẽ lại đường đi
+                                        function updateShipperLocation(lat, lng, forceRouteRefresh) {
+                                            lat = Number(lat);
+                                            lng = Number(lng);
+                                            
+                                            if (Number.isNaN(lat) || Number.isNaN(lng)) {
+                                                return;
+                                            }
+                                            
+                                            syncLocationToServer(lat, lng, false);
+                                            setDistanceStatus('<i class="fa-solid fa-route text-blue-500"></i> Đang cập nhật lộ trình...');
+                                            
+                                            // Cập nhật Marker Shipper
+                                            if (shipperMarker) {
+                                                animateMarkerTo(shipperMarker, lat, lng, 700);
+                                                } else {
+                                                    const shipperIcon = L.divIcon({
+                                                        html: `<div class="w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center border-2 border-white shadow-lg text-lg"><i class="fa-solid fa-motorcycle"></i></div>`,
+                                                        className: '', iconSize: [40, 40], iconAnchor: [20, 40]
+                                                    });
+                                                    shipperMarker = L.marker([lat, lng], {icon: shipperIcon}).addTo(map).bindPopup("<b>Vị trí của bạn</b>");
+                                                }
+                                                
+                                                drawRouteFromShipper(lat, lng, !!forceRouteRefresh);
+                                            }
+                                            
+                                            window.addEventListener('beforeunload', function () {
+                                                if (locationWatchId !== null && navigator.geolocation) {
+                                                    navigator.geolocation.clearWatch(locationWatchId);
+                                                    locationWatchId = null;
+                                                }
+                                                if (trackingTickerId !== null) {
+                                                    clearInterval(trackingTickerId);
+                                                    trackingTickerId = null;
+                                                }
+                                            });
+                                        </script>
 
-                        </body>
-                    </html>
+                                    </body>
+                                </html>
