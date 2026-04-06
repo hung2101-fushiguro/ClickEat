@@ -1,0 +1,165 @@
+2026-03-28 12:59:20,242 [INFO] === Crawl nhà hàng khu FPT City / Điện Bàn / Ngũ Hành Sơn ===
+2026-03-28 12:59:20,251 [INFO] ====== WebDriver manager ======
+2026-03-28 12:59:22,097 [INFO] Get LATEST chromedriver version for google-chrome
+2026-03-28 12:59:22,800 [INFO] Get LATEST chromedriver version for google-chrome
+2026-03-28 12:59:23,200 [INFO] Driver [C:\Users\ASUS\.wdm\drivers\chromedriver\win64\147.0.7727.24\chromedriver-win32/chromedriver.exe] found in cache
+2026-03-28 12:59:25,540 [INFO] Khám phá link từ: https://www.foody.vn/da-nang/khu-vuc-quan-ngu-hanh-son
+2026-03-28 12:59:32,930 [INFO]   → 1/60 links tìm được...
+2026-03-28 12:59:39,348 [INFO]   → 1/60 links tìm được...
+2026-03-28 12:59:45,826 [INFO]   → 1/60 links tìm được...
+2026-03-28 12:59:52,423 [INFO]   → 1/60 links tìm được...
+2026-03-28 12:59:58,674 [INFO]   → 1/60 links tìm được...
+2026-03-28 13:00:05,038 [INFO]   → 1/60 links tìm được...
+2026-03-28 13:00:11,351 [INFO] Khám phá link từ: https://www.foody.vn/da-nang/khu-vuc-fpt-city
+2026-03-28 13:00:15,233 [INFO]   → 1/60 links tìm được...
+2026-03-28 13:00:18,325 [INFO]   → 1/60 links tìm được...
+2026-03-28 13:00:21,423 [INFO]   → 1/60 links tìm được...
+2026-03-28 13:00:24,495 [INFO]   → 1/60 links tìm được...
+2026-03-28 13:00:27,581 [INFO]   → 1/60 links tìm được...
+2026-03-28 13:00:30,674 [INFO] Khám phá link từ: https://www.foody.vn/da-nang/khu-vuc-dien-ban
+2026-03-28 13:00:34,133 [INFO]   → 1/60 links tìm được...
+2026-03-28 13:00:37,184 [INFO]   → 1/60 links tìm được...
+2026-03-28 13:00:40,236 [INFO]   → 1/60 links tìm được...
+2026-03-28 13:00:43,292 [INFO]   → 1/60 links tìm được...
+2026-03-28 13:00:46,354 [INFO]   → 1/60 links tìm được...
+2026-03-28 13:00:49,406 [INFO] Khám phá link từ: https://shopeefood.vn/da-nang/danh-sach-dia-diem
+2026-03-28 13:00:55,891 [INFO] Không thấy popup địa điểm ShopeeFood, tiếp tục...
+2026-03-28 13:00:55,910 [INFO]   → 1/60 links tìm được...
+2026-03-28 13:00:58,997 [INFO]   → 1/60 links tìm được...
+2026-03-28 13:01:02,059 [INFO]   → 1/60 links tìm được...
+2026-03-28 13:01:05,121 [INFO]   → 1/60 links tìm được...
+2026-03-28 13:01:08,214 [INFO]   → 1/60 links tìm được...
+2026-03-28 13:01:11,267 [INFO] Tổng cộng tìm được 1 links nhà hàng.
+2026-03-28 13:01:11,268 [INFO] 
+==================================================
+2026-03-28 13:01:11,268 [INFO] Bắt đầu crawl 1 nhà hàng...
+2026-03-28 13:01:11,268 [INFO] ==================================================
+
+2026-03-28 13:01:11,269 [INFO] [1/1] https://shopeefood.vn/da-nang/fresh
+2026-03-28 13:01:11,269 [INFO] Crawl: https://shopeefood.vn/da-nang/fresh
+2026-03-28 13:01:24,254 [ERROR] Lỗi khi crawl https://shopeefood.vn/da-nang/fresh: Message: 
+Stacktrace:
+	chromedriver!GetHandleVerifier [0xa725e3+10dd3]
+	chromedriver!GetHandleVerifier [0xa72714+10f04]
+	chromedriver!(No symbol) [0x8420d0]
+	chromedriver!(No symbol) [0x88ac8a]
+	chromedriver!(No symbol) [0x88af2b]
+	chromedriver!(No symbol) [0x8cd982]
+	chromedriver!(No symbol) [0x8adc34]
+	chromedriver!(No symbol) [0x8cb28e]
+	chromedriver!(No symbol) [0x8ad986]
+	chromedriver!(No symbol) [0x8802f9]
+	chromedriver!(No symbol) [0x8810b4]
+	chromedriver!GetHandleVerifier [0xcd2d54+271544]
+	chromedriver!GetHandleVerifier [0xcce399+26cb89]
+	chromedriver!GetHandleVerifier [0xcecc45+28b435]
+	chromedriver!GetHandleVerifier [0xa8cee8+2b6d8]
+	chromedriver!GetHandleVerifier [0xa94f1d+3370d]
+	chromedriver!GetHandleVerifier [0xa7af68+19758]
+	chromedriver!GetHandleVerifier [0xa7b132+19922]
+	chromedriver!GetHandleVerifier [0xa640cf+28bf]
+	KERNEL32!BaseThreadInitThunk [0x76e85d49+19]
+	ntdll!RtlInitializeExceptionChain [0x772bd81b+6b]
+	ntdll!RtlGetAppContainerNamedObjectPath [0x772bd7a1+231]
+
+2026-03-28 13:01:25,755 [WARNING] Không crawl được nhà hàng nào.
+2026-03-28 13:01:28,246 [INFO] Browser đã đóng.
+2026-03-28 13:11:16,599 [INFO] === Foody Crawler — FPT City / Điện Bàn / Ngũ Hành Sơn ===
+2026-03-28 13:11:16,633 [INFO] ====== WebDriver manager ======
+2026-03-28 13:11:19,651 [INFO] Get LATEST chromedriver version for google-chrome
+2026-03-28 13:11:20,644 [INFO] Get LATEST chromedriver version for google-chrome
+2026-03-28 13:11:20,894 [INFO] Driver [C:\Users\ASUS\.wdm\drivers\chromedriver\win64\147.0.7727.24\chromedriver-win32/chromedriver.exe] found in cache
+2026-03-28 13:11:24,717 [INFO] Quét khu vực: https://www.foody.vn/da-nang/khu-vuc-fpt-city
+2026-03-28 13:11:31,346 [INFO]   → 0/50 links
+2026-03-28 13:11:47,399 [INFO] === Foody Crawler — FPT City / Điện Bàn / Ngũ Hành Sơn ===
+2026-03-28 13:11:47,402 [INFO] ====== WebDriver manager ======
+2026-03-28 13:11:48,538 [INFO] Get LATEST chromedriver version for google-chrome
+2026-03-28 13:11:48,907 [INFO] Get LATEST chromedriver version for google-chrome
+2026-03-28 13:11:49,294 [INFO] Driver [C:\Users\ASUS\.wdm\drivers\chromedriver\win64\147.0.7727.24\chromedriver-win32/chromedriver.exe] found in cache
+2026-03-28 13:11:50,565 [INFO] Quét khu vực: https://www.foody.vn/da-nang/khu-vuc-fpt-city
+2026-03-28 13:11:56,383 [INFO]   → 0/50 links
+2026-03-28 13:12:01,037 [INFO]   → 0/50 links
+2026-03-28 13:12:05,682 [INFO]   → 0/50 links
+2026-03-28 13:12:10,293 [INFO]   → 0/50 links
+2026-03-28 13:12:15,018 [INFO]   → 0/50 links
+2026-03-28 13:12:19,652 [INFO]   → 0/50 links
+2026-03-28 13:12:24,313 [INFO]   → 0/50 links
+2026-03-28 13:12:28,901 [INFO] Quét khu vực: https://www.foody.vn/da-nang/khu-vuc-quan-ngu-hanh-son
+2026-03-28 13:12:42,521 [INFO]   → 63/50 links
+2026-03-28 13:12:42,521 [INFO] Tổng: 50 links nhà hàng
+2026-03-28 13:12:42,522 [INFO] 
+Bắt đầu crawl 50 nhà hàng
+==================================================
+2026-03-28 13:12:42,522 [INFO] [1/50]
+2026-03-28 13:12:42,522 [INFO] Crawl: https://www.foody.vn/da-nang/binh-luan
+2026-03-28 13:13:58,683 [WARNING]   Timeout: https://www.foody.vn/da-nang/binh-luan
+2026-03-28 13:14:00,183 [INFO] [2/50]
+2026-03-28 13:14:00,184 [INFO] Crawl: https://www.foody.vn/da-nang/com-ga-bi-404-le-van-hien
+2026-03-28 13:15:09,676 [INFO]   ✓ Cơm Gà Bi - 404 Lê Văn Hiến
+2026-03-28 13:15:09,677 [INFO]     Địa chỉ : (không có)
+2026-03-28 13:15:09,677 [INFO]     SĐT     : 0311828036
+2026-03-28 13:15:17,964 [WARNING]   Không tìm thấy menu
+2026-03-28 13:15:19,465 [INFO] [3/50]
+2026-03-28 13:15:19,466 [INFO] Crawl: https://www.foody.vn/(A(&%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20amp;quot;-cpjdosfhwxnr-&%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20amp;quot;))/ung-dung-mobile
+2026-03-28 13:16:36,480 [WARNING]   Timeout: https://www.foody.vn/(A(&%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20amp;quot;-cpjdosfhwxnr-&%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20amp;quot;))/ung-dung-mobile
+2026-03-28 13:16:37,983 [INFO] [4/50]
+2026-03-28 13:16:37,984 [INFO] Crawl: https://www.foody.vn/da-nang/hot-hot-mi-cay-7-cap-do-phan-tu
+2026-03-28 13:17:58,184 [INFO]   ✓ Hot Hot - Mì Cay 7 Cấp Độ - Phan Tứ
+2026-03-28 13:17:58,184 [INFO]     Địa chỉ : (không có)
+2026-03-28 13:17:58,185 [INFO]     SĐT     : 0311828036
+2026-03-28 13:18:06,543 [WARNING]   Không tìm thấy menu
+2026-03-28 13:18:08,043 [INFO] [5/50]
+2026-03-28 13:18:08,044 [INFO] Crawl: https://www.foody.vn/da-nang/sushi-xien-shop-online
+2026-03-28 13:19:24,155 [INFO]   ✓ Sushi Xiên
+2026-03-28 13:19:24,156 [INFO]     Địa chỉ : (không có)
+2026-03-28 13:19:24,156 [INFO]     SĐT     : 0311828036
+2026-03-28 13:19:32,644 [WARNING]   Không tìm thấy menu
+2026-03-28 13:19:34,145 [INFO] [6/50]
+2026-03-28 13:19:34,146 [INFO] Crawl: https://www.foody.vn/da-nang/sushi-boat-sushi-sashimi-ung-van-khiem
+2026-03-28 13:20:48,043 [INFO]   ✓ Sushi Boat - Sushi & Sashimi - Ung Văn Khiêm
+2026-03-28 13:20:48,044 [INFO]     Địa chỉ : (không có)
+2026-03-28 13:20:48,045 [INFO]     SĐT     : 0311828036
+2026-03-28 13:20:56,560 [WARNING]   Không tìm thấy menu
+2026-03-28 13:20:58,061 [INFO] [7/50]
+2026-03-28 13:20:58,062 [INFO] Crawl: https://www.foody.vn/da-nang/khu-am-thuc-cho-bac-my-an
+2026-03-28 13:22:57,438 [INFO]   ✓ Khu Ẩm Thực Chợ Bắc Mỹ An
+2026-03-28 13:22:57,439 [INFO]     Địa chỉ : (không có)
+2026-03-28 13:22:57,439 [INFO]     SĐT     : 0311828036
+2026-03-28 13:23:16,910 [WARNING]   Không tìm thấy menu
+2026-03-28 13:23:18,438 [INFO] [8/50]
+2026-03-28 13:23:18,510 [INFO] Crawl: https://www.foody.vn/da-nang#/delivery
+2026-03-28 13:23:24,041 [ERROR] Lỗi: https://www.foody.vn/da-nang#/delivery — Message: unknown error: net::ERR_NAME_NOT_RESOLVED
+  (Session info: chrome=147.0.7727.24)
+Stacktrace:
+	chromedriver!GetHandleVerifier [0xbf25e3+10dd3]
+	chromedriver!GetHandleVerifier [0xbf2714+10f04]
+	chromedriver!(No symbol) [0x9c20d0]
+	chromedriver!(No symbol) [0x9bf5de]
+	chromedriver!(No symbol) [0x9b26c4]
+	chromedriver!(No symbol) [0x9b412c]
+	chromedriver!(No symbol) [0x9b2b62]
+	chromedriver!(No symbol) [0x9b2495]
+	chromedriver!(No symbol) [0x9b2195]
+	chromedriver!(No symbol) [0x9b02a8]
+	chromedriver!(No symbol) [0x9b09ba]
+	chromedriver!(No symbol) [0x9c5b6e]
+	chromedriver!(No symbol) [0xa4bcc4]
+	chromedriver!(No symbol) [0xa2dbec]
+	chromedriver!(No symbol) [0xa4b28e]
+	chromedriver!(No symbol) [0xa2d986]
+	chromedriver!(No symbol) [0xa002f9]
+	chromedriver!(No symbol) [0xa010b4]
+	chromedriver!GetHandleVerifier [0xe52d54+271544]
+	chromedriver!GetHandleVerifier [0xe4e399+26cb89]
+	chromedriver!GetHandleVerifier [0xe6cc45+28b435]
+	chromedriver!GetHandleVerifier [0xc0cee8+2b6d8]
+	chromedriver!GetHandleVerifier [0xc14f1d+3370d]
+	chromedriver!GetHandleVerifier [0xbfaf68+19758]
+	chromedriver!GetHandleVerifier [0xbfb132+19922]
+	chromedriver!GetHandleVerifier [0xbe40cf+28bf]
+	KERNEL32!BaseThreadInitThunk [0x76e85d49+19]
+	ntdll!RtlInitializeExceptionChain [0x772bd81b+6b]
+	ntdll!RtlGetAppContainerNamedObjectPath [0x772bd7a1+231]
+
+2026-03-28 13:23:25,542 [INFO] [9/50]
+2026-03-28 13:23:25,556 [INFO] Crawl: https://www.foody.vn/da-nang/com-ga-bi-404-le-van-hien/goi-mon

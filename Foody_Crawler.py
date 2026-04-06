@@ -1,295 +1,549 @@
+"""
+Crawl nhà hàng khu FPT City / Điện Bàn / Ngũ Hành Sơn
+Nguồn: foody.vn (tên, địa chỉ, SĐT, hình ảnh, menu)
+Output: restaurants_danang.json + seed_crawled_data.sql
+"""
+
+import logging
+import time
+import sys
+import io
+import json
+import re
+from dataclasses import dataclass, field, asdict
+from typing import Optional
+
 from selenium import webdriver
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import time
-import sys
-import io
+from selenium.common.exceptions import TimeoutException
+from webdriver_manager.chrome import ChromeDriverManager
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+# ── Encoding fix ──────────────────────────────────────────────────────────────
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
-def generate_sql(merchant_data):
-    # Mocking users, merchants, categories, and food items
-    user_id = 1000  # Starting fake user id for merchants
-    
-    sql_statements = ["-- ===========================================",
-                      "-- SEED DATA CRAWLED FROM SHOPEEFOOD",
-                      "-- ===========================================",
-                      "USE ClickEat;",
-                      "GO\n",
-                      "BEGIN TRY",
-                      "    BEGIN TRAN;\n"]
-                      
-    for data in merchant_data:
-        shop_name = data['name'].replace("'", "''")
-        shop_address = data['address'].replace("'", "''")
-        shop_img = data['image'].replace("'", "''")
-        
-        # 1. Insert User
-        phone = f"0900{user_id}"
-        email = f"merchant{user_id}@shopeefood.vn"
-        sql_statements.append(f"    -- Merchant {shop_name}")
-        sql_statements.append(f"    INSERT INTO dbo.Users(full_name, email, phone, password_hash, role, status)")
-        sql_statements.append(f"    VALUES(N'{shop_name}', N'{email}', N'{phone}', N'hash_pwd', N'MERCHANT', N'ACTIVE');\n")
-        sql_statements.append(f"    DECLARE @m{user_id} BIGINT = SCOPE_IDENTITY();\n")
-        
-        # 2. Insert MerchantProfile
-        # We dummy province and district for now based on address loosely
-        province = "N'79', N'TP.HCM'" if "HCM" in shop_address or "Hồ Chí Minh" in shop_address else ("N'48', N'Đà Nẵng'" if "Nẵng" in shop_address else "N'49', N'Quảng Nam'")
-        sql_statements.append(f"    INSERT INTO dbo.MerchantProfiles(user_id, shop_name, shop_phone, shop_address_line, province_code, province_name, district_code, district_name, ward_code, ward_name, status, image_url)")
-        sql_statements.append(f"    VALUES(@m{user_id}, N'{shop_name}', N'{phone}', N'{shop_address}', {province}, N'000', N'Quận', N'000', N'Phường', N'APPROVED', N'{shop_img}');\n")
-        
-        cat_id = 1
-        for category in data['menu']:
-            cat_name = category['category_name'].replace("'", "''")
-            
-            # 3. Insert Category
-            sql_statements.append(f"    INSERT INTO dbo.Categories(merchant_user_id, name, is_active, sort_order)")
-            sql_statements.append(f"    VALUES(@m{user_id}, N'{cat_name}', 1, {cat_id});")
-            sql_statements.append(f"    DECLARE @cat_m{user_id}_{cat_id} BIGINT = SCOPE_IDENTITY();\n")
-            
-            # 4. Insert FoodItems
-            for item in category['items']:
-                item_name = item['name'].replace("'", "''")
-                item_desc = item['desc'].replace("'", "''") if item['desc'] else ""
-                item_price = item['price'].replace(".", "").replace("đ", "").replace(",", "")
-                item_img = item['img'].replace("'", "''") if item['img'] else "NULL"
-                img_val = f"N'{item_img}'" if item_img != "NULL" else "NULL"
-                
-                sql_statements.append(f"    INSERT INTO dbo.FoodItems(merchant_user_id, category_id, name, description, price, image_url, is_available, is_fried, calories)")
-                sql_statements.append(f"    VALUES(@m{user_id}, @cat_m{user_id}_{cat_id}, N'{item_name}', N'{item_desc}', {item_price}, {img_val}, 1, 0, 500);")
-            
-            sql_statements.append("")
-            cat_id += 1
-            
-        user_id += 1
-        
-    sql_statements.append("    COMMIT TRAN;")
-    sql_statements.append("    PRINT N'ShopeeFood Crawled Data Seeded successfully.';")
-    sql_statements.append("END TRY")
-    sql_statements.append("BEGIN CATCH")
-    sql_statements.append("    IF @@TRANCOUNT > 0 ROLLBACK TRAN;")
-    sql_statements.append("    PRINT N'ERROR: ' + ERROR_MESSAGE();")
-    sql_statements.append("    THROW;")
-    sql_statements.append("END CATCH;")
-    sql_statements.append("GO\n")
-    
-    with open('seed_crawled_data.sql', 'w', encoding='utf-8') as f:
-        f.write("\n".join(sql_statements))
-    print("Generated seed_crawled_data.sql successfully!")
+# ── Logging ───────────────────────────────────────────────────────────────────
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler("crawl_log.txt", encoding="utf-8"),
+    ],
+)
+log = logging.getLogger(__name__)
 
-def crawl_shopeefood(driver, url):
-    print(f"Fetching {url} ...")
-    
+# ── Config ────────────────────────────────────────────────────────────────────
+TARGET_COUNT = 50
+
+AREA_URLS = [
+    "https://www.foody.vn/da-nang/khu-vuc-fpt-city",
+    "https://www.foody.vn/da-nang/khu-vuc-quan-ngu-hanh-son",
+    "https://www.foody.vn/da-nang/khu-vuc-dien-ban",
+]
+
+# ── Data classes ──────────────────────────────────────────────────────────────
+@dataclass
+class FoodItem:
+    name: str
+    desc: str = ""
+    price: int = 0
+    img: str = ""
+
+@dataclass
+class MenuCategory:
+    category_name: str
+    items: list = field(default_factory=list)
+
+@dataclass
+class Restaurant:
+    name: str
+    address: str = ""
+    phone: str = ""
+    image: str = ""
+    source_url: str = ""
+    menu: list = field(default_factory=list)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Helpers
+# ══════════════════════════════════════════════════════════════════════════════
+
+def safe_text(parent, css: str) -> str:
     try:
-        driver.get(url)
-        # Wait for the restaurant name to be visible
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "h1.name-restaurant"))
-        )
-        
-        # Scroll a bit to load lazy elements
-        driver.execute_script("window.scrollTo(0, 1000);")
-        time.sleep(2)
-        driver.execute_script("window.scrollTo(0, 2000);")
-        time.sleep(2)
-        
-        name = driver.find_element(By.CSS_SELECTOR, "h1.name-restaurant").text.strip()
-        address = driver.find_element(By.CSS_SELECTOR, "div.address-restaurant").text.strip()
-        
+        return parent.find_element(By.CSS_SELECTOR, css).text.strip()
+    except Exception:
+        return ""
+
+def safe_attr(parent, css: str, attr: str) -> str:
+    try:
+        return (parent.find_element(By.CSS_SELECTOR, css).get_attribute(attr) or "").strip()
+    except Exception:
+        return ""
+
+def parse_price(raw: str) -> int:
+    cleaned = re.sub(r"[^\d]", "", raw)
+    return int(cleaned) if cleaned else 0
+
+def sql_escape(val: str) -> str:
+    return (val or "").replace("'", "''")
+
+def try_selectors_text(driver, selectors: list) -> str:
+    for sel in selectors:
         try:
-            image = driver.find_element(By.CSS_SELECTOR, "div.detail-restaurant-img img").get_attribute("src")
-        except:
-            image = ""
-            
-        print(f"Found Restaurant: {name}")
-        print(f"Address: {address}")
-        
-        # Wait for menu items
-        WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "div.item-restaurant-row"))
+            el = driver.find_element(By.CSS_SELECTOR, sel)
+            val = el.text.strip()
+            if val:
+                return val
+        except Exception:
+            continue
+    return ""
+
+def try_selectors_attr(driver, selectors: list, attr: str) -> str:
+    for sel in selectors:
+        try:
+            el = driver.find_element(By.CSS_SELECTOR, sel)
+            val = (el.get_attribute(attr) or "").strip()
+            if val:
+                return val
+        except Exception:
+            continue
+    return ""
+
+def slow_scroll(driver, times: int = 6, pause: float = 1.2):
+    for _ in range(times):
+        driver.execute_script("window.scrollBy(0, window.innerHeight * 0.8);")
+        time.sleep(pause)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PHASE 1 — Thu thập link nhà hàng từ trang khu vực Foody
+# ══════════════════════════════════════════════════════════════════════════════
+
+def is_detail_link(href: str) -> bool:
+    """Kiểm tra href có phải là link chi tiết nhà hàng không."""
+    if not href or "foody.vn" not in href:
+        return False
+    skip = ["/khu-vuc", "/tim-kiem", "/loai-hinh", "/mon-an",
+            "/dia-diem", "/giao-do-an", "/danh-sach"]
+    if any(s in href for s in skip):
+        return False
+    parts = href.rstrip("/").split("/")
+    # Phải có ít nhất: https: '' foody.vn da-nang ten-quan
+    return len(parts) >= 5 and parts[-1] != "da-nang"
+
+def get_restaurant_links(driver, target_count: int) -> list:
+    collected = set()
+
+    for area_url in AREA_URLS:
+        if len(collected) >= target_count:
+            break
+
+        log.info(f"Quét khu vực: {area_url}")
+        try:
+            driver.get(area_url)
+            time.sleep(5)
+        except Exception as e:
+            log.warning(f"Load thất bại {area_url}: {e}")
+            continue
+
+        stale = 0
+        while len(collected) < target_count and stale < 7:
+            before = len(collected)
+
+            # Lấy tất cả thẻ <a> trên trang, lọc link chi tiết nhà hàng
+            all_links = driver.find_elements(By.TAG_NAME, "a")
+            for a in all_links:
+                try:
+                    href = (a.get_attribute("href") or "").split("?")[0]
+                    if is_detail_link(href):
+                        collected.add(href)
+                except Exception:
+                    continue
+
+            log.info(f"  → {len(collected)}/{target_count} links")
+
+            if len(collected) == before:
+                stale += 1
+            else:
+                stale = 0
+
+            if len(collected) >= target_count:
+                break
+
+            # Thử click "Xem thêm"
+            clicked = False
+            for xpath in [
+                "//a[contains(@class,'view-more')]",
+                "//button[contains(.,'Xem thêm')]",
+                "//a[contains(.,'Xem thêm')]",
+                "//a[contains(.,'Xem tiếp')]",
+                "//*[@class='btn-load-more']",
+            ]:
+                try:
+                    btn = driver.find_element(By.XPATH, xpath)
+                    driver.execute_script("arguments[0].scrollIntoView(true);", btn)
+                    time.sleep(0.5)
+                    btn.click()
+                    log.info("  → Clicked 'Xem thêm'")
+                    time.sleep(4)
+                    clicked = True
+                    break
+                except Exception:
+                    continue
+
+            if not clicked:
+                slow_scroll(driver, times=3, pause=1.5)
+
+    result = list(collected)[:target_count]
+    log.info(f"Tổng: {len(result)} links nhà hàng")
+    return result
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PHASE 2 — Crawl chi tiết nhà hàng trên Foody.vn
+# ══════════════════════════════════════════════════════════════════════════════
+
+NAME_SELS = [
+    "h1.res-page-name", "h1.restaurant-name", "h1.name",
+    ".fn-name h1", "h1.place-name", "h1",
+]
+ADDR_SELS = [
+    "span.address-value", ".res-info-address span",
+    "div.address-restaurant span", "a.address",
+    ".fn-address", "span.fn-address",
+    "div.info-contact span",
+]
+PHONE_SELS = [
+    "a.phone-value", "span.phone-value",
+    "a[href^='tel:']", ".fn-phone",
+    "span.tel", ".res-info-phone span",
+]
+IMG_SELS = [
+    "div.restaurant-img img", "div.res-banner img",
+    ".fn-avatar img", "img.restaurant-avatar",
+    ".restaurant-cover img", "div.cover-img img",
+]
+
+def extract_phone_from_body(driver) -> str:
+    try:
+        body = driver.find_element(By.TAG_NAME, "body").text
+        m = re.search(r"(0[0-9]{9,10})", body)
+        return m.group(1) if m else ""
+    except Exception:
+        return ""
+
+def crawl_menu_foody(driver) -> list:
+    """Parse menu từ trang Foody chi tiết."""
+    categories = []
+    slow_scroll(driver, times=8, pause=1.0)
+
+    # Foody dùng cấu trúc: section group → item list
+    GROUP_SELS = [
+        "div.food-list-group", "div.menu-section",
+        "div.menu-group", "section.food-section",
+        "div.category-group",
+    ]
+    ITEM_SELS = [
+        "div.food-item", "div.item-food",
+        "li.food-item", ".food-card",
+        "div.res-item",
+    ]
+
+    for grp_sel in GROUP_SELS:
+        groups = driver.find_elements(By.CSS_SELECTOR, grp_sel)
+        if not groups:
+            continue
+
+        log.info(f"  Menu: {len(groups)} groups [{grp_sel}]")
+        for grp in groups:
+            cat_name = (
+                safe_text(grp, "h2.group-name") or safe_text(grp, "div.group-title")
+                or safe_text(grp, "h3") or safe_text(grp, "h2") or "Menu"
+            )
+            cat = MenuCategory(category_name=cat_name)
+            for item_sel in ITEM_SELS:
+                items = grp.find_elements(By.CSS_SELECTOR, item_sel)
+                if items:
+                    for it in items:
+                        fi = parse_food_item(it)
+                        if fi:
+                            cat.items.append(fi)
+                    break
+            if cat.items:
+                categories.append(cat)
+                log.info(f"    [{cat_name}]: {len(cat.items)} món")
+        if categories:
+            return categories
+
+    # Fallback: flat list
+    for item_sel in ITEM_SELS:
+        items = driver.find_elements(By.CSS_SELECTOR, item_sel)
+        if items:
+            log.info(f"  Menu flat: {len(items)} món [{item_sel}]")
+            cat = MenuCategory(category_name="Thực Đơn")
+            for it in items:
+                fi = parse_food_item(it)
+                if fi:
+                    cat.items.append(fi)
+            if cat.items:
+                categories.append(cat)
+            return categories
+
+    log.warning("  Không tìm thấy menu")
+    return []
+
+def parse_food_item(el) -> Optional[FoodItem]:
+    try:
+        name = (
+            safe_text(el, "h3.food-title") or safe_text(el, "span.food-name")
+            or safe_text(el, "h3") or safe_text(el, "h2")
+            or safe_text(el, ".item-name") or safe_text(el, "p.name")
         )
-        
-        # Find scroll container and extract items
-        scroll_container = driver.find_element(By.CSS_SELECTOR, "div.ReactVirtualized__Grid__innerScrollContainer")
-        children = scroll_container.find_elements(By.XPATH, "./*")
-        
-        menu_categories = []
-        current_category = None
-        
-        for child in children:
-            cls = child.get_attribute("class")
-            if "menu-group" in cls:
-                cat_name = child.find_element(By.CSS_SELECTOR, "div.title-menu").text.strip()
-                current_category = {"category_name": cat_name, "items": []}
-                menu_categories.append(current_category)
-                print(f"  Category: {cat_name}")
-            elif "item-restaurant-row" in cls:
-                if not current_category:
-                    current_category = {"category_name": "Món Chính", "items": []}
-                    menu_categories.append(current_category)
-                    
-                item_name = child.find_element(By.CSS_SELECTOR, "h2.item-restaurant-name").text.strip()
-                
-                try:
-                    item_desc = child.find_element(By.CSS_SELECTOR, "div.item-restaurant-desc").text.strip()
-                except:
-                    item_desc = ""
-                    
-                try:
-                    item_price = child.find_element(By.CSS_SELECTOR, "div.current-price").text.strip()
-                except:
-                    item_price = "0"
-                    
-                try:
-                    item_img = child.find_element(By.CSS_SELECTOR, "div.item-restaurant-img img").get_attribute("src")
-                except:
-                    item_img = ""
-                    
-                current_category["items"].append({
-                    "name": item_name,
-                    "desc": item_desc,
-                    "price": item_price,
-                    "img": item_img
-                })
-                print(f"    + {item_name} ({item_price})")
-                
-        restaurant_data = {
-            "name": name,
-            "address": address,
-            "image": image,
-            "menu": menu_categories
-        }
-        
-        return restaurant_data
-        
-    except Exception as e:
-        print(f"An error occurred: {e}")
+        if not name:
+            return None
+        desc = (
+            safe_text(el, "p.food-desc") or safe_text(el, "span.food-desc")
+            or safe_text(el, ".item-desc") or ""
+        )
+        price_raw = (
+            safe_text(el, "span.price") or safe_text(el, "span.food-price")
+            or safe_text(el, ".item-price") or "0"
+        )
+        img = safe_attr(el, "img", "src") or safe_attr(el, "img", "data-src") or ""
+        return FoodItem(name=name, desc=desc, price=parse_price(price_raw), img=img)
+    except Exception:
         return None
 
-def get_restaurant_links(driver, base_url, target_count):
-    print(f"Discovering {target_count} restaurant links from {base_url} ...")
-    driver.get(base_url)
-    
-    is_foody = "foody.vn" in base_url
-    
-    if not is_foody:
-        # Handle ShopeeFood Location Popup if it appears
-        try:
-            print("Checking for location popup (ShopeeFood)...")
-            location_input = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "input[placeholder*='Nhập địa chỉ'], #address"))
-            )
-            print("Handling location popup...")
-            location_input.send_keys("Đà Nẵng")
-            time.sleep(2)
-            first_sug = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, ".suggest-local .location-items .location-item, .list-local .location-item"))
-            )
-            first_sug.click()
-            print("Location set to Đà Nẵng.")
-            time.sleep(3)
-        except:
-            print("No ShopeeFood location popup found or could not handle it, continuing...")
+def crawl_restaurant(driver, url: str) -> Optional[Restaurant]:
+    log.info(f"Crawl: {url}")
+    try:
+        driver.get(url)
 
-    collected_urls = set()
-    
-    while len(collected_urls) < target_count:
-        if is_foody:
-            # On Foody, look for ShopeeFood delivery links directly
-            elements = driver.find_elements(By.CSS_SELECTOR, "a[href^='https://shopeefood.vn/']")
-        else:
-            # On ShopeeFood, use restaurant list selectors
-            elements = driver.find_elements(By.CSS_SELECTOR, ".home-tab .item-restaurant a.item-content")
-            if not elements:
-                elements = driver.find_elements(By.CSS_SELECTOR, "a.item-content")
-            
-        added_new = False
-        for el in elements:
+        loaded = False
+        for sel in NAME_SELS:
             try:
-                href = el.get_attribute("href")
-                if href and ("/da-nang/" in href or "/quang-nam/" in href) and href not in collected_urls:
-                    # Clear some tracking params if any
-                    clean_href = href.split("?")[0]
-                    collected_urls.add(clean_href)
-                    added_new = True
-                    if len(collected_urls) >= target_count:
-                        break
-            except:
+                WebDriverWait(driver, 12).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, sel))
+                )
+                loaded = True
+                break
+            except TimeoutException:
                 continue
-                
-        print(f"Found {len(collected_urls)}/{target_count} links...")
-        
-        if len(collected_urls) >= target_count:
+
+        if not loaded:
+            log.warning(f"  Timeout: {url}")
+            return None
+
+        time.sleep(2)
+
+        name  = try_selectors_text(driver, NAME_SELS)
+        addr  = try_selectors_text(driver, ADDR_SELS)
+        phone = try_selectors_text(driver, PHONE_SELS)
+        image = try_selectors_attr(driver, IMG_SELS, "src")
+
+        if phone.startswith("tel:"):
+            phone = phone[4:].strip()
+        if not phone:
+            phone = extract_phone_from_body(driver)
+
+        if not name:
+            log.warning(f"  Không lấy được tên: {url}")
+            return None
+
+        log.info(f"  ✓ {name}")
+        log.info(f"    Địa chỉ : {addr or '(không có)'}")
+        log.info(f"    SĐT     : {phone or '(không có)'}")
+
+        menu = crawl_menu_foody(driver)
+
+        return Restaurant(
+            name=name, address=addr, phone=phone,
+            image=image, source_url=url, menu=menu,
+        )
+
+    except Exception as e:
+        log.error(f"Lỗi: {url} — {e}")
+        return None
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Outputs
+# ══════════════════════════════════════════════════════════════════════════════
+
+def save_json(data: list, path="restaurants_danang.json"):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump([asdict(r) for r in data], f, ensure_ascii=False, indent=2)
+    log.info(f"JSON: {path} ({len(data)} nhà hàng)")
+
+def generate_sql(data: list, path="seed_crawled_data.sql"):
+    L = [
+        "-- SEED: Foody.vn — FPT City / Điện Bàn / Ngũ Hành Sơn",
+        "USE ClickEat;", "GO\n",
+        "BEGIN TRY", "    BEGIN TRAN;\n",
+    ]
+    uid = 1000
+    for r in data:
+        sn = sql_escape(r.name)
+        sa = sql_escape(r.address)
+        si = sql_escape(r.image)
+        sp = sql_escape(r.phone) if r.phone else f"0900{uid}"
+        em = f"merchant{uid}@foody.vn"
+        pv = "N'49', N'Quảng Nam'" if "Quảng Nam" in r.address or "Điện Bàn" in r.address else "N'48', N'Đà Nẵng'"
+
+        L += [
+            f"    -- {sn}",
+            f"    INSERT INTO dbo.Users(full_name,email,phone,password_hash,role,status)",
+            f"    VALUES(N'{sn}',N'{em}',N'{sp}',N'hash_pwd',N'MERCHANT',N'ACTIVE');",
+            f"    DECLARE @m{uid} BIGINT = SCOPE_IDENTITY();\n",
+            f"    INSERT INTO dbo.MerchantProfiles(user_id,shop_name,shop_phone,shop_address_line,province_code,province_name,district_code,district_name,ward_code,ward_name,status,image_url)",
+            f"    VALUES(@m{uid},N'{sn}',N'{sp}',N'{sa}',{pv},N'000',N'Quận',N'000',N'Phường',N'APPROVED',N'{si}');\n",
+        ]
+        cid = 1
+        for cat in r.menu:
+            sc = sql_escape(cat.category_name)
+            L += [
+                f"    INSERT INTO dbo.Categories(merchant_user_id,name,is_active,sort_order)",
+                f"    VALUES(@m{uid},N'{sc}',1,{cid});",
+                f"    DECLARE @cat_m{uid}_{cid} BIGINT = SCOPE_IDENTITY();\n",
+            ]
+            for it in cat.items:
+                sn2 = sql_escape(it.name)
+                sd  = sql_escape(it.desc)
+                iv  = f"N'{sql_escape(it.img)}'" if it.img else "NULL"
+                L += [
+                    f"    INSERT INTO dbo.FoodItems(merchant_user_id,category_id,name,description,price,image_url,is_available,is_fried,calories)",
+                    f"    VALUES(@m{uid},@cat_m{uid}_{cid},N'{sn2}',N'{sd}',{it.price},{iv},1,0,500);",
+                ]
+            L.append("")
+            cid += 1
+        uid += 1
+
+    L += [
+        "    COMMIT TRAN;",
+        "    PRINT N'Seeded successfully.';",
+        "END TRY",
+        "BEGIN CATCH",
+        "    IF @@TRANCOUNT > 0 ROLLBACK TRAN;",
+        "    PRINT N'ERROR: ' + ERROR_MESSAGE();",
+        "    THROW;",
+        "END CATCH;",
+        "GO\n",
+    ]
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(L))
+    log.info(f"SQL: {path}")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Driver
+# ══════════════════════════════════════════════════════════════════════════════
+
+def build_driver():
+    opts = Options()
+    # opts.add_argument("--headless=new")
+    opts.add_argument("--disable-gpu")
+    opts.add_argument("--no-sandbox")
+    opts.add_argument("--disable-dev-shm-usage")
+    opts.add_argument("--window-size=1920,1080")
+    opts.add_argument("--disable-blink-features=AutomationControlled")
+    opts.add_argument(
+        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    )
+    opts.add_experimental_option("excludeSwitches", ["enable-automation"])
+    opts.add_experimental_option("useAutomationExtension", False)
+    return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=opts)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# DEBUG MODE — lưu HTML để tìm selector đúng
+# ══════════════════════════════════════════════════════════════════════════════
+
+def debug_mode(driver):
+    """
+    Chạy: python crawl_foody_danang.py --debug
+    Lưu HTML của trang khu vực và trang chi tiết để bạn inspect selector.
+    """
+    area_url = "https://www.foody.vn/da-nang/khu-vuc-fpt-city"
+    log.info(f"DEBUG: load {area_url}")
+    driver.get(area_url)
+    time.sleep(6)
+
+    with open("debug_area.html", "w", encoding="utf-8") as f:
+        f.write(driver.page_source)
+    log.info("Saved: debug_area.html")
+
+    # Tìm link chi tiết đầu tiên
+    all_a = driver.find_elements(By.TAG_NAME, "a")
+    detail = None
+    for a in all_a:
+        href = (a.get_attribute("href") or "").split("?")[0]
+        if is_detail_link(href):
+            detail = href
             break
-            
-        # Try to click "Xem thêm" button
-        try:
-            if is_foody:
-                # Foody "Xem tiếp" button
-                load_more_btn = driver.find_element(By.CSS_SELECTOR, "a.load-more-result, .fd-btn-more")
-            else:
-                # ShopeeFood "Xem thêm" button
-                load_more_btn = driver.find_element(By.XPATH, "//button[contains(., 'Xem thêm')]")
-                
-            driver.execute_script("arguments[0].scrollIntoView();", load_more_btn)
-            time.sleep(1)
-            load_more_btn.click()
-            print("Clicked 'Load More' to discover more...")
-            time.sleep(4)
-        except:
-            # If no button, just scroll down
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(3)
-            
-        if not added_new and len(collected_urls) > 0:
-            driver.execute_script("window.scrollBy(0, -500);")
-            time.sleep(1)
-            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(3)
-        
-    return list(collected_urls)
+
+    if detail:
+        log.info(f"DEBUG: load detail {detail}")
+        driver.get(detail)
+        time.sleep(6)
+        with open("debug_detail.html", "w", encoding="utf-8") as f:
+            f.write(driver.page_source)
+        log.info("Saved: debug_detail.html")
+        log.info(f"Detail URL: {detail}")
+
+    log.info("\nMở debug_area.html và debug_detail.html bằng trình duyệt")
+    log.info("F12 → inspect để tìm đúng CSS selector cho name/address/phone/menu")
+    log.info("Sau đó cập nhật NAME_SELS, ADDR_SELS, PHONE_SELS, GROUP_SELS trong script")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Main
+# ══════════════════════════════════════════════════════════════════════════════
 
 def main():
-    print("Setting up Chrome (Headless Disabled) ...")
-    chrome_options = Options()
-    # chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--window-size=1920,1080")
-    chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36")
-    
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
-        
-    all_merchants = []
-    
+    log.info("=== Foody Crawler — FPT City / Điện Bàn / Ngũ Hành Sơn ===")
+    driver = build_driver()
+    results: list[Restaurant] = []
+
     try:
-        urls = []
+        if "--debug" in sys.argv:
+            debug_mode(driver)
+            return
+
         if len(sys.argv) > 1:
             urls = sys.argv[1:]
         else:
-            # Default to the area the user requested
-            discovery_url = "https://www.foody.vn/da-nang/khu-vuc-quan-ngu-hanh-son"
-            urls = get_restaurant_links(driver, discovery_url, 50)
-            
-        print(f"\n--- Starting to crawl {len(urls)} restaurants ---")
+            urls = get_restaurant_links(driver, TARGET_COUNT)
+
+        if not urls:
+            log.error("Không tìm được link nào!")
+            log.error("Gợi ý: chạy với --debug để xem HTML thực tế và tìm đúng selector")
+            return
+
+        log.info(f"\nBắt đầu crawl {len(urls)} nhà hàng\n{'='*50}")
+
         for i, url in enumerate(urls, 1):
-            print(f"\n[{i}/{len(urls)}] ", end="")
-            data = crawl_shopeefood(driver, url)
-            if data:
-                all_merchants.append(data)
-                
-            # Optional: save intermediate progress
-            if len(all_merchants) % 10 == 0:
-                print(f"--> Checkpoint: Generated SQL for {len(all_merchants)} restaurants so far...")
-                generate_sql(all_merchants)
-                
-        if all_merchants:
-            generate_sql(all_merchants)
-            
+            log.info(f"[{i}/{len(urls)}]")
+            r = crawl_restaurant(driver, url)
+            if r:
+                results.append(r)
+
+            if results and len(results) % 10 == 0:
+                save_json(results)
+                generate_sql(results)
+            time.sleep(1.5)
+
+        if results:
+            save_json(results)
+            generate_sql(results)
+            log.info(f"\n✅ Xong! {len(results)} nhà hàng → restaurants_danang.json + seed_crawled_data.sql")
+        else:
+            log.warning("Không lấy được dữ liệu. Chạy --debug để kiểm tra selector.")
+
     finally:
         driver.quit()
 
